@@ -31,6 +31,8 @@ export default function AuthPage() {
       if (res.ok) {
         // Save JWT token in localStorage
         localStorage.setItem('token', data.token);
+        // Store user data for profile avatar
+        localStorage.setItem('userData', JSON.stringify(data.user));
         console.log(`${isSignIn ? 'Login' : 'Signup'} successful:`, data.user);
         alert(`${isSignIn ? 'Login' : 'Signup'} successful!`);
 

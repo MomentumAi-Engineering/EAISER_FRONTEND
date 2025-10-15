@@ -17,3 +17,19 @@ export const getCurrentUser = async () => {
     return null;
   }
 };
+
+// Helper function to check if user is logged in
+export const isAuthenticated = () => {
+  return !!localStorage.getItem('token');
+};
+
+// Helper function to get user data from localStorage
+export const getStoredUserData = () => {
+  try {
+    const userData = localStorage.getItem('userData');
+    return userData ? JSON.parse(userData) : null;
+  } catch (error) {
+    console.error('Error parsing user data:', error);
+    return null;
+  }
+};

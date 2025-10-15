@@ -8,6 +8,7 @@ import ImpactMetricsSection from './components/AboutMore';
 import Ending from './components/Ending';
 import AuthPage from './pages/Signup';
 import SignInPage from './pages/SignIn';
+import ProfilePage from './pages/Profile';
 
 function AppContent() {
   const location = useLocation();
@@ -30,6 +31,7 @@ function AppContent() {
         />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/signin" element={<SignInPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Routes>
     </div>
   );

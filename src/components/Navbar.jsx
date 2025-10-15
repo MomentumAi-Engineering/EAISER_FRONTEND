@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, Home, FileText, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import ProfileAvatar from './ProfileAvatar';
+import { isAuthenticated } from '../utils/auth';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeItem, setActiveItem] = useState('Home');
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const menuItems = [
     { name: 'Home', icon: Home },
@@ -21,6 +24,11 @@ const Navbar = () => {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    // Check authentication status
+    setIsLoggedIn(isAuthenticated());
   }, []);
 
   const handleLoginClick = () => {
@@ -72,13 +80,19 @@ const Navbar = () => {
               })}
             </div>
 
-            {/* Beautiful Login Button */}
-            <button 
-              onClick={handleLoginClick}
-              className="ml-6 px-6 py-2 bg-gradient-to-r from-cyan-400 to-blue-500 text-white font-semibold rounded-full shadow-lg hover:scale-105 transform transition-transform duration-300 hover:shadow-xl"
-            >
-              Login
-            </button>
+            {/* Login or Profile Avatar */}
+            <div className="ml-6">
+              {isLoggedIn ? (
+                <ProfileAvatar />
+              ) : (
+                <button 
+                  onClick={handleLoginClick}
+                  className="px-6 py-2 bg-gradient-to-r from-cyan-400 to-blue-500 text-white font-semibold rounded-full shadow-lg hover:scale-105 transform transition-transform duration-300 hover:shadow-xl"
+                >
+                  Login
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Mobile Menu Button */}
