@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { isGuestUser } from '../utils/auth';
 
 const ProfileAvatar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [userName, setUserName] = useState('');
+  const [isGuest, setIsGuest] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -12,11 +14,11 @@ const ProfileAvatar = () => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
-        // Try to get user name from stored user data or decode from token
         const storedUserData = localStorage.getItem('userData');
         if (storedUserData) {
           const user = JSON.parse(storedUserData);
           setUserName(user.name || '');
+          setIsGuest(isGuestUser());
         }
       } catch (error) {
         console.error('Error getting user data:', error);
@@ -57,7 +59,14 @@ const ProfileAvatar = () => {
   };
 
   const getInitial = () => {
-    return userName ? userName.charAt(0).toUpperCase() : 'U';
+    return userName ? userName.charAt(0).toUpperCase() : 'G';
+  };
+
+  const getAvatarStyle = () => {
+    if (isGuest) {
+      return "w-10 h-10 bg-gradient-to-br from-gray-500 to-gray-700 rounded-full flex items-center justify-center text-white font-semibold text-sm hover:from-gray-600 hover:to-gray-800 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2";
+    }
+    return "w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm hover:from-purple-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2";
   };
 
   return (
@@ -65,7 +74,7 @@ const ProfileAvatar = () => {
       {/* Avatar */}
       <button
         onClick={handleAvatarClick}
-        className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm hover:from-purple-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+        className={getAvatarStyle()}
       >
         {getInitial()}
       </button>
@@ -75,7 +84,9 @@ const ProfileAvatar = () => {
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
           <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
             <p className="font-medium">{userName}</p>
-            <p className="text-xs text-gray-500">View your profile</p>
+            <p className="text-xs text-gray-500">
+              {isGuest ? 'Guest user' : 'View your profile'}
+            </p>
           </div>
           
           <button

@@ -37,7 +37,7 @@ export default function AuthPage() {
         alert(`${isSignIn ? 'Login' : 'Signup'} successful!`);
 
         // Redirect to your main app page
-        navigate('/snapfix'); // change '/snapfix' to your desired route
+        navigate('/'); // changed from '/snapfix' to '/'
       } else {
         alert(data.error || 'Something went wrong');
       }

@@ -1,12 +1,76 @@
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+
 export default function AuthLanding() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Load Google OAuth script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          callback: handleGoogleResponse
+        });
+      }
+    };
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  const handleGoogleResponse = async (response) => {
+    try {
+      // Decode the JWT token from Google
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
+      
+      const googleUserData = {
+        email: payload.email,
+        name: payload.name,
+        googleId: payload.sub,
+        picture: payload.picture
+      };
+
+      // Send to your backend
+      const res = await fetch('http://localhost:5000/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(googleUserData)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userData', JSON.stringify(data.user));
+        console.log('Google login successful:', data.user);
+        navigate('/');
+      } else {
+        alert(data.error || 'Google authentication failed');
+      }
+    } catch (error) {
+      console.error('Google auth error:', error);
+      alert('Failed to authenticate with Google');
+    }
+  };
+
   const handleEmailSignup = () => {
-    // In a real app with routing, you would use: navigate('/auth')
-    window.location.href = '/auth';
+    navigate('/auth');
   };
 
   const handleGoogleSignup = () => {
-    console.log('Continue with Google clicked');
-    // Add Google OAuth logic here
+    if (window.google) {
+      window.google.accounts.id.prompt();
+    } else {
+      console.error('Google OAuth not loaded');
+    }
   };
 
   const handleGithubSignup = () => {
@@ -21,7 +85,20 @@ export default function AuthLanding() {
 
   const handleGuestContinue = () => {
     console.log('Continue as Guest clicked');
-    // Add guest logic here
+    // Create guest user data
+    const guestUserData = {
+      name: 'Guest',
+      email: 'Not provided',
+      isGuest: true,
+      createdAt: new Date().toISOString()
+    };
+    
+    // Store guest token and user data
+    localStorage.setItem('token', 'guest-token');
+    localStorage.setItem('userData', JSON.stringify(guestUserData));
+    
+    // Navigate to home page
+    navigate('/');
   };
 
   return (
