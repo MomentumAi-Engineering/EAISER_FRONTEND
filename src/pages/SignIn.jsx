@@ -20,6 +20,18 @@ export default function AuthLanding() {
           auto_select: false,
           cancel_on_tap_outside: true
         });
+
+        // Render the actual Google button instead of using prompts
+        window.google.accounts.id.renderButton(
+          document.getElementById('google-signin-div'),
+          { 
+            theme: 'filled_white',
+            size: 'large',
+            shape: 'pill',
+            text: 'continue_with',
+            logo_alignment: 'left'
+          }
+        );
       }
     };
 
@@ -81,24 +93,8 @@ export default function AuthLanding() {
   };
 
   const handleGoogleSignup = () => {
-    try {
-      if (window.google && window.google.accounts) {
-        // Simple prompt without button rendering
-        window.google.accounts.id.prompt((notification) => {
-          console.log('Prompt notification:', notification);
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            console.log('Prompt was not displayed or was skipped');
-            alert('Google sign-in popup was blocked or not displayed. Please check your popup blocker settings.');
-          }
-        });
-      } else {
-        console.error('Google OAuth not loaded properly');
-        alert('Google OAuth is not ready. Please refresh the page and try again.');
-      }
-    } catch (error) {
-      console.error('Google signup error:', error);
-      alert('Error initializing Google OAuth: ' + error.message);
-    }
+    // This function is no longer needed since we're using the rendered button
+    console.log('Custom Google button clicked - but using rendered button instead');
   };
 
   const handleAppleSignup = () => {
@@ -124,24 +120,28 @@ export default function AuthLanding() {
     navigate('/');
   };
 
+  const handleGoBack = () => {
+    navigate('/');
+  };
+
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <div className="w-12 h-16 bg-gradient-to-br from-gray-200 to-white rounded-lg transform rotate-12"></div>
+    <div className="min-h-screen bg-black flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-sm">
+        {/* Logo - Reduced size */}
+        <div className="flex justify-center mb-6">
+          <div className="w-10 h-12 bg-gradient-to-br from-gray-200 to-white rounded-lg transform rotate-12"></div>
         </div>
 
-        {/* Heading */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
+        {/* Heading - Reduced sizes */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-1">
             Where ideas
           </h1>
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold mb-4">
             <span className="text-white">become </span>
             <span className="text-green-500">reality</span>
           </h1>
-          <p className="text-gray-300 text-lg">
+          <p className="text-gray-300 text-sm">
             Already have an account?{' '}
             <a href="#" className="text-blue-400 hover:text-blue-300 transition-colors">
               Sign in
@@ -149,10 +149,19 @@ export default function AuthLanding() {
           </p>
         </div>
 
-        {/* Auth Options */}
-        <div className="space-y-4">
-          {/* Continue with Google - Simple hover effect with reduced width */}
+        {/* Auth Options - Reduced spacing */}
+        <div className="space-y-3">
+          {/* Google Sign-In */}
           <div className="flex justify-center">
+            <div 
+              id="google-signin-div" 
+              className="w-full"
+              style={{ display: 'flex', justifyContent: 'center' }}
+            ></div>
+          </div>
+
+          {/* Fallback custom button (hidden by default) */}
+          <div className="flex justify-center" style={{ display: 'none' }}>
             <button
               onClick={handleGoogleSignup}
               className="w-4/5 bg-white text-black font-semibold py-3 rounded-full hover:bg-gray-200 transition-colors duration-200 flex items-center justify-center gap-3"
@@ -166,54 +175,63 @@ export default function AuthLanding() {
               Continue with Google
             </button>
           </div>
-          {/* Hidden div for Google button rendering */}
-          <div id="google-signin-button" style={{ display: 'none' }}></div>
 
-          {/* Microsoft button instead of Apple */}
+          {/* Microsoft button - Reduced size */}
           <div className="flex justify-center">
             <button
               onClick={handleAppleSignup}
-              className="w-full max-w-xs bg-gray-900 text-white font-medium py-3 rounded-full hover:bg-gray-800 transition-colors flex items-center justify-center border border-gray-800"
+              className="w-3/4 bg-gray-900 text-white font-medium py-2.5 rounded-full hover:bg-gray-800 transition-colors flex items-center justify-center border border-gray-800 text-sm"
             >
-              <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z"/>
               </svg>
               Continue with Microsoft
             </button>
           </div>
 
-          {/* Divider */}
-          <div className="flex items-center gap-4 py-4">
+          {/* Divider - Reduced spacing */}
+          <div className="flex items-center gap-4 py-3">
             <div className="flex-1 h-px bg-gray-800"></div>
-            <span className="text-gray-600 text-sm">Or start with email</span>
+            <span className="text-gray-600 text-xs">Or start with email</span>
             <div className="flex-1 h-px bg-gray-800"></div>
           </div>
 
-          {/* Sign up with Email */}
+          {/* Sign up with Email - Reduced size */}
           <button
             onClick={handleEmailSignup}
-            className="w-full bg-transparent text-green-500 font-semibold py-3 rounded-full border-2 border-green-500 hover:bg-green-500 hover:text-black transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-transparent text-green-500 font-medium py-2.5 rounded-full border-2 border-green-500 hover:bg-green-500 hover:text-black transition-colors flex items-center justify-center gap-2 text-sm"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
             Sign up with Email
           </button>
 
-          {/* Continue as Guest */}
+          {/* Continue as Guest - Reduced size */}
           <button
             onClick={handleGuestContinue}
-            className="w-full bg-transparent text-gray-400 font-medium py-3 rounded-full border border-gray-700 hover:bg-gray-900 hover:text-white transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-transparent text-gray-400 font-medium py-2.5 rounded-full border border-gray-700 hover:bg-gray-900 hover:text-white transition-colors flex items-center justify-center gap-2 text-sm"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
             Continue as Guest
           </button>
+
+          {/* Back to Home Button */}
+          <button
+            onClick={handleGoBack}
+            className="w-full bg-transparent text-gray-500 font-medium py-2.5 rounded-full border border-gray-800 hover:bg-gray-900 hover:text-gray-300 transition-colors flex items-center justify-center gap-2 text-sm mt-4"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Home
+          </button>
         </div>
 
-        {/* Terms and Privacy */}
-        <div className="text-center mt-8 text-sm text-gray-600">
+        {/* Terms and Privacy - Reduced size and spacing */}
+        <div className="text-center mt-6 text-xs text-gray-600">
           By continuing, you agree to our{' '}
           <a href="#" className="text-white hover:text-gray-300 transition-colors">
             Terms of Service
