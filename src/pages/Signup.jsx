@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AUTH_BASE_URL } from '../config';
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function AuthPage() {
       const endpoint = isSignIn ? 'login' : 'signup';
       const payload = isSignIn ? { email, password } : { name, email, password };
 
-      const res = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
+      const res = await fetch(`${AUTH_BASE_URL}/${endpoint}`, {
 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -37,7 +38,8 @@ export default function AuthPage() {
         alert(`${isSignIn ? 'Login' : 'Signup'} successful!`);
 
         // Redirect to your main app page
-        navigate('/snapfix'); // change '/snapfix' to your desired route
+-        navigate('/snapfix'); // change '/snapfix' to your desired route
++        navigate('/dashboard');
       } else {
         alert(data.error || 'Something went wrong');
       }

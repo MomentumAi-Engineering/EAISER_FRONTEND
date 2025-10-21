@@ -1,27 +1,26 @@
+import { useNavigate } from 'react-router-dom';
+
 export default function AuthLanding() {
+  const navigate = useNavigate();
+
   const handleEmailSignup = () => {
-    // In a real app with routing, you would use: navigate('/auth')
-    window.location.href = '/auth';
+    navigate('/auth');
   };
 
   const handleGoogleSignup = () => {
     console.log('Continue with Google clicked');
-    // Add Google OAuth logic here
   };
 
   const handleGithubSignup = () => {
     console.log('Continue with GitHub clicked');
-    // Add GitHub OAuth logic here
   };
 
   const handleAppleSignup = () => {
     console.log('Continue with Apple clicked');
-    // Add Apple OAuth logic here
   };
 
   const handleGuestContinue = () => {
     console.log('Continue as Guest clicked');
-    // Add guest logic here
   };
 
   return (
