@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+<<<<<<< HEAD
 import DarkElegantBackground from '../components/DarkElegantBackground';
+=======
+import { AUTH_BASE_URL } from '../config';
+>>>>>>> c1f4cb62ba125be0caa7af768211e8dc6b7974b7
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -19,7 +23,12 @@ export default function AuthPage() {
       const endpoint = isSignIn ? 'login' : 'signup';
       const payload = isSignIn ? { email, password } : { name, email, password };
 
+<<<<<<< HEAD
       const res = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
+=======
+      const res = await fetch(`${AUTH_BASE_URL}/${endpoint}`, {
+
+>>>>>>> c1f4cb62ba125be0caa7af768211e8dc6b7974b7
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -37,7 +46,8 @@ export default function AuthPage() {
         alert(`${isSignIn ? 'Login' : 'Signup'} successful!`);
 
         // Redirect to your main app page
-        navigate('/'); // changed from '/snapfix' to '/'
+-        navigate('/snapfix'); // change '/snapfix' to your desired route
++        navigate('/dashboard');
       } else {
         alert(data.error || 'Something went wrong');
       }
