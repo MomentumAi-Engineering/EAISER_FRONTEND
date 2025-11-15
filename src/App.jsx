@@ -3,7 +3,7 @@ import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Signup from "./Auth/Signup";
 import Login from './Auth/Login';
-import Report from './components/Report';
+import Report from './pages/Report'
 
 export default function App() {
   return (

@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 
-
 export default function Navbar() {
   const [open, setOpen] = useState(false);
 
@@ -16,19 +15,26 @@ export default function Navbar() {
 
         {/* Desktop Menu */}
         <ul className="hidden md:flex gap-10 text-lg font-semibold">
-          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">Home</li>
-          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">Report Issue</li>
-          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">New+</li>
-          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">Contact</li>
+          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
+            <Link to="/">Home</Link>
+          </li>
+          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
+            <Link to="/report">Report Issue</Link>
+          </li>
+          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
+            <Link to="/new">New+</Link>
+          </li>
+          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
+            <Link to="/contact">Contact</Link>
+          </li>
         </ul>
 
         {/* Button */}
-       <Link to="/signup">
-  <button className="hidden md:block bg-yellow-400 text-black px-6 py-2 rounded-2xl font-bold shadow-md hover:bg-yellow-300 transition-all duration-300 hover:scale-105">
-    Login
-  </button>
-</Link>
-
+        <Link to="/signup">
+          <button className="hidden md:block bg-yellow-400 text-black px-6 py-2 rounded-2xl font-bold shadow-md hover:bg-yellow-300 transition-all duration-300 hover:scale-105">
+            Login
+          </button>
+        </Link>
 
         {/* Mobile Icon */}
         <button className="md:hidden" onClick={() => setOpen(!open)}>
@@ -39,14 +45,40 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {open && (
         <div className="md:hidden w-full bg-black/95 text-yellow-300 px-6 py-5 space-y-4 border-t border-yellow-400/20 animate-slide-down">
-          <p className="hover:text-white transition cursor-pointer">Home</p>
-          <p className="hover:text-white transition cursor-pointer">Features</p>
-          <p className="hover:text-white transition cursor-pointer">About</p>
-          <p className="hover:text-white transition cursor-pointer">Contact</p>
+          <Link
+            to="/"
+            onClick={() => setOpen(false)}
+            className="block hover:text-white transition"
+          >
+            Home
+          </Link>
+          <Link
+            to="/features"
+            onClick={() => setOpen(false)}
+            className="block hover:text-white transition"
+          >
+            Features
+          </Link>
+          <Link
+            to="/about"
+            onClick={() => setOpen(false)}
+            className="block hover:text-white transition"
+          >
+            About
+          </Link>
+          <Link
+            to="/report"
+            onClick={() => setOpen(false)}
+            className="block hover:text-white transition"
+          >
+            Report Issue
+          </Link>
 
-          <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
-            Login
-          </button>
+          <Link to="/signup" onClick={() => setOpen(false)} className="block">
+            <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
+              Login
+            </button>
+          </Link>
         </div>
       )}
     </nav>
