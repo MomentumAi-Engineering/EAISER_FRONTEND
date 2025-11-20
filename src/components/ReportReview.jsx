@@ -1,0 +1,274 @@
+// ReportReview.jsx
+// Purpose: Modular UI component to render the backend-generated issue report for review.
+// Notes: Designed to be resilient to varying response shapes from the backend.
+//        Uses defensive accessors and shows helpful fallbacks.
+
+import React from 'react';
+import apiClient from '../services/apiClient';
+import { Image as ImageIcon, MapPin, FileText, CheckCircle2, Clock } from 'lucide-react';
+
+// Helper to safely access nested fields with fallback
+const pick = (obj, keys, fallback = undefined) => {
+  // Iterate keys until a defined value is found
+  for (const key of keys) {
+    const parts = key.split('.');
+    let cur = obj;
+    for (const p of parts) {
+      if (!cur || typeof cur !== 'object') { cur = undefined; break; }
+      cur = cur[p];
+    }
+    if (cur !== undefined && cur !== null) return cur;
+  }
+  return fallback;
+};
+
+export default function ReportReview({ issue, imagePreview, analysisDescription, userAddress, userZip, userLat, userLon }) {
+  const issueId = pick(issue, ['id', 'issue_id', 'data.id'], 'N/A');
+  const aiReport = pick(issue, ['report.report', 'report', 'data.report'], {});
+  const aiOverview = pick(aiReport, ['issue_overview', 'unified_report.issue_overview'], {});
+
+  const issueType = pick(issue, [
+    'issue_type',
+    'classification.issue_type',
+    'report.report.issue_overview.issue_type',
+    'report.report.template_fields.issue_type',
+    'report.issue_type'
+  ], 'Unknown');
+  const aiSeverity = pick(aiOverview, ['severity'], pick(issue, ['severity', 'priority'], 'medium'));
+  const category = pick(issue, ['category'], 'public');
+  const zipCodeBase = pick(issue, ['zip_code', 'location.zip_code'], '—');
+  const addressBase = pick(issue, ['address', 'location.address'], '—');
+  const latitudeBase = pick(issue, ['latitude', 'location.latitude'], '—');
+  const longitudeBase = pick(issue, ['longitude', 'location.longitude'], '—');
+  const zipCode = userZip || zipCodeBase;
+  const address = userAddress || addressBase;
+  const latitude = (typeof userLat === 'number' && !Number.isNaN(userLat)) ? userLat : latitudeBase;
+  const longitude = (typeof userLon === 'number' && !Number.isNaN(userLon)) ? userLon : longitudeBase;
+  const authorities = pick(issue, ['authorities', 'available_authorities', 'report.available_authorities'], []);
+
+  const summaryExplanation = pick(aiOverview, ['summary_explanation', 'summary'], null);
+  const reportText = pick(aiReport, ['issue_overview.summary_explanation', 'additional_notes.summary', 'template_fields.formatted_text'], null);
+  const descriptionText = analysisDescription || summaryExplanation || reportText || null;
+  const detectedProblems = pick(aiOverview, ['detected_problems', 'issues', 'labels'], []);
+  const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
+  const recommendedAuthorities = pick(issue, ['report.report.responsible_authorities_or_parties', 'responsible_authorities_or_parties'], []);
+  let confidence = pick(aiOverview, ['confidence'], null);
+  if (confidence !== null) {
+    try {
+      const num = Number(confidence);
+      confidence = num <= 1 ? Math.round(num * 100) : Math.round(num);
+    } catch {}
+  }
+
+  const lat = typeof latitude === 'number' ? latitude : Number(latitude);
+  const lon = typeof longitude === 'number' ? longitude : Number(longitude);
+  const mapsLink = lat && lon ? `https://www.google.com/maps?q=${lat},${lon}` : (address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : null);
+
+  // Render a clean card with the report details
+  return (
+    <div className="mt-8 bg-gradient-to-br from-gray-900/60 to-black/60 backdrop-blur-xl rounded-2xl border border-gray-800 p-6">
+      {/* Top header and progress */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center">
+              <FileText className="w-5 h-5 text-gray-300" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Review Generated Report</h2>
+              <p className="text-xs text-gray-400">Issue #{issueId}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const el = document.getElementById('edit-summary');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="px-3 py-2 bg-white/5 hover:bg-white/10 border border-gray-700 rounded-lg text-xs"
+          >
+            Edit Report
+          </button>
+        </div>
+        <div className="mt-4 flex items-center gap-6">
+          <div className="flex items-center gap-2 text-xs text-gray-300">
+            <CheckCircle2 className="w-4 h-4 text-purple-300" /> Visual Evidence
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-300">
+            <CheckCircle2 className="w-4 h-4 text-purple-300" /> Location
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-300">
+            <CheckCircle2 className="w-4 h-4 text-purple-300" /> Review
+          </div>
+        </div>
+      </div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold">Report Review</h2>
+        <span className="text-xs text-gray-400">Issue ID: {issueId}</span>
+      </div>
+
+      {/* Responsible Authorities (single primary) */}
+      <div className="mb-6">
+        <p className="text-sm font-bold mb-2">Responsible Authorities</p>
+        {Array.isArray(recommendedAuthorities) && recommendedAuthorities.length > 0 ? (
+          <div className="grid md:grid-cols-1 gap-2">
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+              <p className="text-sm font-semibold">{String(recommendedAuthorities[0].name || 'Authority')}</p>
+              <p className="text-xs text-gray-400">{String(recommendedAuthorities[0].type || '—')}</p>
+              <p className="text-xs text-gray-400">{String(recommendedAuthorities[0].email || '—')}</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400">No primary authority selected by AI.</p>
+        )}
+        <div className="mt-3 flex gap-3">
+          <button
+            onClick={async () => {
+              try {
+                const primary = (recommendedAuthorities && recommendedAuthorities.length > 0) ? recommendedAuthorities : [];
+                if (!issueId || primary.length === 0) return;
+                await apiClient.submitIssue(issueId, primary, undefined);
+                alert('Report accepted and submitted to primary authority');
+              } catch (e) {
+                alert(`Failed to accept: ${e.message}`);
+              }
+            }}
+            className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm"
+          >
+            Accept Report
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                if (!issueId) return;
+                await apiClient.declineIssue(issueId, 'user_declined');
+                alert('Report declined');
+              } catch (e) {
+                alert(`Failed to decline: ${e.message}`);
+              }
+            }}
+            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm"
+          >
+            Decline Report
+          </button>
+        </div>
+      </div>
+      {/* Meta grid */}
+      <div className="grid md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+          <p className="text-xs text-gray-400">Issue Type</p>
+          <p className="text-sm font-semibold">{String(issueType)}</p>
+        </div>
+        <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+          <p className="text-xs text-gray-400">Severity</p>
+          <p className="text-sm font-semibold">{aiSeverity}</p>
+        </div>
+        <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+          <p className="text-xs text-gray-400">Category</p>
+          <p className="text-sm font-semibold">{category}</p>
+        </div>
+        {confidence !== null && (
+          <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+            <p className="text-xs text-gray-400">Confidence</p>
+            <p className="text-sm font-semibold">{String(confidence)}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Location */}
+      <div className="grid md:grid-cols-2 gap-4 mb-6">
+        <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
+          <p className="text-xs text-gray-400">Address</p>
+          <p className="text-sm font-semibold">{String(address || '—')}</p>
+        </div>
+        <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
+          <p className="text-xs text-gray-400">ZIP / Coordinates</p>
+          <p className="text-sm font-semibold">{String(zipCode || '—')} • {String(latitude || '—')}, {String(longitude || '—')}</p>
+        </div>
+      </div>
+
+      {/* Suggested Authorities removed as requested earlier */}
+
+      {/* Issue Overview summary text */}
+      <div className="mb-6">
+        <p className="text-sm font-bold mb-2">Summary</p>
+        {descriptionText ? (
+          <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap">
+            {String(descriptionText)}
+          </div>
+        ) : (
+          <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs text-gray-400">No summary provided.</div>
+        )}
+        {confidence !== null && (
+          <div className="mt-3">
+            <p className="text-xs text-gray-400 mb-1">Confidence</p>
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-gray-700">
+              <div className="h-full bg-blue-500/50" style={{ width: `${Math.max(0, Math.min(100, confidence))}%` }} />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">{Math.max(0, Math.min(100, confidence))}%</p>
+          </div>
+        )}
+      </div>
+      {mapsLink && (
+        <div className="mb-6">
+          <a href={mapsLink} target="_blank" rel="noreferrer" className="text-xs text-purple-300 hover:text-purple-200">View on Map</a>
+        </div>
+      )}
+
+      {/* AI Generated Items */}
+      <div className="mb-6">
+        <p className="text-sm font-bold mb-2">AI Generated Items</p>
+        {summaryExplanation && (
+          <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap mb-3">
+            {String(summaryExplanation)}
+          </div>
+        )}
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
+            <p className="text-xs text-gray-400 mb-2">Detected Problems</p>
+            <div className="flex flex-wrap gap-2">
+              {Array.isArray(detectedProblems) && detectedProblems.length > 0 ? (
+                detectedProblems.map((it, idx) => (
+                  <span key={idx} className="px-3 py-1 rounded-full text-xs bg-red-500/20 border border-red-500/40 text-red-300">
+                    {String(it)}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-gray-400">No specific problems listed</span>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
+            <p className="text-xs text-gray-400 mb-2">Recommended Actions</p>
+            {Array.isArray(recommendedActions) && recommendedActions.length > 0 ? (
+              <ul className="list-disc list-inside text-sm text-gray-200">
+                {recommendedActions.map((act, i) => (
+                  <li key={i}>{String(act)}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-gray-400">No recommendations provided</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Image Preview if available */}
+      {imagePreview && (
+        <div className="mb-6">
+          <p className="text-sm font-bold mb-2">Submitted Image</p>
+          <img src={imagePreview} alt="Submitted" className="w-full h-64 object-cover rounded-xl border border-gray-700" />
+        </div>
+      )}
+
+      {/* Raw JSON for debugging/review */}
+      <details className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs">
+        <summary className="cursor-pointer text-gray-300">Show raw response</summary>
+        <pre className="mt-2 text-gray-300 overflow-auto">
+{JSON.stringify(issue, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
