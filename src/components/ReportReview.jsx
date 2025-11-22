@@ -5,7 +5,7 @@
 
 import React from 'react';
 import apiClient from '../services/apiClient';
-import { Image as ImageIcon, MapPin, FileText, CheckCircle2, Clock } from 'lucide-react';
+import { Image as ImageIcon, MapPin, FileText, CheckCircle2, Clock, Check } from 'lucide-react';
 
 // Helper to safely access nested fields with fallback
 const pick = (obj, keys, fallback = undefined) => {
@@ -22,18 +22,30 @@ const pick = (obj, keys, fallback = undefined) => {
   return fallback;
 };
 
-export default function ReportReview({ issue, imagePreview, analysisDescription, userAddress, userZip, userLat, userLon }) {
+export default function ReportReview({ issue, imagePreview, analysisDescription, userAddress, userZip, userLat, userLon, imageName }) {
   const issueId = pick(issue, ['id', 'issue_id', 'data.id'], 'N/A');
   const aiReport = pick(issue, ['report.report', 'report', 'data.report'], {});
   const aiOverview = pick(aiReport, ['issue_overview', 'unified_report.issue_overview'], {});
+  const summaryExplanation = pick(aiOverview, ['summary_explanation', 'summary'], null);
+  const detectedProblems = pick(aiOverview, ['detected_problems', 'issues', 'labels'], []);
 
-  const issueType = pick(issue, [
+  let issueType = pick(issue, [
     'issue_type',
     'classification.issue_type',
     'report.report.issue_overview.issue_type',
     'report.report.template_fields.issue_type',
-    'report.issue_type'
+    'report.unified_report.issue_type',
+    'report.issue_type',
   ], 'Unknown');
+  if (!issueType || String(issueType).toLowerCase() === 'unknown') {
+    const labelsText = String((Array.isArray(detectedProblems) ? detectedProblems.join(' ') : '') + ' ' + (summaryExplanation || '')).toLowerCase();
+    if (labelsText.includes('tree')) issueType = 'tree_fallen';
+    else if (labelsText.includes('pothole') || labelsText.includes('crack') || labelsText.includes('road')) issueType = 'road_damage';
+    else if (labelsText.includes('streetlight')) issueType = 'broken_streetlight';
+    else if (labelsText.includes('garbage') || labelsText.includes('trash') || labelsText.includes('waste')) issueType = 'garbage';
+    else if (labelsText.includes('flood') || labelsText.includes('waterlogging')) issueType = 'flood';
+    else if (labelsText.includes('fire') || labelsText.includes('smoke')) issueType = 'fire';
+  }
   const aiSeverity = pick(aiOverview, ['severity'], pick(issue, ['severity', 'priority'], 'medium'));
   const category = pick(issue, ['category'], 'public');
   const zipCodeBase = pick(issue, ['zip_code', 'location.zip_code'], '—');
@@ -46,10 +58,8 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const longitude = (typeof userLon === 'number' && !Number.isNaN(userLon)) ? userLon : longitudeBase;
   const authorities = pick(issue, ['authorities', 'available_authorities', 'report.available_authorities'], []);
 
-  const summaryExplanation = pick(aiOverview, ['summary_explanation', 'summary'], null);
   const reportText = pick(aiReport, ['issue_overview.summary_explanation', 'additional_notes.summary', 'template_fields.formatted_text'], null);
   const descriptionText = analysisDescription || summaryExplanation || reportText || null;
-  const detectedProblems = pick(aiOverview, ['detected_problems', 'issues', 'labels'], []);
   const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
   const recommendedAuthorities = pick(issue, ['report.report.responsible_authorities_or_parties', 'responsible_authorities_or_parties'], []);
   let confidence = pick(aiOverview, ['confidence'], null);
@@ -63,6 +73,29 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const lat = typeof latitude === 'number' ? latitude : Number(latitude);
   const lon = typeof longitude === 'number' ? longitude : Number(longitude);
   const mapsLink = lat && lon ? `https://www.google.com/maps?q=${lat},${lon}` : (address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : null);
+
+  let city = '—';
+  let state = '—';
+  if (typeof address === 'string' && address.length > 0) {
+    const parts = address.split(',').map(s => s.trim());
+    if (parts.length >= 2) {
+      city = parts[0] || city;
+      const m = parts[1].match(/[A-Za-z]{2,}/);
+      if (m) state = m[0];
+    }
+  }
+  const shortDesc = (typeof descriptionText === 'string' && descriptionText.length > 0)
+    ? (descriptionText.split(/[.!?]/)[0] || descriptionText).slice(0, 160)
+    : (Array.isArray(detectedProblems) && detectedProblems.length > 0 ? detectedProblems[0] : 'an incident');
+  const hazardWords = ['hazard','danger','fire','smoke','collapse','crack','flood','leak','exposed','broken','damaged','risk'];
+  const baseWords = (String(descriptionText || '').toLowerCase() + ' ' + (Array.isArray(detectedProblems) ? detectedProblems.join(' ').toLowerCase() : ''));
+  const hits = hazardWords.filter(w => baseWords.includes(w));
+  const riskTags = hits.length > 0 ? hits.slice(0, 6).join(', ') : (Array.isArray(detectedProblems) ? detectedProblems.slice(0, 4).join(', ') : '');
+  let priorityLabel = String(aiSeverity || 'medium');
+  if (hits.length >= 3) priorityLabel = 'High'; else if (hits.length >= 1) priorityLabel = 'Medium'; else priorityLabel = 'Low';
+  const locCity = city && city !== '—' ? city : (address && address !== '—' ? address.split(',')[0] : 'Unknown');
+  const locState = state && state !== '—' ? state : '—';
+  const templateSummary = `Our AI detected a ${String(issueType || 'Unknown')} in ${String(locCity)}, ${String(locState)} (ZIP ${String(zipCode || '—')}).\nThe image shows ${shortDesc}.\nBased on the location and context, this incident has been classified as ${String(priorityLabel)} due to ${riskTags || 'contextual risks'}.`;
 
   // Render a clean card with the report details
   return (
@@ -107,52 +140,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         <span className="text-xs text-gray-400">Issue ID: {issueId}</span>
       </div>
 
-      {/* Responsible Authorities (single primary) */}
-      <div className="mb-6">
-        <p className="text-sm font-bold mb-2">Responsible Authorities</p>
-        {Array.isArray(recommendedAuthorities) && recommendedAuthorities.length > 0 ? (
-          <div className="grid md:grid-cols-1 gap-2">
-            <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
-              <p className="text-sm font-semibold">{String(recommendedAuthorities[0].name || 'Authority')}</p>
-              <p className="text-xs text-gray-400">{String(recommendedAuthorities[0].type || '—')}</p>
-              <p className="text-xs text-gray-400">{String(recommendedAuthorities[0].email || '—')}</p>
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs text-gray-400">No primary authority selected by AI.</p>
-        )}
-        <div className="mt-3 flex gap-3">
-          <button
-            onClick={async () => {
-              try {
-                const primary = (recommendedAuthorities && recommendedAuthorities.length > 0) ? recommendedAuthorities : [];
-                if (!issueId || primary.length === 0) return;
-                await apiClient.submitIssue(issueId, primary, undefined);
-                alert('Report accepted and submitted to primary authority');
-              } catch (e) {
-                alert(`Failed to accept: ${e.message}`);
-              }
-            }}
-            className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm"
-          >
-            Accept Report
-          </button>
-          <button
-            onClick={async () => {
-              try {
-                if (!issueId) return;
-                await apiClient.declineIssue(issueId, 'user_declined');
-                alert('Report declined');
-              } catch (e) {
-                alert(`Failed to decline: ${e.message}`);
-              }
-            }}
-            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm"
-          >
-            Decline Report
-          </button>
-        </div>
-      </div>
+      {/* Responsible Authorities (moved to bottom) */}
       {/* Meta grid */}
       <div className="grid md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
@@ -192,9 +180,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       {/* Issue Overview summary text */}
       <div className="mb-6">
         <p className="text-sm font-bold mb-2">Summary</p>
-        {descriptionText ? (
+        {templateSummary ? (
           <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap">
-            {String(descriptionText)}
+            {String(templateSummary)}
           </div>
         ) : (
           <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs text-gray-400">No summary provided.</div>
@@ -242,9 +230,12 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
           <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
             <p className="text-xs text-gray-400 mb-2">Recommended Actions</p>
             {Array.isArray(recommendedActions) && recommendedActions.length > 0 ? (
-              <ul className="list-disc list-inside text-sm text-gray-200">
+              <ul className="space-y-2 text-sm text-gray-200">
                 {recommendedActions.map((act, i) => (
-                  <li key={i}>{String(act)}</li>
+                  <li key={i} className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-green-400" />
+                    <span>{String(act)}</span>
+                  </li>
                 ))}
               </ul>
             ) : (
@@ -258,9 +249,63 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       {imagePreview && (
         <div className="mb-6">
           <p className="text-sm font-bold mb-2">Submitted Image</p>
-          <img src={imagePreview} alt="Submitted" className="w-full h-64 object-cover rounded-xl border border-gray-700" />
+          <div className="relative">
+            <img src={imagePreview} alt="Submitted" className="w-full h-64 object-cover rounded-xl border border-gray-700" />
+            {imageName && (
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-3 py-2 rounded-b-xl">
+                {imageName}
+              </div>
+            )}
+          </div>
         </div>
       )}
+
+      {/* Responsible Authorities (bottom) */}
+      <div className="mb-6">
+        <p className="text-sm font-bold mb-2">Responsible Authorities</p>
+        {Array.isArray(recommendedAuthorities) && recommendedAuthorities.length > 0 ? (
+          <div className="grid md:grid-cols-1 gap-2">
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+              <p className="text-sm font-semibold">{String(recommendedAuthorities[0].name || 'Authority')}</p>
+              <p className="text-xs text-gray-400">{String(recommendedAuthorities[0].type || '—')}</p>
+              <p className="text-xs text-gray-400">{String(recommendedAuthorities[0].email || '—')}</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400">No primary authority selected by AI.</p>
+        )}
+        <div className="mt-3 flex gap-3">
+          <button
+            onClick={async () => {
+              try {
+                const primary = (recommendedAuthorities && recommendedAuthorities.length > 0) ? recommendedAuthorities : [];
+                if (!issueId || primary.length === 0) return;
+                await apiClient.submitIssue(issueId, primary, undefined);
+                alert('Report accepted and submitted to primary authority');
+              } catch (e) {
+                alert(`Failed to accept: ${e.message}`);
+              }
+            }}
+            className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm"
+          >
+            Accept Report
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                if (!issueId) return;
+                await apiClient.declineIssue(issueId, 'user_declined');
+                alert('Report declined');
+              } catch (e) {
+                alert(`Failed to decline: ${e.message}`);
+              }
+            }}
+            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm"
+          >
+            Decline Report
+          </button>
+        </div>
+      </div>
 
       {/* Raw JSON for debugging/review */}
       <details className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs">

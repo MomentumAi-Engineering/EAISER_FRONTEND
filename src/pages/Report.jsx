@@ -116,7 +116,11 @@ export default function EaiserReport() {
     }
     try {
       setAnalyzing(true);
-      const result = await apiClient.analyzeImage(selectedFile);
+      const form = new FormData();
+      form.append("image", selectedFile);  // KEY MUST MATCH backend
+
+      const result = await apiClient.analyzeImage(form);
+
       setAnalysis(result);
       setFormData(f => ({ ...f, description: result?.description || f.description }));
     } catch (err) {
@@ -465,6 +469,7 @@ export default function EaiserReport() {
             userZip={formData.zipCode}
             userLat={coords.latitude}
             userLon={coords.longitude}
+            imageName={selectedFile?.name || ''}
           />
         )}
 

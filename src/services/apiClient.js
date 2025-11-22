@@ -105,20 +105,16 @@ class ApiClient {
     });
   }
 
-  // AI: analyze an image via backend Gemini service
-  async analyzeImage(imageFile, opts = {}) {
-    if (!imageFile || !(imageFile instanceof File)) {
-      throw new Error('imageFile is required and must be a File');
-    }
-    const form = new FormData();
-    form.append('image', imageFile);
-    const fast = opts.fast ? '?fast=true' : '';
-    return this.request(`/api/ai/analyze-image${fast}`, {
-      method: 'POST',
-      headers: {},
-      body: form,
-    });
-  }
+  
+async analyzeImage(formData, opts = {}) {
+  const fast = opts.fast ? '?fast=true' : '';
+  return this.request(`/api/ai/analyze-image${fast}`, {
+    method: 'POST',
+    headers: {},
+    body: formData,
+  });
+}
+
 
   async getAuthoritiesByZip(zip_code) {
     return this.request(`/api/authorities/${encodeURIComponent(zip_code)}`);
