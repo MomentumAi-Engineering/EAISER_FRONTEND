@@ -105,11 +105,89 @@ class ApiClient {
 
   
 async analyzeImage(formData) {
-  return this.request(`/api/ai/analyze-image`, {
-    method: 'POST',
-    headers: {},
-    body: formData,
+  try {
+    return await this.request(`/api/ai/analyze-image`, {
+      method: 'POST',
+      headers: {},
+      body: formData,
+    });
+  } catch (err) {
+    // Try alias endpoint before client-side fallback
+    try {
+      return await this.request(`/api/analyze-image`, {
+        method: 'POST',
+        headers: {},
+        body: formData,
+      });
+    } catch (_) {}
+    const key = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
+    const file = formData && typeof formData.get === 'function' ? formData.get('image') : null;
+    if (!key || !file || !(file instanceof File)) throw err;
+    return await this.clientAnalyzeWithGemini(file, key);
+  }
+}
+
+async fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const s = String(reader.result || '');
+      const i = s.indexOf('base64,');
+      resolve(i >= 0 ? s.slice(i + 7) : s);
+    };
+    reader.onerror = (e) => reject(e);
+    reader.readAsDataURL(file);
   });
+}
+
+async clientAnalyzeWithGemini(file, key) {
+  const model = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_MODEL) || 'gemini-1.5-flash';
+  const b64 = await this.fileToBase64(file);
+  const prompt = 'Analyze the uploaded image. Identify visible public infrastructure issues strictly from the supported list (pothole, road damage, broken streetlight, graffiti, garbage, vandalism, open drain, blocked drain, flood, fire, illegal construction, tree fallen, public toilet issue, stray animals and variants, noise/air pollution, water leakage, street vendor encroachment, signal malfunction, waterlogging, abandoned vehicle, vacant lot issue). If none found, respond clearly that no public issue was found.';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+  const payload = {
+    contents: [
+      {
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: file.type || 'image/jpeg', data: b64 } },
+        ],
+      },
+    ],
+  };
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(typeof data === 'string' ? data : data?.error?.message || 'Client-side analyze failed');
+  const parts = (((data || {}).candidates || [])[0] || {}).content?.parts || [];
+  const text = parts.map(p => p.text || '').join('\n').trim();
+  const description = text || 'No description provided';
+  const lines = description.split(/\r?\n/);
+  const issues = [];
+  const labels = [];
+  for (const raw of lines) {
+    const l = raw.trim().replace(/^[-*•]\s*/, '');
+    if (!l) continue;
+    if (/issue|risk|problem|damage|hazard/i.test(l)) issues.push(l);
+    else if (labels.length < 8) labels.push(l);
+  }
+  const base = (description.toLowerCase() + ' ' + labels.join(' ').toLowerCase());
+  const danger = ['hazard','danger','out of control','emergency','injury','uncontrolled','explosion','collapse','severe','major','wildfire','accident','collision','leak','burst'];
+  const controlled = ['campfire','bonfire','bon fire','bbq','barbecue','barbeque','grill','fire pit','controlled burn','festival','celebration','diwali','diya','candle','incense','lamp','stove','kitchen','smoke machine','stage'];
+  const minor = ['minor','small','tiny','cosmetic','scratch','smudge','dust','stain','low','no issue','normal','benign'];
+  const hasDanger = danger.some(w => base.includes(w));
+  const hasControlled = controlled.some(w => base.includes(w));
+  const hasMinor = minor.some(w => base.includes(w));
+  let confidence = 20;
+  if (!issues.length && !hasDanger) confidence = 10;
+  else if (hasDanger || (issues.length && !hasControlled)) confidence = 85;
+  else if (hasControlled && !hasDanger) confidence = 45;
+  else if (hasMinor && !hasDanger) confidence = 80;
+  confidence = Math.max(0, Math.min(100, confidence));
+  return { status: 'success', description, issues, labels, confidence };
 }
 
 
