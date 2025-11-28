@@ -42,13 +42,12 @@ class ApiClient {
   // Issues: create a new issue with image upload and metadata
   async createIssue({
     imageFile, // File (required)
+    description = '',
     address = '',
     zip_code = undefined,
     latitude = 0.0,
     longitude = 0.0,
     user_email = undefined,
-    category = 'public',
-    severity = 'medium',
     issue_type = 'other',
   }) {
     if (!imageFile || !(imageFile instanceof File)) {
@@ -57,13 +56,12 @@ class ApiClient {
     }
     const form = new FormData();
     form.append('image', imageFile);
+    form.append('description', description);
     form.append('address', address);
     if (zip_code) form.append('zip_code', zip_code);
     form.append('latitude', String(latitude));
     form.append('longitude', String(longitude));
     if (user_email) form.append('user_email', user_email);
-    form.append('category', category);
-    form.append('severity', severity);
     form.append('issue_type', issue_type);
 
     // POST /api/issues (FastAPI router)
@@ -106,9 +104,8 @@ class ApiClient {
   }
 
   
-async analyzeImage(formData, opts = {}) {
-  const fast = opts.fast ? '?fast=true' : '';
-  return this.request(`/api/ai/analyze-image${fast}`, {
+async analyzeImage(formData) {
+  return this.request(`/api/ai/analyze-image`, {
     method: 'POST',
     headers: {},
     body: formData,

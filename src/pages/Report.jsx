@@ -74,13 +74,12 @@ export default function EaiserReport() {
     try {
       const payload = {
         imageFile: selectedFile,
+        description: formData.description || '',
         address: formData.streetAddress,
         zip_code: formData.zipCode || undefined,
         latitude: coords.latitude || 0.0,
         longitude: coords.longitude || 0.0,
         user_email: undefined,
-        category: 'public',
-        severity: 'medium',
         issue_type: 'other',
       };
       const response = await apiClient.createIssue(payload);
@@ -256,26 +255,7 @@ export default function EaiserReport() {
                   <Sparkles className="w-4 h-4" />
                   {analyzing ? 'Analyzing...' : 'Analyze Image'}
                 </button>
-                <button
-                  onClick={async () => {
-                    if (!selectedFile) { alert('Please upload an image first.'); return; }
-                    try {
-                      setAnalyzing(true);
-                      const result = await apiClient.analyzeImage(selectedFile, { fast: true });
-                      setAnalysis(result);
-                      setFormData(f => ({ ...f, description: result?.description || f.description }));
-                    } catch (err) {
-                      alert(`Failed to analyze image: ${err.message}`);
-                    } finally {
-                      setAnalyzing(false);
-                    }
-                  }}
-                  disabled={analyzing}
-                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${analyzing ? 'bg-blue-500/20 border border-blue-500/50 text-blue-300' : 'bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/50 text-blue-300'}`}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  {analyzing ? 'Fast Mode…' : 'Analyze (Fast Mode)'}
-                </button>
+                
               </div>
 
               {analysis && (
@@ -377,36 +357,9 @@ export default function EaiserReport() {
               </div>
             </div>
 
-            {/* Category Selection */}
-            <div className="bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-6">
-              <h2 className="text-lg font-bold mb-4">Issue Category</h2>
-              <div className="grid grid-cols-2 gap-3">
-                {['Infrastructure', 'Safety', 'Environment', 'Public Services'].map((category) => (
-                  <button
-                    key={category}
-                    className="px-4 py-3 bg-white/5 hover:bg-yellow-500/10 border border-gray-700 hover:border-yellow-500/50 rounded-xl text-sm font-semibold transition-all"
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
-            </div>
+            
 
-            {/* Priority Level */}
-            <div className="bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-xl rounded-2xl border border-gray-800 p-6">
-              <h2 className="text-lg font-bold mb-4">Priority Level</h2>
-              <div className="flex gap-3">
-                <button className="flex-1 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 rounded-xl text-sm font-semibold text-red-400 transition-all">
-                  High
-                </button>
-                <button className="flex-1 px-4 py-3 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/50 rounded-xl text-sm font-semibold text-yellow-400 transition-all">
-                  Medium
-                </button>
-                <button className="flex-1 px-4 py-3 bg-green-500/10 hover:bg-green-500/20 border border-green-500/50 rounded-xl text-sm font-semibold text-green-400 transition-all">
-                  Low
-                </button>
-              </div>
-            </div>
+            
           </div>
         </div>
 
@@ -516,41 +469,7 @@ export default function EaiserReport() {
                     <p className="text-xs text-gray-400">No authorities listed for this issue.</p>
                   )}
                 </div>
-                <div className="mb-4">
-                  <label className="block text-xs font-semibold text-gray-400 mb-2">Add Extra Authority (by ZIP)</label>
-                  <div className="flex gap-3">
-                    <select
-                      onChange={(e) => {
-                        const idx = Number(e.target.value);
-                        const auth = authoritiesByZip[idx];
-                        if (auth) toggleAuthority(auth);
-                      }}
-                      className="flex-1 px-4 py-2.5 bg-white/5 border border-gray-700 focus:border-yellow-500/50 rounded-xl text-white text-sm outline-none"
-                    >
-                      <option value="">Select authority...</option>
-                      {authoritiesByZip.map((auth, i) => (
-                        <option key={`${auth.email}-${i}`} value={i}>
-                          {(auth.name || 'Authority')} • {(auth.type || 'type')} • {(auth.email || '—')}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={async () => {
-                        const z = formData.zipCode || issueResult?.zip_code || '';
-                        if (!z) return;
-                        try {
-                          const authorities = await apiClient.getAuthoritiesByZip(z);
-                          const flat = Object.values(authorities || {}).flat();
-                          setAuthoritiesByZip(Array.isArray(flat) ? flat : []);
-                        } catch (e) {
-                        }
-                      }}
-                      className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-sm"
-                    >
-                      Load Authorities
-                    </button>
-                  </div>
-                </div>
+                {/* Extra authority by ZIP removed per request */}
               </>
             )}
             <button

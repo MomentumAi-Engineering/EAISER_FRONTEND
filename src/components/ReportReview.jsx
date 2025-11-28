@@ -32,9 +32,10 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   let issueType = pick(issue, [
     'issue_type',
     'classification.issue_type',
+    'report.report.unified_report.issue_type',
+    'report.unified_report.issue_type',
     'report.report.issue_overview.issue_type',
     'report.report.template_fields.issue_type',
-    'report.unified_report.issue_type',
     'report.issue_type',
   ], 'Unknown');
   if (!issueType || String(issueType).toLowerCase() === 'unknown') {
@@ -46,8 +47,8 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     else if (labelsText.includes('flood') || labelsText.includes('waterlogging')) issueType = 'flood';
     else if (labelsText.includes('fire') || labelsText.includes('smoke')) issueType = 'fire';
   }
-  const aiSeverity = pick(aiOverview, ['severity'], pick(issue, ['severity', 'priority'], 'medium'));
-  const category = pick(issue, ['category'], 'public');
+  const aiSeverity = pick(aiOverview, ['severity'], pick(issue, ['severity', 'priority'], ''));
+  const category = pick(issue, ['category'], '');
   const zipCodeBase = pick(issue, ['zip_code', 'location.zip_code'], '—');
   const addressBase = pick(issue, ['address', 'location.address'], '—');
   const latitudeBase = pick(issue, ['latitude', 'location.latitude'], '—');
@@ -62,7 +63,13 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const descriptionText = analysisDescription || summaryExplanation || reportText || null;
   const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
   const recommendedAuthorities = pick(issue, ['report.report.responsible_authorities_or_parties', 'responsible_authorities_or_parties'], []);
-  let confidence = pick(aiOverview, ['confidence'], null);
+  // Prefer unified_report.confidence_percent when available
+  let confidence = pick(issue, [
+    'report.report.unified_report.confidence_percent',
+    'report.unified_report.confidence_percent',
+    'report.report.issue_overview.confidence',
+    'report.issue_overview.confidence',
+  ], null);
   if (confidence !== null) {
     try {
       const num = Number(confidence);
@@ -91,6 +98,22 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const baseWords = (String(descriptionText || '').toLowerCase() + ' ' + (Array.isArray(detectedProblems) ? detectedProblems.join(' ').toLowerCase() : ''));
   const hits = hazardWords.filter(w => baseWords.includes(w));
   const riskTags = hits.length > 0 ? hits.slice(0, 6).join(', ') : (Array.isArray(detectedProblems) ? detectedProblems.slice(0, 4).join(', ') : '');
+  const derivedProblems = (() => {
+    const set = new Set();
+    hits.forEach(h => set.add(h));
+    const mapIssue = {
+      dead_animal: 'dead animal',
+      tree_fallen: 'fallen tree',
+      road_damage: 'road damage',
+      broken_streetlight: 'broken streetlight',
+      garbage: 'garbage',
+      flood: 'flooding',
+      fire: 'fire/smoke',
+    };
+    const m = mapIssue[String(issueType || '').toLowerCase()];
+    if (m) set.add(m);
+    return Array.from(set);
+  })();
   let priorityLabel = String(aiSeverity || 'medium');
   if (hits.length >= 3) priorityLabel = 'High'; else if (hits.length >= 1) priorityLabel = 'Medium'; else priorityLabel = 'Low';
   const locCity = city && city !== '—' ? city : (address && address !== '—' ? address.split(',')[0] : 'Unknown');
@@ -147,14 +170,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
           <p className="text-xs text-gray-400">Issue Type</p>
           <p className="text-sm font-semibold">{String(issueType)}</p>
         </div>
-        <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
-          <p className="text-xs text-gray-400">Severity</p>
-          <p className="text-sm font-semibold">{aiSeverity}</p>
-        </div>
-        <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
-          <p className="text-xs text-gray-400">Category</p>
-          <p className="text-sm font-semibold">{category}</p>
-        </div>
+        
         {confidence !== null && (
           <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
             <p className="text-xs text-gray-400">Confidence</p>
@@ -215,13 +231,12 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
           <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
             <p className="text-xs text-gray-400 mb-2">Detected Problems</p>
             <div className="flex flex-wrap gap-2">
-              {Array.isArray(detectedProblems) && detectedProblems.length > 0 ? (
-                detectedProblems.map((it, idx) => (
-                  <span key={idx} className="px-3 py-1 rounded-full text-xs bg-red-500/20 border border-red-500/40 text-red-300">
-                    {String(it)}
-                  </span>
-                ))
-              ) : (
+              {(Array.isArray(detectedProblems) && detectedProblems.length > 0 ? detectedProblems : derivedProblems).map((it, idx) => (
+                <span key={idx} className="px-3 py-1 rounded-full text-xs bg-red-500/20 border border-red-500/40 text-red-300">
+                  {String(it)}
+                </span>
+              ))}
+              {(!detectedProblems || detectedProblems.length === 0) && derivedProblems.length === 0 && (
                 <span className="text-xs text-gray-400">No specific problems listed</span>
               )}
             </div>
@@ -264,23 +279,25 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       <div className="mb-6">
         <p className="text-sm font-bold mb-2">Responsible Authorities</p>
         {Array.isArray(recommendedAuthorities) && recommendedAuthorities.length > 0 ? (
-          <div className="grid md:grid-cols-1 gap-2">
-            <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
-              <p className="text-sm font-semibold">{String(recommendedAuthorities[0].name || 'Authority')}</p>
-              <p className="text-xs text-gray-400">{String(recommendedAuthorities[0].type || '—')}</p>
-              <p className="text-xs text-gray-400">{String(recommendedAuthorities[0].email || '—')}</p>
-            </div>
+          <div className="grid md:grid-cols-2 gap-2">
+            {recommendedAuthorities.map((auth, idx) => (
+              <div key={`${auth.email || idx}`} className="bg-white/5 border border-gray-700 rounded-xl p-3">
+                <p className="text-sm font-semibold">{String(auth.name || 'Authority')}</p>
+                <p className="text-xs text-gray-400">{String(auth.type || '—')}</p>
+                <p className="text-xs text-gray-400">{String(auth.email || '—')}</p>
+              </div>
+            ))}
           </div>
         ) : (
-          <p className="text-xs text-gray-400">No primary authority selected by AI.</p>
+          <p className="text-xs text-gray-400">No authority selected by AI.</p>
         )}
         <div className="mt-3 flex gap-3">
           <button
             onClick={async () => {
               try {
-                const primary = (recommendedAuthorities && recommendedAuthorities.length > 0) ? recommendedAuthorities : [];
-                if (!issueId || primary.length === 0) return;
-                await apiClient.submitIssue(issueId, primary, undefined);
+                const target = (recommendedAuthorities && recommendedAuthorities.length > 0) ? recommendedAuthorities : [];
+                if (!issueId || target.length === 0) return;
+                await apiClient.submitIssue(issueId, target, undefined);
                 alert('Report accepted and submitted to primary authority');
               } catch (e) {
                 alert(`Failed to accept: ${e.message}`);
@@ -307,13 +324,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         </div>
       </div>
 
-      {/* Raw JSON for debugging/review */}
-      <details className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs">
-        <summary className="cursor-pointer text-gray-300">Show raw response</summary>
-        <pre className="mt-2 text-gray-300 overflow-auto">
-{JSON.stringify(issue, null, 2)}
-        </pre>
-      </details>
+      {/* Raw debug removed */}
     </div>
   );
 }
