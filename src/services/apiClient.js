@@ -141,13 +141,18 @@ async fileToBase64(file) {
 }
 
 async clientAnalyzeWithGemini(file, key) {
-  const model = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_MODEL) || 'gemini-1.5-flash';
+  let model =
+  (import.meta?.env?.VITE_GEMINI_MODEL) ||
+  "gemini-2.0-flash"; // recommended model
+
   const b64 = await this.fileToBase64(file);
   const prompt = 'Analyze the uploaded image. Identify visible public infrastructure issues strictly from the supported list (pothole, road damage, broken streetlight, graffiti, garbage, vandalism, open drain, blocked drain, flood, fire, illegal construction, tree fallen, public toilet issue, stray animals and variants, noise/air pollution, water leakage, street vendor encroachment, signal malfunction, waterlogging, abandoned vehicle, vacant lot issue). If none found, respond clearly that no public issue was found.';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+  const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+
   const payload = {
     contents: [
       {
+        role: 'user',
         parts: [
           { text: prompt },
           { inline_data: { mime_type: file.type || 'image/jpeg', data: b64 } },
@@ -238,3 +243,6 @@ async clientAnalyzeWithGemini(file, key) {
 const apiClient = new ApiClient();
 export default apiClient;
 export { ApiClient };
+
+
+// testing commit -m
