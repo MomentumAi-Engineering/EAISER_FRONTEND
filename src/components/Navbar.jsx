@@ -26,12 +26,14 @@ export default function Navbar() {
           </li>
         </ul>
 
-        {/* Button */}
-        <Link to="/signup">
-          <button className="hidden md:block bg-yellow-400 text-black px-6 py-2 rounded-2xl font-bold shadow-md hover:bg-yellow-300 transition-all duration-300 hover:scale-105">
-            Login
-          </button>
-        </Link>
+        {/* Desktop auth links - removed any Microsoft-specific option */}
+        <div className="hidden md:flex items-center">
+          <Link to="/signup">
+            <button className="bg-yellow-400 text-black px-6 py-2 rounded-2xl font-bold shadow-md hover:bg-yellow-300 transition-all duration-300 hover:scale-105">
+              Sign Up
+            </button>
+          </Link>
+        </div>
 
         {/* Mobile Icon */}
         <button className="md:hidden" onClick={() => setOpen(!open)}>
@@ -71,11 +73,14 @@ export default function Navbar() {
             Report Issue
           </Link>
 
-          <Link to="/signup" onClick={() => setOpen(false)} className="block">
-            <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
-              Login
-            </button>
-          </Link>
+          {/* Mobile auth links - removed Microsoft-specific option */}
+          <div>
+            <Link to="/signup" onClick={() => setOpen(false)} className="block">
+              <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
+                Sign Up
+              </button>
+            </Link>
+          </div>
         </div>
       )}
     </nav>
