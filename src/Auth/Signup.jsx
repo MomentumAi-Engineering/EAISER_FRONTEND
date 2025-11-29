@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Lock, User, Calendar, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react';
-import { Link } from "react-router-dom";
+import { Mail, Lock, User, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react'; // Calendar removed
+import { Link, useNavigate } from "react-router-dom";
+import { signup as signupApi } from '../api/auth';
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -9,10 +10,14 @@ export default function Signup() {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    dob: '',
+    // dob removed
     password: '',
     confirmPassword: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(null);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -26,9 +31,38 @@ export default function Signup() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
+    setError(null);
+    setMessage(null);
+
+    // Basic client-side validation
+    if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
+      setError('Please fill all required fields.');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        fullName: formData.fullName,
+        email: formData.email,
+        // dob removed
+        password: formData.password
+      };
+      const res = await signupApi(payload);
+      setMessage(res?.message || 'Account created.');
+      // redirect to home after short delay (changed from /login)
+      setTimeout(() => navigate('/'), 900);
+    } catch (err) {
+      setError(err?.response?.message || err.message || 'Signup failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -137,21 +171,6 @@ export default function Signup() {
               </div>
             </div>
 
-            {/* Date of Birth */}
-            <div className="group">
-              <label className="block text-xs font-semibold text-gray-400 mb-1.5">Date of Birth</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-yellow-400 transition-colors" />
-                <input
-                  type="date"
-                  name="dob"
-                  value={formData.dob}
-                  onChange={handleChange}
-                  className="w-full pl-10 pr-3 py-2.5 bg-white/5 border border-gray-700 focus:border-yellow-500 rounded-xl text-white text-sm outline-none transition-all focus:bg-white/10 [color-scheme:dark]"
-                />
-              </div>
-            </div>
-
             {/* Password */}
             <div className="group">
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Password</label>
@@ -201,13 +220,18 @@ export default function Signup() {
             {/* Submit Button */}
             <button
               onClick={handleSubmit}
-              className="group relative w-full py-3 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-xl font-bold text-base text-black overflow-hidden transition-all hover:shadow-md hover:shadow-yellow-500/20 hover:-translate-y-0.5 mt-4"
+              disabled={loading}
+              className="group relative w-full py-3 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-xl font-bold text-base text-black overflow-hidden transition-all hover:shadow-md hover:shadow-yellow-500/20 hover:-translate-y-0.5 mt-4 disabled:opacity-60"
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
-                Create Account
+                {loading ? 'Creating...' : 'Create Account'}
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </span>
             </button>
+
+            {/* simple messages */}
+            {message && <p className="text-center text-green-400 text-sm mt-2">{message}</p>}
+            {error && <p className="text-center text-red-400 text-sm mt-2">{error}</p>}
           </div>
 
           {/* Footer */}

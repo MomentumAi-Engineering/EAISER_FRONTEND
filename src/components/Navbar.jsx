@@ -24,9 +24,6 @@ export default function Navbar() {
           <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
             <Link to="/new">New+</Link>
           </li>
-          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
-            <Link to="/contact">Contact</Link>
-          </li>
         </ul>
 
         {/* Button */}

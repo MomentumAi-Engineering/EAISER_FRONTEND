@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Signup from "./Auth/Signup";
@@ -8,9 +8,8 @@ import Report from './pages/Report'
 export default function App() {
   return (
     <Router>
-
-      {/* Pages that SHOULD have Navbar */}
       <Routes>
+        {/* public home with navbar */}
         <Route
           path="/"
           element={
@@ -20,22 +19,17 @@ export default function App() {
             </>
           }
         />
-        <Route
-          path="/report"
-          element={
-            <>
-              <Report />
-            </>
-          }
-        />
-      </Routes>
 
-      {/* Pages WITHOUT Navbar */}
-      <Routes>
+        {/* other app pages */}
+        <Route path="/report" element={<Report />} />
+
+        {/* auth pages (no navbar) */}
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
-      </Routes>
 
+        {/* catch-all -> redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </Router>
   );
 }

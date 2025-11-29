@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { login as loginApi } from '../api/auth';
 
 export default function EaiserLogin() {
   const [showPassword, setShowPassword] = useState(false);
@@ -8,6 +10,11 @@ export default function EaiserLogin() {
     email: '',
     password: ''
   });
+
+  // added states
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -21,9 +28,30 @@ export default function EaiserLogin() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Login submitted:', formData);
+    setError(null);
+
+    if (!formData.email || !formData.password) {
+      setError('Please enter email and password.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await loginApi({ email: formData.email, password: formData.password });
+      if (res?.token) {
+        localStorage.setItem('token', res.token);
+        // optional: localStorage.setItem('user', JSON.stringify(res.user));
+        navigate('/'); // redirect to home on successful login
+        return;
+      }
+      setError(res?.message || 'Login failed');
+    } catch (err) {
+      setError(err?.response?.message || err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -141,12 +169,16 @@ export default function EaiserLogin() {
             <button
               onClick={handleSubmit}
               className="group relative w-full py-3 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-xl font-bold text-base text-black overflow-hidden transition-all hover:shadow-md hover:shadow-yellow-500/20 hover:-translate-y-0.5 mt-2"
+              disabled={loading}
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
-                Sign In
+                {loading ? 'Signing In...' : 'Sign In'}
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </span>
             </button>
+
+            {/* Error Message */}
+            {error && <p className="text-center text-red-400 text-sm mt-2">{error}</p>}
           </div>
 
           {/* Footer */}
