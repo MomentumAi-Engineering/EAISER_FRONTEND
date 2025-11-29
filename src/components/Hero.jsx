@@ -25,7 +25,7 @@ export default function EaiserAIHero() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden relative pt-15">
+    <div className="min-h-screen bg-black text-white overflow-hidden relative pt-20">
       {/* Dynamic Mouse-Following Gradient */}
       <div 
         className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300"

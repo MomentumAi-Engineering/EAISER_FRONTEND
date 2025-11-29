@@ -187,7 +187,16 @@ async clientAnalyzeWithGemini(file, key) {
   else if (hasControlled && !hasDanger) confidence = 45;
   else if (hasMinor && !hasDanger) confidence = 80;
   confidence = Math.max(0, Math.min(100, confidence));
-  return { status: 'success', description, issues, labels, confidence };
+  // Derive issue_type for UI fallback
+  let issue_type = 'other';
+  if (/(roadkill|dead animal|carcass)/i.test(base)) issue_type = 'dead_animal';
+  else if (/(pothole|road damage|crack)/i.test(base)) issue_type = 'road_damage';
+  else if (/(flood|waterlogging)/i.test(base)) issue_type = 'flood';
+  else if (/(leak|burst|pipeline|water leak)/i.test(base)) issue_type = 'water_leakage';
+  else if (/(garbage|trash|waste|dump|litter)/i.test(base)) issue_type = 'garbage';
+  else if (/(streetlight|street light|lamp post|broken light)/i.test(base)) issue_type = 'broken_streetlight';
+  else if (/(fire|smoke|flame|burning)/i.test(base) && !hasControlled) issue_type = 'fire';
+  return { status: 'success', description, issues, labels, confidence, issue_type };
 }
 
 

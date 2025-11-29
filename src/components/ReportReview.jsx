@@ -41,11 +41,12 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   if (!issueType || String(issueType).toLowerCase() === 'unknown') {
     const labelsText = String((Array.isArray(detectedProblems) ? detectedProblems.join(' ') : '') + ' ' + (summaryExplanation || '')).toLowerCase();
     if (labelsText.includes('tree')) issueType = 'tree_fallen';
-    else if (labelsText.includes('pothole') || labelsText.includes('crack') || labelsText.includes('road')) issueType = 'road_damage';
+    else if (labelsText.includes('pothole') || labelsText.includes('crack')) issueType = 'road_damage';
     else if (labelsText.includes('streetlight')) issueType = 'broken_streetlight';
     else if (labelsText.includes('garbage') || labelsText.includes('trash') || labelsText.includes('waste')) issueType = 'garbage';
     else if (labelsText.includes('flood') || labelsText.includes('waterlogging')) issueType = 'flood';
     else if (labelsText.includes('fire') || labelsText.includes('smoke')) issueType = 'fire';
+    else if (labelsText.includes('roadkill') || labelsText.includes('dead animal') || labelsText.includes('carcass') || labelsText.includes('animal')) issueType = 'dead_animal';
   }
   const aiSeverity = pick(aiOverview, ['severity'], pick(issue, ['severity', 'priority'], ''));
   const category = pick(issue, ['category'], '');
@@ -62,6 +63,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const reportText = pick(aiReport, ['issue_overview.summary_explanation', 'additional_notes.summary', 'template_fields.formatted_text'], null);
   const descriptionText = analysisDescription || summaryExplanation || reportText || null;
   const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
+  const imageAnalysis = pick(aiReport, ['ai_evaluation.image_analysis'], null);
   const recommendedAuthorities = pick(issue, ['report.report.responsible_authorities_or_parties', 'responsible_authorities_or_parties'], []);
   // Prefer unified_report.confidence_percent when available
   let confidence = pick(issue, [
@@ -94,7 +96,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const shortDesc = (typeof descriptionText === 'string' && descriptionText.length > 0)
     ? (descriptionText.split(/[.!?]/)[0] || descriptionText).slice(0, 160)
     : (Array.isArray(detectedProblems) && detectedProblems.length > 0 ? detectedProblems[0] : 'an incident');
-  const hazardWords = ['hazard','danger','fire','smoke','collapse','crack','flood','leak','exposed','broken','damaged','risk'];
+  const hazardWords = ['danger','fire','smoke','collapse','crack','flood','leak','exposed','broken','damaged'];
   const baseWords = (String(descriptionText || '').toLowerCase() + ' ' + (Array.isArray(detectedProblems) ? detectedProblems.join(' ').toLowerCase() : ''));
   const hits = hazardWords.filter(w => baseWords.includes(w));
   const riskTags = hits.length > 0 ? hits.slice(0, 6).join(', ') : (Array.isArray(detectedProblems) ? detectedProblems.slice(0, 4).join(', ') : '');
@@ -227,6 +229,11 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
             {String(summaryExplanation)}
           </div>
         )}
+        {imageAnalysis && (
+          <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap mb-3">
+            {String(imageAnalysis)}
+          </div>
+        )}
         <div className="grid md:grid-cols-2 gap-4">
           <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
             <p className="text-xs text-gray-400 mb-2">Detected Problems</p>
@@ -291,37 +298,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         ) : (
           <p className="text-xs text-gray-400">No authority selected by AI.</p>
         )}
-        <div className="mt-3 flex gap-3">
-          <button
-            onClick={async () => {
-              try {
-                const target = (recommendedAuthorities && recommendedAuthorities.length > 0) ? recommendedAuthorities : [];
-                if (!issueId || target.length === 0) return;
-                await apiClient.submitIssue(issueId, target, undefined);
-                alert('Report accepted and submitted to primary authority');
-              } catch (e) {
-                alert(`Failed to accept: ${e.message}`);
-              }
-            }}
-            className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm"
-          >
-            Accept Report
-          </button>
-          <button
-            onClick={async () => {
-              try {
-                if (!issueId) return;
-                await apiClient.declineIssue(issueId, 'user_declined');
-                alert('Report declined');
-              } catch (e) {
-                alert(`Failed to decline: ${e.message}`);
-              }
-            }}
-            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm"
-          >
-            Decline Report
-          </button>
-        </div>
+        
       </div>
 
       {/* Raw debug removed */}
