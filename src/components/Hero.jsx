@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Zap, MapPin, FileText, CheckCircle, Clock, Users, ArrowRight, Sparkles, Brain, Target, Rocket } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import VideoDEmo from '../assets/VideoDEmo.mp4';
+import { Zap, MapPin, FileText, CheckCircle, Clock, Users, ArrowRight, Sparkles, Brain, Target, Rocket, X } from 'lucide-react';
 
 export default function EaiserAIHero() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [scrollY, setScrollY] = useState(0);
   const heroRef = useRef(null);
+  const navigate = useNavigate();
+  const [showVideo, setShowVideo] = useState(false);
+  const videoRef = useRef(null);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -18,9 +23,22 @@ export default function EaiserAIHero() {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('scroll', handleScroll);
 
+    // close video on Escape
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setShowVideo(false);
+        if (videoRef.current) {
+          videoRef.current.pause();
+          videoRef.current.currentTime = 0;
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('keydown', onKey);
     };
   }, []);
 
@@ -74,14 +92,20 @@ export default function EaiserAIHero() {
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <button className="group relative px-8 py-4 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl font-bold text-black overflow-hidden transition-all hover:shadow-2xl hover:shadow-yellow-500/50 hover:-translate-y-1">
+              <button
+                onClick={() => navigate('/report')}
+                className="group relative px-8 py-4 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl font-bold text-black overflow-hidden transition-all hover:shadow-2xl hover:shadow-yellow-500/50 hover:-translate-y-1"
+              >
                 <span className="relative z-10 flex items-center gap-2">
                   Report an Issue
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </span>
               </button>
               
-              <button className="px-8 py-4 bg-white/5 backdrop-blur-sm border border-yellow-500/30 rounded-2xl font-bold text-white hover:bg-white/10 transition-all hover:-translate-y-1">
+              <button
+                onClick={() => setShowVideo(true)}
+                className="px-8 py-4 bg-white/5 backdrop-blur-sm border border-yellow-500/30 rounded-2xl font-bold text-white hover:bg-white/10 transition-all hover:-translate-y-1"
+              >
                 Watch Demo
               </button>
             </div>
@@ -252,12 +276,46 @@ export default function EaiserAIHero() {
               Join the future of intelligent issue reporting and resolution
             </p>
             
-            <button className="px-12 py-5 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl font-bold text-xl text-black hover:shadow-2xl hover:shadow-yellow-500/50 transition-all hover:scale-105">
+            <button
+              onClick={() => navigate('/report')}
+              className="px-12 py-5 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl font-bold text-xl text-black hover:shadow-2xl hover:shadow-yellow-500/50 transition-all hover:scale-105"
+            >
               Get Started Now
             </button>
           </div>
         </div>
       </div>
+
+      {/* Video overlay (50vw x 50vh) */}
+      {showVideo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowVideo(false); videoRef.current?.pause(); } }}
+        >
+          <div className="relative w-[50vw] h-[50vh] bg-black rounded-lg overflow-hidden shadow-2xl">
+            <button
+              aria-label="Close video"
+              className="absolute top-3 right-3 z-20 p-2 rounded bg-white/10 hover:bg-white/20"
+              onClick={() => {
+                setShowVideo(false);
+                if (videoRef.current) {
+                  videoRef.current.pause();
+                  videoRef.current.currentTime = 0;
+                }
+              }}
+            >
+              <X className="w-4 h-4 text-white" />
+            </button>
+            <video
+              ref={videoRef}
+              src={VideoDEmo}
+              controls
+              autoPlay
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes blob {
