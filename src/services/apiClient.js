@@ -120,7 +120,7 @@ async analyzeImage(formData) {
         body: formData,
       });
     } catch (_) {}
-    const key = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY;
+    const key = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.GEMINI_API_KEY;
     const file = formData && typeof formData.get === 'function' ? formData.get('image') : null;
     if (!key || !file || !(file instanceof File)) throw err;
     return await this.clientAnalyzeWithGemini(file, key);
