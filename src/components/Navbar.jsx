@@ -22,7 +22,7 @@ export default function Navbar() {
             <Link to="/report">Report Issue</Link>
           </li>
           <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
-            <Link to="/new">New+</Link>
+            <Link to="/impact">Impact</Link>
           </li>
         </ul>
 
@@ -50,6 +50,13 @@ export default function Navbar() {
             className="block hover:text-white transition"
           >
             Home
+          </Link>
+          <Link
+            to="/impact"
+            onClick={() => setOpen(false)}
+            className="block hover:text-white transition"
+          >
+            Impact
           </Link>
           <Link
             to="/features"

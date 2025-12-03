@@ -257,7 +257,10 @@ export default function EaiserAIHero() {
                   <p className="text-xl text-gray-300">See how communities are transforming with AI</p>
                 </div>
                 
-                <button className="px-8 py-4 bg-white text-black font-bold rounded-2xl hover:bg-yellow-400 transition-all hover:scale-105 flex items-center gap-2">
+                <button
+                  onClick={() => navigate('/impact')}
+                  className="px-8 py-4 bg-white text-black font-bold rounded-2xl hover:bg-yellow-400 transition-all hover:scale-105 flex items-center gap-2"
+                >
                   View Impact <Target className="w-5 h-5" />
                 </button>
               </div>

@@ -4,6 +4,7 @@ import Hero from "./components/Hero";
 import Signup from "./Auth/Signup";
 import Login from './Auth/Login';
 import Report from './pages/Report'
+import Impact from './components/Impact';
 
 export default function App() {
   return (
@@ -22,6 +23,15 @@ export default function App() {
 
         {/* other app pages */}
         <Route path="/report" element={<Report />} />
+        <Route
+          path="/impact"
+          element={
+            <>
+              <Navbar />
+              <Impact />
+            </>
+          }
+        />
 
         {/* auth pages (no navbar) */}
         <Route path="/signup" element={<Signup />} />
