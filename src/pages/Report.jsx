@@ -132,11 +132,20 @@ export default function SimpleReport() {
               <Navigation className="w-4 h-4" />
               {locationPermission ? "Location Access Granted" : "Use Current Location"}
             </button>
+
             {locationPermission && (
               <p className="text-xs text-green-400 mt-2 text-center">GPS Captured ✓</p>
             )}
           </div>
         </div>
+
+        {/* Generate Report Button */}
+        <button
+          onClick={() => alert("Report Generated!")}
+          className="w-full mt-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl text-sm transition-all"
+        >
+          Generate Report
+        </button>
       </div>
     </div>
   );
