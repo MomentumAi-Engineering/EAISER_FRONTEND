@@ -250,19 +250,10 @@ export default function EaiserAIHero() {
             <div className="lg:col-span-2 group relative bg-gradient-to-br from-yellow-500/20 to-amber-500/20 backdrop-blur-xl rounded-3xl border-2 border-yellow-500/50 p-10 overflow-hidden hover:border-yellow-400 transition-all">
               <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-amber-500/0 group-hover:from-yellow-500/10 group-hover:to-amber-500/10 transition-all" />
               
-              <div className="relative z-10 flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-bold text-yellow-400 mb-2">SUCCESS STORIES</div>
-                  <h3 className="text-4xl font-black mb-4">Making a Measurable Difference</h3>
-                  <p className="text-xl text-gray-300">See how communities are transforming with AI</p>
-                </div>
-                
-                <button
-                  onClick={() => navigate('/impact')}
-                  className="px-8 py-4 bg-white text-black font-bold rounded-2xl hover:bg-yellow-400 transition-all hover:scale-105 flex items-center gap-2"
-                >
-                  View Impact <Target className="w-5 h-5" />
-                </button>
+              <div className="relative z-10">
+                <div className="text-sm font-bold text-yellow-400 mb-2">SUCCESS STORIES</div>
+                <h3 className="text-4xl font-black mb-4">Making a Measurable Difference</h3>
+                <p className="text-xl text-gray-300">See how communities are transforming with AI</p>
               </div>
             </div>
           </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react'; // Calendar removed
 import { Link, useNavigate } from "react-router-dom";
 import { signup as signupApi } from '../api/auth';
+import axios from 'axios';
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -56,8 +57,19 @@ export default function Signup() {
       };
       const res = await signupApi(payload);
       setMessage(res?.message || 'Account created.');
-      // redirect to home after short delay (changed from /login)
-      setTimeout(() => navigate('/'), 900);
+
+      // After successful signup, log the user in by calling login endpoint
+      const loginRes = await axios.post('http://localhost:5000/api/auth/login', {
+        email: formData.email,
+        password: formData.password
+      });
+
+      // Store token and user info
+      localStorage.setItem('token', loginRes.data.token);
+      localStorage.setItem('user', JSON.stringify(loginRes.data.user));
+
+      // Redirect to home
+      navigate('/');
     } catch (err) {
       setError(err?.response?.message || err.message || 'Signup failed.');
     } finally {

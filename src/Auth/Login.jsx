@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { login as loginApi } from '../api/auth';
+import axios from 'axios';
 
 export default function EaiserLogin() {
   const [showPassword, setShowPassword] = useState(false);
@@ -39,16 +39,16 @@ export default function EaiserLogin() {
 
     setLoading(true);
     try {
-      const res = await loginApi({ email: formData.email, password: formData.password });
-      if (res?.token) {
-        localStorage.setItem('token', res.token);
-        // optional: localStorage.setItem('user', JSON.stringify(res.user));
-        navigate('/'); // redirect to home on successful login
-        return;
-      }
-      setError(res?.message || 'Login failed');
+      const res = await axios.post('http://localhost:5000/api/auth/login', formData);
+      
+      // Store token and user info
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+
+      // Redirect to home
+      navigate('/');
     } catch (err) {
-      setError(err?.response?.message || err.message || 'Login failed');
+      setError(err.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }

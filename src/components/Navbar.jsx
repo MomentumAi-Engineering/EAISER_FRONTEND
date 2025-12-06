@@ -1,9 +1,37 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Check token on mount and when location changes
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
+  }, [location]);
+
+  useEffect(() => {
+    // Listen for storage changes (for cross-tab communication)
+    const handleStorageChange = () => {
+      const token = localStorage.getItem("token");
+      setIsLoggedIn(!!token);
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setIsLoggedIn(false);
+    navigate("/");
+    setOpen(false);
+  };
 
   return (
     <nav className="w-full bg-gradient-to-r from-black via-zinc-900 to-black text-yellow-400 shadow-xl fixed top-0 left-0 z-50 border-b border-yellow-400/30 backdrop-blur-xl">
@@ -21,18 +49,24 @@ export default function Navbar() {
           <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
             <Link to="/report">Report Issue</Link>
           </li>
-          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
-            <Link to="/impact">Impact</Link>
-          </li>
         </ul>
 
-        {/* Desktop auth links - removed any Microsoft-specific option */}
+        {/* Desktop auth links */}
         <div className="hidden md:flex items-center">
-          <Link to="/signup">
-            <button className="bg-yellow-400 text-black px-6 py-2 rounded-2xl font-bold shadow-md hover:bg-yellow-300 transition-all duration-300 hover:scale-105">
-              Sign Up
+          {!isLoggedIn ? (
+            <Link to="/signup">
+              <button className="bg-yellow-400 text-black px-6 py-2 rounded-2xl font-bold shadow-md hover:bg-yellow-300 transition-all duration-300 hover:scale-105">
+                Sign Up
+              </button>
+            </Link>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 text-white px-6 py-2 rounded-2xl font-bold shadow-md hover:bg-red-600 transition-all duration-300 hover:scale-105"
+            >
+              Logout
             </button>
-          </Link>
+          )}
         </div>
 
         {/* Mobile Icon */}
@@ -52,27 +86,6 @@ export default function Navbar() {
             Home
           </Link>
           <Link
-            to="/impact"
-            onClick={() => setOpen(false)}
-            className="block hover:text-white transition"
-          >
-            Impact
-          </Link>
-          <Link
-            to="/features"
-            onClick={() => setOpen(false)}
-            className="block hover:text-white transition"
-          >
-            Features
-          </Link>
-          <Link
-            to="/about"
-            onClick={() => setOpen(false)}
-            className="block hover:text-white transition"
-          >
-            About
-          </Link>
-          <Link
             to="/report"
             onClick={() => setOpen(false)}
             className="block hover:text-white transition"
@@ -80,13 +93,22 @@ export default function Navbar() {
             Report Issue
           </Link>
 
-          {/* Mobile auth links - removed Microsoft-specific option */}
+          {/* Mobile auth links */}
           <div>
-            <Link to="/signup" onClick={() => setOpen(false)} className="block">
-              <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
-                Sign Up
+            {!isLoggedIn ? (
+              <Link to="/signup" onClick={() => setOpen(false)} className="block">
+                <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
+                  Sign Up
+                </button>
+              </Link>
+            ) : (
+              <button
+                onClick={handleLogout}
+                className="w-full bg-red-500 text-white py-2 rounded-xl font-semibold hover:bg-red-600 transition"
+              >
+                Logout
               </button>
-            </Link>
+            )}
           </div>
         </div>
       )}
