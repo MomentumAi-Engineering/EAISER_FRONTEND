@@ -1,7 +1,4 @@
-// ReportReview.jsx
-// Purpose: Modular UI component to render the backend-generated issue report for review.
-// Notes: Designed to be resilient to varying response shapes from the backend.
-//        Uses defensive accessors and shows helpful fallbacks.
+
 
 import React from 'react';
 import apiClient from '../services/apiClient';
