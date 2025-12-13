@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { Upload, Camera, MapPin, Navigation, X } from "lucide-react";
+import { Upload, Camera, MapPin, Navigation, X, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function SimpleReport() {
+  const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [locationPermission, setLocationPermission] = useState(false);
@@ -54,10 +56,19 @@ export default function SimpleReport() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white p-6">
       <div className="max-w-3xl mx-auto space-y-8">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate('/')}
+          className="mb-2 inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-sm font-semibold"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </button>
+
         <h1 className="text-3xl font-black text-white flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-gray-700 to-gray-800 rounded-xl flex items-center justify-center">
+          {/* <div className="w-10 h-10 bg-gradient-to-br from-gray-700 to-gray-800 rounded-xl flex items-center justify-center">
             <Upload className="w-5 h-5 text-yellow-400" />
-          </div>
+          </div> */}
           Report an Issue
         </h1>
 

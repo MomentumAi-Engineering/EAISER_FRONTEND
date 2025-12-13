@@ -62,3 +62,7 @@ export async function signup({ fullName, email, password }) {
 export async function login({ email, password }) {
   return request('/api/auth/login', { email, password });
 }
+
+export async function googleSignIn(idToken) {
+  return request('/api/auth/google', { idToken });
+}
