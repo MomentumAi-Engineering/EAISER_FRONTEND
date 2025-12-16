@@ -7,8 +7,8 @@ class ApiClient {
   // Constructor sets base URL and common headers
   constructor(baseURL) {
     // Prefer env-configured base URL, fallback to localhost:8000 for dev
-    const envBase = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL;
-    this.baseURL = (baseURL || envBase || 'http://localhost:8000').replace(/\/$/, ''); // trim trailing slash
+    const envCore = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_CORE_API_URL;
+    this.baseURL = (baseURL || envCore || 'http://localhost:8000').replace(/\/$/, ''); // trim trailing slash
 
     // Common headers for JSON requests (multipart handled per-request)
     this.defaultHeaders = {
@@ -103,106 +103,106 @@ class ApiClient {
     });
   }
 
-  
-async analyzeImage(formData) {
-  try {
-    return await this.request(`/api/ai/analyze-image`, {
-      method: 'POST',
-      headers: {},
-      body: formData,
-    });
-  } catch (err) {
-    // Try alias endpoint before client-side fallback
+
+  async analyzeImage(formData) {
     try {
-      return await this.request(`/api/analyze-image`, {
+      return await this.request(`/api/ai/analyze-image`, {
         method: 'POST',
         headers: {},
         body: formData,
       });
-    } catch (_) {}
-    const key = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.GEMINI_API_KEY;
-    const file = formData && typeof formData.get === 'function' ? formData.get('image') : null;
-    if (!key || !file || !(file instanceof File)) throw err;
-    return await this.clientAnalyzeWithGemini(file, key);
+    } catch (err) {
+      // Try alias endpoint before client-side fallback
+      try {
+        return await this.request(`/api/analyze-image`, {
+          method: 'POST',
+          headers: {},
+          body: formData,
+        });
+      } catch (_) { }
+      const key = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.GEMINI_API_KEY;
+      const file = formData && typeof formData.get === 'function' ? formData.get('image') : null;
+      if (!key || !file || !(file instanceof File)) throw err;
+      return await this.clientAnalyzeWithGemini(file, key);
+    }
   }
-}
 
-async fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const s = String(reader.result || '');
-      const i = s.indexOf('base64,');
-      resolve(i >= 0 ? s.slice(i + 7) : s);
+  async fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const s = String(reader.result || '');
+        const i = s.indexOf('base64,');
+        resolve(i >= 0 ? s.slice(i + 7) : s);
+      };
+      reader.onerror = (e) => reject(e);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async clientAnalyzeWithGemini(file, key) {
+    let model =
+      (import.meta?.env?.VITE_GEMINI_MODEL) ||
+      "gemini-2.0-flash"; // recommended model
+
+    const b64 = await this.fileToBase64(file);
+    const prompt = 'Analyze the uploaded image. Identify visible public infrastructure issues strictly from the supported list (pothole, road damage, broken streetlight, graffiti, garbage, vandalism, open drain, blocked drain, flood, fire, illegal construction, tree fallen, public toilet issue, stray animals and variants, noise/air pollution, water leakage, street vendor encroachment, signal malfunction, waterlogging, abandoned vehicle, vacant lot issue). If none found, respond clearly that no public issue was found.';
+    const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+
+    const payload = {
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: file.type || 'image/jpeg', data: b64 } },
+          ],
+        },
+      ],
     };
-    reader.onerror = (e) => reject(e);
-    reader.readAsDataURL(file);
-  });
-}
-
-async clientAnalyzeWithGemini(file, key) {
-  let model =
-  (import.meta?.env?.VITE_GEMINI_MODEL) ||
-  "gemini-2.0-flash"; // recommended model
-
-  const b64 = await this.fileToBase64(file);
-  const prompt = 'Analyze the uploaded image. Identify visible public infrastructure issues strictly from the supported list (pothole, road damage, broken streetlight, graffiti, garbage, vandalism, open drain, blocked drain, flood, fire, illegal construction, tree fallen, public toilet issue, stray animals and variants, noise/air pollution, water leakage, street vendor encroachment, signal malfunction, waterlogging, abandoned vehicle, vacant lot issue). If none found, respond clearly that no public issue was found.';
-  const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
-
-  const payload = {
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          { text: prompt },
-          { inline_data: { mime_type: file.type || 'image/jpeg', data: b64 } },
-        ],
-      },
-    ],
-  };
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(typeof data === 'string' ? data : data?.error?.message || 'Client-side analyze failed');
-  const parts = (((data || {}).candidates || [])[0] || {}).content?.parts || [];
-  const text = parts.map(p => p.text || '').join('\n').trim();
-  const description = text || 'No description provided';
-  const lines = description.split(/\r?\n/);
-  const issues = [];
-  const labels = [];
-  for (const raw of lines) {
-    const l = raw.trim().replace(/^[-*•]\s*/, '');
-    if (!l) continue;
-    if (/issue|risk|problem|damage|hazard/i.test(l)) issues.push(l);
-    else if (labels.length < 8) labels.push(l);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(typeof data === 'string' ? data : data?.error?.message || 'Client-side analyze failed');
+    const parts = (((data || {}).candidates || [])[0] || {}).content?.parts || [];
+    const text = parts.map(p => p.text || '').join('\n').trim();
+    const description = text || 'No description provided';
+    const lines = description.split(/\r?\n/);
+    const issues = [];
+    const labels = [];
+    for (const raw of lines) {
+      const l = raw.trim().replace(/^[-*•]\s*/, '');
+      if (!l) continue;
+      if (/issue|risk|problem|damage|hazard/i.test(l)) issues.push(l);
+      else if (labels.length < 8) labels.push(l);
+    }
+    const base = (description.toLowerCase() + ' ' + labels.join(' ').toLowerCase());
+    const danger = ['hazard', 'danger', 'out of control', 'emergency', 'injury', 'uncontrolled', 'explosion', 'collapse', 'severe', 'major', 'wildfire', 'accident', 'collision', 'leak', 'burst'];
+    const controlled = ['campfire', 'bonfire', 'bon fire', 'bbq', 'barbecue', 'barbeque', 'grill', 'fire pit', 'controlled burn', 'festival', 'celebration', 'diwali', 'diya', 'candle', 'incense', 'lamp', 'stove', 'kitchen', 'smoke machine', 'stage'];
+    const minor = ['minor', 'small', 'tiny', 'cosmetic', 'scratch', 'smudge', 'dust', 'stain', 'low', 'no issue', 'normal', 'benign'];
+    const hasDanger = danger.some(w => base.includes(w));
+    const hasControlled = controlled.some(w => base.includes(w));
+    const hasMinor = minor.some(w => base.includes(w));
+    let confidence = 20;
+    if (!issues.length && !hasDanger) confidence = 10;
+    else if (hasDanger || (issues.length && !hasControlled)) confidence = 85;
+    else if (hasControlled && !hasDanger) confidence = 45;
+    else if (hasMinor && !hasDanger) confidence = 80;
+    confidence = Math.max(0, Math.min(100, confidence));
+    // Derive issue_type for UI fallback
+    let issue_type = 'other';
+    if (/(roadkill|dead animal|carcass)/i.test(base)) issue_type = 'dead_animal';
+    else if (/(pothole|road damage|crack)/i.test(base)) issue_type = 'road_damage';
+    else if (/(flood|waterlogging)/i.test(base)) issue_type = 'flood';
+    else if (/(leak|burst|pipeline|water leak)/i.test(base)) issue_type = 'water_leakage';
+    else if (/(garbage|trash|waste|dump|litter)/i.test(base)) issue_type = 'garbage';
+    else if (/(streetlight|street light|lamp post|broken light)/i.test(base)) issue_type = 'broken_streetlight';
+    else if (/(fire|smoke|flame|burning)/i.test(base) && !hasControlled) issue_type = 'fire';
+    return { status: 'success', description, issues, labels, confidence, issue_type };
   }
-  const base = (description.toLowerCase() + ' ' + labels.join(' ').toLowerCase());
-  const danger = ['hazard','danger','out of control','emergency','injury','uncontrolled','explosion','collapse','severe','major','wildfire','accident','collision','leak','burst'];
-  const controlled = ['campfire','bonfire','bon fire','bbq','barbecue','barbeque','grill','fire pit','controlled burn','festival','celebration','diwali','diya','candle','incense','lamp','stove','kitchen','smoke machine','stage'];
-  const minor = ['minor','small','tiny','cosmetic','scratch','smudge','dust','stain','low','no issue','normal','benign'];
-  const hasDanger = danger.some(w => base.includes(w));
-  const hasControlled = controlled.some(w => base.includes(w));
-  const hasMinor = minor.some(w => base.includes(w));
-  let confidence = 20;
-  if (!issues.length && !hasDanger) confidence = 10;
-  else if (hasDanger || (issues.length && !hasControlled)) confidence = 85;
-  else if (hasControlled && !hasDanger) confidence = 45;
-  else if (hasMinor && !hasDanger) confidence = 80;
-  confidence = Math.max(0, Math.min(100, confidence));
-  // Derive issue_type for UI fallback
-  let issue_type = 'other';
-  if (/(roadkill|dead animal|carcass)/i.test(base)) issue_type = 'dead_animal';
-  else if (/(pothole|road damage|crack)/i.test(base)) issue_type = 'road_damage';
-  else if (/(flood|waterlogging)/i.test(base)) issue_type = 'flood';
-  else if (/(leak|burst|pipeline|water leak)/i.test(base)) issue_type = 'water_leakage';
-  else if (/(garbage|trash|waste|dump|litter)/i.test(base)) issue_type = 'garbage';
-  else if (/(streetlight|street light|lamp post|broken light)/i.test(base)) issue_type = 'broken_streetlight';
-  else if (/(fire|smoke|flame|burning)/i.test(base) && !hasControlled) issue_type = 'fire';
-  return { status: 'success', description, issues, labels, confidence, issue_type };
-}
 
 
   async getAuthoritiesByZip(zip_code) {
@@ -234,6 +234,64 @@ async clientAnalyzeWithGemini(file, key) {
     return this.request(`/api/issues/${encodeURIComponent(issue_id)}/decline`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // --- Admin Review API ---
+
+  async getPendingReviews() {
+    return this.request('/api/admin/review/pending', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken') || 'demo_token'}` }
+    });
+  }
+
+  async adminLogin(email, password) {
+    return this.request('/api/admin/review/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
+  async approveIssueAdmin(issue_id, admin_id = 'admin', notes = '', new_authority_email = null, new_authority_name = null) {
+    const payload = {
+      issue_id,
+      admin_id,
+      notes,
+      new_authority_email,
+      new_authority_name
+    };
+    return this.request('/api/admin/review/approve', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken') || 'demo_token'}`
+      },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async declineIssueAdmin(issue_id, admin_id = 'admin', notes = '') {
+    const payload = { issue_id, admin_id, notes };
+    return this.request('/api/admin/review/decline', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer demo_token'
+      },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deactivateUser(user_email, reason, admin_id = 'admin') {
+    const payload = { user_email, reason, admin_id };
+    return this.request('/api/admin/review/deactivate-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer demo_token'
+      },
       body: JSON.stringify(payload),
     });
   }

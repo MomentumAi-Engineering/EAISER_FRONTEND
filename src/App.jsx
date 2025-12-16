@@ -4,6 +4,8 @@ import Hero from "./components/Hero";
 import Signup from "./Auth/Signup";
 import Login from './Auth/Login';
 import Report from './pages/Report'
+import AdminLogin from './components/AdminLogin';
+import AdminDashboard from './components/AdminDashboard';
 
 export default function App() {
   return (
@@ -22,6 +24,10 @@ export default function App() {
 
         {/* other app pages */}
         <Route path="/report" element={<Report />} />
+
+        {/* Admin Routes */}
+        <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
         {/* auth pages (no navbar) */}
         <Route path="/signup" element={<Signup />} />
