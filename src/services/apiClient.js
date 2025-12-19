@@ -7,8 +7,24 @@ class ApiClient {
   // Constructor sets base URL and common headers
   constructor(baseURL) {
     // Prefer env-configured base URL, fallback to 127.0.0.1:8000 for dev (fixes Node 18+ IPv6 issues)
-    const envCore = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_CORE_API_URL;
-    this.baseURL = (baseURL || envCore || 'http://127.0.0.1:8000').replace(/\/$/, ''); // trim trailing slash
+  const envApi =
+    typeof import.meta !== 'undefined' &&
+    import.meta.env &&
+    import.meta.env.VITE_API_BASE_URL;
+
+  const isDev =
+    typeof import.meta !== 'undefined' &&
+    import.meta.env &&
+    import.meta.env.DEV;
+
+  this.baseURL = (
+    baseURL ||
+    envApi ||
+    (isDev
+      ? 'http://127.0.0.1:8000'
+      : 'https://eaiser-backend.onrender.com')
+  ).replace(/\/$/, '');
+
 
     // Common headers for JSON requests (multipart handled per-request)
     this.defaultHeaders = {
