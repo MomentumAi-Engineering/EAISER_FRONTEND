@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/apiClient';
-import { ShieldAlert, CheckCircle2, XCircle, AlertTriangle, Loader2, Edit2, ShieldCheck, Mail, Save, X } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, XCircle, AlertTriangle, Loader2, Edit2, ShieldCheck, Mail, Save, X, Users, BarChart3, CheckSquare, Square } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { hasPermission, canActOnIssue, getCurrentAdmin } from '../utils/permissions';
 
 export default function AdminDashboard() {
   const [reviews, setReviews] = useState([]);
@@ -14,6 +15,32 @@ export default function AdminDashboard() {
   const [approvalModal, setApprovalModal] = useState(null); // { issueId, currentAuth }
   const [editAuthority, setEditAuthority] = useState(false);
   const [newAuthData, setNewAuthData] = useState({ name: '', email: '' });
+
+  // Assignment Modal State
+  const [assignmentModal, setAssignmentModal] = useState(null); // { issueId }
+  const [adminList, setAdminList] = useState([]);
+  const [selectedAdmin, setSelectedAdmin] = useState('');
+
+  // View Mode State
+  const [viewMode, setViewMode] = useState('all'); // 'all' or 'assigned'
+
+  // Bulk Selection State
+  const [selectedIssues, setSelectedIssues] = useState(new Set());
+
+  const toggleIssueSelection = (id) => {
+    const newSet = new Set(selectedIssues);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIssues(newSet);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIssues.size === reviews.length && reviews.length > 0) {
+      setSelectedIssues(new Set());
+    } else {
+      setSelectedIssues(new Set(reviews.map(r => r._id || r.issue_id)));
+    }
+  };
 
   useEffect(() => {
     // Basic auth check
@@ -33,10 +60,17 @@ export default function AdminDashboard() {
       setError(null);
     } catch (err) {
       console.error("Failed to fetch reviews", err);
-      if (err.message && err.message.includes('401')) {
-        navigate('/admin'); // Redirect to login on unauthorized
+
+      // Handle authentication errors
+      if (err.message && (err.message.includes('401') || err.message.includes('403') || err.message.includes('Admin access required'))) {
+        console.warn('Authentication failed, clearing tokens and redirecting');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminData');
+        navigate('/admin', { replace: true });
+        return;
       }
-      setError("Failed to load pending reviews.");
+
+      setError("Failed to load pending reviews: " + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -93,6 +127,73 @@ export default function AdminDashboard() {
     }
   };
 
+  // Fetch admin list for assignment
+  const fetchAdmins = async () => {
+    try {
+      const admins = await apiClient.getAdmins();
+      // Filter only active admins who can handle issues
+      const activeAdmins = admins.filter(a =>
+        a.is_active &&
+        (a.role === 'admin' || a.role === 'team_member' || a.role === 'super_admin')
+      );
+      setAdminList(activeAdmins);
+    } catch (err) {
+      console.error('Failed to fetch admins:', err);
+    }
+  };
+
+  // Open assignment modal
+  const openAssignmentModal = (issue) => {
+    setAssignmentModal(issue);
+    setSelectedAdmin('');
+    fetchAdmins();
+  };
+
+  // Handle issue assignment (Supports Single and Bulk)
+  const handleAssignIssue = async () => {
+    if (!selectedAdmin) {
+      alert('Please select an admin to assign');
+      return;
+    }
+
+    try {
+      if (assignmentModal.isBulk) {
+        await apiClient.bulkAssignIssues(Array.from(selectedIssues), selectedAdmin);
+        alert(`Successfully assigned ${selectedIssues.size} issues!`);
+        setSelectedIssues(new Set());
+      } else {
+        const issueId = assignmentModal._id || assignmentModal.issue_id;
+        await apiClient.assignIssue(issueId, selectedAdmin);
+        alert('Issue assigned successfully!');
+      }
+      setAssignmentModal(null);
+      fetchReviews(); // Refresh list
+    } catch (err) {
+      console.error('Failed to assign issue:', err);
+      alert('Failed to assign issue: ' + err.message);
+    }
+  };
+
+  // Switch view mode
+  const switchViewMode = async (mode) => {
+    setViewMode(mode);
+    setLoading(true);
+
+    try {
+      if (mode === 'assigned') {
+        const data = await apiClient.getMyAssignedIssues();
+        setReviews(data.issues || []);
+      } else {
+        await fetchReviews();
+      }
+    } catch (err) {
+      console.error('Failed to switch view:', err);
+      setError('Failed to load issues');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -106,15 +207,43 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto">
         <header className="flex items-center justify-between mb-10">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold text-blue-500">
               Admin Dashboard
             </h1>
             <p className="text-gray-400 mt-2">Review flagged and low-confidence reports</p>
           </div>
           <div className="flex gap-3">
+            {/* Show Manage Team button only for super_admin */}
+            {hasPermission('manage_team') && (
+              <button
+                onClick={() => navigate('/admin/team')}
+                className="px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg text-sm border border-purple-500/30 transition-all flex items-center gap-2"
+              >
+                <Users className="w-4 h-4" />
+                Manage Team
+              </button>
+            )}
+            {/* View Stats button for all roles */}
+            {hasPermission('view_stats') && (
+              <button
+                onClick={() => navigate('/admin/stats')}
+                className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg text-sm border border-blue-500/30 transition-all flex items-center gap-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                View Stats
+              </button>
+            )}
+            <button
+              onClick={() => navigate('/admin/security')}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm border border-gray-700 transition-all flex items-center gap-2"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Security
+            </button>
             <button
               onClick={() => {
                 localStorage.removeItem('adminToken');
+                localStorage.removeItem('adminData');
                 navigate('/admin');
               }}
               className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-sm border border-red-500/30 transition-all"
@@ -129,6 +258,46 @@ export default function AdminDashboard() {
             </button>
           </div>
         </header>
+
+        {/* View Mode Tabs */}
+        {hasPermission('view_assigned_issues') && (
+          <div className="flex gap-2 mb-6 bg-gray-900/50 p-1 rounded-lg w-fit">
+            <button
+              onClick={() => switchViewMode('all')}
+              className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'all'
+                ? 'bg-blue-500 text-white'
+                : 'text-gray-400 hover:text-white'
+                }`}
+            >
+              All Issues ({reviews.length})
+            </button>
+            <button
+              onClick={() => switchViewMode('assigned')}
+              className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'assigned'
+                ? 'bg-purple-500 text-white'
+                : 'text-gray-400 hover:text-white'
+                }`}
+            >
+              My Assigned
+            </button>
+          </div>
+        )}
+
+        {/* Bulk Actions Header */}
+        {hasPermission('assign_issue') && (
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={handleSelectAll}
+              className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+            >
+              {selectedIssues.size > 0 && selectedIssues.size === reviews.length ? <CheckSquare className="w-5 h-5 text-purple-500" /> : <Square className="w-5 h-5" />}
+              Select All ({reviews.length})
+            </button>
+            {selectedIssues.size > 0 && (
+              <span className="text-purple-400 font-semibold">{selectedIssues.size} selected</span>
+            )}
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-xl text-red-200 mb-8 flex items-center gap-3">
@@ -171,6 +340,15 @@ export default function AdminDashboard() {
                 <div key={id} className="bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-xl overflow-hidden flex flex-col hover:border-gray-500 transition-all shadow-xl">
                   {/* Image Header */}
                   <div className="relative h-48 bg-gray-800">
+                    {/* Selection Checkbox */}
+                    {hasPermission('assign_issue') && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleIssueSelection(id); }}
+                        className="absolute top-3 left-3 z-10 p-1 rounded hover:scale-110 transition-transform bg-black/40 backdrop-blur-sm"
+                      >
+                        {selectedIssues.has(id) ? <CheckSquare className="w-5 h-5 text-purple-500 fill-purple-500/10" /> : <Square className="w-5 h-5 text-white/50 hover:text-white" />}
+                      </button>
+                    )}
                     {imageUrl ? (
                       <img src={imageUrl} alt="Evidence" className="w-full h-full object-cover" />
                     ) : (
@@ -215,25 +393,55 @@ export default function AdminDashboard() {
                       <p>👤 {review.reporter_email || 'Anonymous'}</p>
                     </div>
 
+                    {/* Assignment Section */}
+                    {hasPermission('assign_issue') && (
+                      <div className="mb-3">
+                        {review.assigned_to ? (
+                          <div className="text-xs text-purple-400 bg-purple-500/10 px-3 py-2 rounded-lg border border-purple-500/30">
+                            📌 Assigned to: {review.assigned_to}
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => openAssignmentModal(review)}
+                            className="w-full py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg transition-all text-sm flex items-center justify-center gap-2"
+                          >
+                            <Users className="w-4 h-4" />
+                            Assign to Team Member
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     {/* Actions */}
-                    <div className="grid grid-cols-2 gap-3 mt-auto">
-                      <button
-                        onClick={() => handleDecline(id)}
-                        disabled={processingId === id}
-                        className="flex items-center justify-center gap-2 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        {processingId === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
-                        Decline
-                      </button>
-                      <button
-                        onClick={() => openApproveModal(review)}
-                        disabled={processingId === id}
-                        className="flex items-center justify-center gap-2 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        {processingId === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                        Review
-                      </button>
-                    </div>
+                    {/* Action Buttons - Only show if admin can act on this issue */}
+                    {canActOnIssue(review) && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => confirmDecline(id)}
+                          disabled={processingId === id}
+                          className="flex items-center justify-center gap-2 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          {processingId === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                          Decline
+                        </button>
+                        <button
+                          onClick={() => openApproveModal(review)}
+                          disabled={processingId === id}
+                          className="flex items-center justify-center gap-2 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          {processingId === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                          Review
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Show message if user cannot act on this issue */}
+                    {!canActOnIssue(review) && (
+                      <div className="text-center py-3 text-gray-500 text-sm">
+                        <ShieldAlert className="w-4 h-4 inline mr-2" />
+                        Not assigned to you
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -241,6 +449,26 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Bulk Action Bar - Sticky Bottom */}
+      {selectedIssues.size > 0 && hasPermission('assign_issue') && (
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900/95 backdrop-blur border border-purple-500/50 rounded-xl px-6 py-4 shadow-2xl flex items-center gap-6 z-40 animate-in slide-in-from-bottom-5">
+          <span className="text-white font-bold text-lg">{selectedIssues.size} selected</span>
+          <div className="h-8 w-px bg-gray-700"></div>
+          <button
+            onClick={() => { setAssignmentModal({ isBulk: true }); fetchAdmins(); }}
+            className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-purple-900/20"
+          >
+            <Users className="w-5 h-5" /> Assign to Team
+          </button>
+          <button
+            onClick={() => setSelectedIssues(new Set())}
+            className="text-gray-400 hover:text-white text-sm font-medium"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Approval Modal */}
       {approvalModal && (
@@ -373,6 +601,54 @@ export default function AdminDashboard() {
                   <CheckCircle2 className="w-4 h-4" />
                 )}
                 Confirm & Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assignment Modal */}
+      {assignmentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-gray-900 border border-purple-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+              <Users className="w-6 h-6 text-purple-400" />
+              {assignmentModal.isBulk ? `Assign ${selectedIssues.size} Issues` : 'Assign Issue'}
+            </h2>
+
+            <div className="mb-6">
+              <p className="text-gray-400 text-sm mb-4">
+                Select a team member to assign this issue to:
+              </p>
+
+              <select
+                value={selectedAdmin}
+                onChange={(e) => setSelectedAdmin(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500"
+              >
+                <option value="">-- Select Admin --</option>
+                {adminList.map((admin) => (
+                  <option key={admin.id || admin._id} value={admin.email}>
+                    {admin.name || admin.email} ({admin.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setAssignmentModal(null)}
+                className="flex-1 px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssignIssue}
+                disabled={!selectedAdmin}
+                className="flex-1 px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Assign
               </button>
             </div>
           </div>

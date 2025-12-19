@@ -181,26 +181,44 @@ class ApiClient {
     }
     const base = (description.toLowerCase() + ' ' + labels.join(' ').toLowerCase());
     const danger = ['hazard', 'danger', 'out of control', 'emergency', 'injury', 'uncontrolled', 'explosion', 'collapse', 'severe', 'major', 'wildfire', 'accident', 'collision', 'leak', 'burst'];
-    const controlled = ['campfire', 'bonfire', 'bon fire', 'bbq', 'barbecue', 'barbeque', 'grill', 'fire pit', 'controlled burn', 'festival', 'celebration', 'diwali', 'diya', 'candle', 'incense', 'lamp', 'stove', 'kitchen', 'smoke machine', 'stage'];
+    const controlled = ['campfire', 'bonfire', 'bon fire', 'bbq', 'barbecue', 'barbeque', 'grill', 'fire pit', 'controlled burn', 'controlled fire', 'festival', 'celebration', 'diwali', 'diya', 'candle', 'incense', 'lamp', 'stove', 'kitchen', 'smoke machine', 'stage'];
     const minor = ['minor', 'small', 'tiny', 'cosmetic', 'scratch', 'smudge', 'dust', 'stain', 'low', 'no issue', 'normal', 'benign'];
+
+    const isFake = /(fake|cartoon|video game|ai generated|screenshot|drawing|art)/i.test(base);
+
     const hasDanger = danger.some(w => base.includes(w));
     const hasControlled = controlled.some(w => base.includes(w));
     const hasMinor = minor.some(w => base.includes(w));
+
     let confidence = 20;
-    if (!issues.length && !hasDanger) confidence = 10;
-    else if (hasDanger || (issues.length && !hasControlled)) confidence = 85;
-    else if (hasControlled && !hasDanger) confidence = 45;
-    else if (hasMinor && !hasDanger) confidence = 80;
+    if (isFake) {
+      confidence = 0;
+    } else if (!issues.length && !hasDanger) {
+      confidence = 10;
+    } else if (hasDanger || (issues.length && !hasControlled)) {
+      confidence = 85;
+    } else if (hasControlled && !hasDanger) {
+      confidence = 40;
+    } else if (hasMinor && !hasDanger) {
+      confidence = 80;
+    }
+
+    if (isFake) {
+      // Force issue type to unknown or none
+    }
+
     confidence = Math.max(0, Math.min(100, confidence));
     // Derive issue_type for UI fallback
     let issue_type = 'other';
-    if (/(roadkill|dead animal|carcass)/i.test(base)) issue_type = 'dead_animal';
+    if (isFake) issue_type = 'unknown';
+    else if (/(roadkill|dead animal|carcass)/i.test(base)) issue_type = 'dead_animal';
     else if (/(pothole|road damage|crack)/i.test(base)) issue_type = 'road_damage';
     else if (/(flood|waterlogging)/i.test(base)) issue_type = 'flood';
     else if (/(leak|burst|pipeline|water leak)/i.test(base)) issue_type = 'water_leakage';
     else if (/(garbage|trash|waste|dump|litter)/i.test(base)) issue_type = 'garbage';
     else if (/(streetlight|street light|lamp post|broken light)/i.test(base)) issue_type = 'broken_streetlight';
     else if (/(fire|smoke|flame|burning)/i.test(base) && !hasControlled) issue_type = 'fire';
+
     return { status: 'success', description, issues, labels, confidence, issue_type };
   }
 
@@ -246,13 +264,85 @@ class ApiClient {
     });
   }
 
-  async adminLogin(email, password) {
+  async adminLogin(email, password, code = undefined) {
+    const payload = { email, password };
+    if (code) payload.code = code;
+
     return this.request('/api/admin/review/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify(payload),
     });
   }
+
+  async changePassword(current_password, new_password) {
+    return this.request('/api/admin/review/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ current_password, new_password }),
+    });
+  }
+
+  async setup2FA(email, method = 'totp') {
+    return this.request('/api/admin/review/2fa/setup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ email, method }),
+    });
+  }
+
+  async verify2FA(code, session_token, email) {
+    return this.request('/api/admin/review/2fa/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ code, session_token, email }),
+    });
+  }
+
+  async disable2FA() {
+    return this.request('/api/admin/review/2fa/disable', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      }
+    });
+  }
+
+  async getAdmins() {
+    return this.request('/api/admin/review/list', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+    });
+  }
+
+  async createAdmin(adminData) {
+    return this.request('/api/admin/review/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify(adminData),
+    });
+  }
+
+  async deleteAdmin(adminId) {
+    return this.request(`/api/admin/review/delete/${adminId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      }
+    });
+  }
+
 
   async approveIssueAdmin(issue_id, admin_id = 'admin', notes = '', new_authority_email = null, new_authority_name = null) {
     const payload = {
@@ -278,7 +368,7 @@ class ApiClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer demo_token'
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
       },
       body: JSON.stringify(payload),
     });
@@ -290,9 +380,73 @@ class ApiClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer demo_token'
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
       },
       body: JSON.stringify(payload),
+    });
+  }
+
+  // ============================================
+  // TEAM MANAGEMENT METHODS
+  // ============================================
+
+  async getAdmins() {
+    return this.request('/api/admin/review/list', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      }
+    });
+  }
+
+  async createAdmin(adminData) {
+    return this.request('/api/admin/review/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify(adminData)
+    });
+  }
+
+  async assignIssue(issueId, adminEmail) {
+    return this.request('/api/admin/review/assign-issue', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ issue_id: issueId, admin_email: adminEmail })
+    });
+  }
+
+  async bulkAssignIssues(issueIds, adminEmail) {
+    return this.request('/api/admin/review/bulk-assign', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ issue_ids: issueIds, admin_email: adminEmail })
+    });
+  }
+
+  async getMyAssignedIssues() {
+    return this.request('/api/admin/review/my-assigned-issues', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      }
+    });
+  }
+
+  async getAdminStats() {
+    return this.request('/api/admin/review/stats', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      }
     });
   }
 }

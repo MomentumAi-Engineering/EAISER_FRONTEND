@@ -6,6 +6,10 @@ import Login from './Auth/Login';
 import Report from './pages/Report'
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
+import TeamManagement from './components/TeamManagement';
+import StatsDashboard from './components/StatsDashboard';
+import ChangePassword from './components/ChangePassword';
+import SecuritySettings from './components/SecuritySettings';
 
 export default function App() {
   return (
@@ -28,6 +32,10 @@ export default function App() {
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/team" element={<TeamManagement />} />
+        <Route path="/admin/stats" element={<StatsDashboard />} />
+        <Route path="/admin/change-password" element={<ChangePassword />} />
+        <Route path="/admin/security" element={<SecuritySettings />} />
 
         {/* auth pages (no navbar) */}
         <Route path="/signup" element={<Signup />} />
