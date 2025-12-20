@@ -7,23 +7,23 @@ class ApiClient {
   // Constructor sets base URL and common headers
   constructor(baseURL) {
     // Prefer env-configured base URL, fallback to 127.0.0.1:8000 for dev (fixes Node 18+ IPv6 issues)
-  const envApi =
-    typeof import.meta !== 'undefined' &&
-    import.meta.env &&
-    import.meta.env.VITE_API_BASE_URL;
+    const envApi =
+      typeof import.meta !== 'undefined' &&
+      import.meta.env &&
+      import.meta.env.VITE_API_BASE_URL;
 
-  const isDev =
-    typeof import.meta !== 'undefined' &&
-    import.meta.env &&
-    import.meta.env.DEV;
+    const isDev =
+      typeof import.meta !== 'undefined' &&
+      import.meta.env &&
+      import.meta.env.DEV;
 
-  this.baseURL = (
-    baseURL ||
-    envApi ||
-    (isDev
-      ? 'http://127.0.0.1:8000'
-      : 'https://eaiser-backend.onrender.com')
-  ).replace(/\/$/, '');
+    this.baseURL = (
+      baseURL ||
+      envApi ||
+      (isDev
+        ? 'http://127.0.0.1:8000'
+        : 'https://eaiser-backend.onrender.com')
+    ).replace(/\/$/, '');
 
 
     // Common headers for JSON requests (multipart handled per-request)
@@ -353,6 +353,24 @@ class ApiClient {
   async deleteAdmin(adminId) {
     return this.request(`/api/admin/review/delete/${adminId}`, {
       method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      }
+    });
+  }
+
+  async deactivateAdmin(adminId) {
+    return this.request(`/api/admin/review/deactivate-admin/${adminId}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      }
+    });
+  }
+
+  async reactivateAdmin(adminId) {
+    return this.request(`/api/admin/review/reactivate-admin/${adminId}`, {
+      method: 'PUT',
       headers: {
         Authorization: `Bearer ${localStorage.getItem('adminToken')}`
       }

@@ -82,12 +82,38 @@ export default function TeamManagement() {
         if (!confirm('Are you sure you want to deactivate this admin?')) return;
 
         try {
-            await apiClient.deleteAdmin(adminId);
+            await apiClient.deactivateAdmin(adminId);
             alert('Admin deactivated successfully');
             fetchAdmins();
         } catch (err) {
             console.error('Failed to deactivate admin:', err);
             alert('Failed to deactivate admin: ' + (err.message || 'Unknown error'));
+        }
+    };
+
+    const handleReactivate = async (adminId) => {
+        if (!confirm('Are you sure you want to reactivate this admin?')) return;
+
+        try {
+            await apiClient.reactivateAdmin(adminId);
+            alert('Admin reactivated successfully');
+            fetchAdmins();
+        } catch (err) {
+            console.error('Failed to reactivate admin:', err);
+            alert('Failed to reactivate admin: ' + (err.message || 'Unknown error'));
+        }
+    };
+
+    const handleDelete = async (adminId) => {
+        if (!confirm('Are you sure you want to PERMANENTLY DELETE this admin? This action cannot be undone.')) return;
+
+        try {
+            await apiClient.deleteAdmin(adminId);
+            alert('Admin deleted successfully');
+            fetchAdmins();
+        } catch (err) {
+            console.error('Failed to delete admin:', err);
+            alert('Failed to delete admin: ' + (err.message || 'Unknown error'));
         }
     };
 
@@ -189,14 +215,36 @@ export default function TeamManagement() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex gap-2">
-                                            {admin.is_active && admin.role !== 'super_admin' && (
+                                            {admin.is_active ? (
+                                                (admin.role !== 'super_admin' || (currentAdmin?.role === 'super_admin' && (admin.id || admin._id) !== (currentAdmin?.id || currentAdmin?._id))) && (
+                                                    <button
+                                                        onClick={() => handleDeactivate(admin.id || admin._id)}
+                                                        className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm transition-all"
+                                                    >
+                                                        Deactivate
+                                                    </button>
+                                                )
+                                            ) : (
                                                 <button
-                                                    onClick={() => handleDeactivate(admin.id || admin._id)}
-                                                    className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm transition-all"
+                                                    onClick={() => handleReactivate(admin.id || admin._id)}
+                                                    className="px-3 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-sm transition-all"
                                                 >
-                                                    Deactivate
+                                                    Reactivate
                                                 </button>
                                             )}
+
+                                            {/* Delete Button - Only showed if we can perform action */}
+                                            {(admin.role !== 'super_admin' || (currentAdmin?.role === 'super_admin' && (admin.id || admin._id) !== (currentAdmin?.id || currentAdmin?._id))) && (
+                                                <button
+                                                    onClick={() => handleDelete(admin.id || admin._id)}
+                                                    className="ml-2 px-3 py-1 bg-gray-700 hover:bg-red-900/40 text-gray-400 hover:text-red-400 rounded-lg text-sm transition-all"
+                                                    title="Permanently Delete"
+                                                >
+                                                    Start over / Remove
+                                                </button>
+                                            )}
+
+
                                         </div>
                                     </td>
                                 </tr>
