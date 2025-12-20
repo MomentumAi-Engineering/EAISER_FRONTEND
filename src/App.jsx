@@ -1,95 +1,49 @@
-// App.jsx
-import './App.css';
-import { Routes, Route, BrowserRouter, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Hero from "./components/Hero";
+import Signup from "./Auth/Signup";
+import Login from './Auth/Login';
+import Report from './pages/Report'
+import AdminLogin from './components/AdminLogin';
+import AdminDashboard from './components/AdminDashboard';
+import TeamManagement from './components/TeamManagement';
+import StatsDashboard from './components/StatsDashboard';
+import ChangePassword from './components/ChangePassword';
+import SecuritySettings from './components/SecuritySettings';
 
-// Shared Components
-import Navbar from './components/Navbar';
-import PrivateRoute from './components/PrivateRoutes';
-
-// Landing/Home Components
-import HeroSection from './components/Hero';
-import AboutSection from './components/About';
-import ImpactMetricsSection from './components/AboutMore';
-import Ending from './components/Ending';
-
-// Auth & Profile
-import AuthPage from './pages/Signup';
-import SignInPage from './pages/SignIn';
-import ProfilePage from './pages/Profile';
-
-// App Feature Pages
-import Dashboard from './pages/Dashboard';
-import ReportIssue from './pages/ReportIssue';
-import ViewIssues from './pages/ViewIssues';
-import NotFound from './pages/NotFound';
-
-// Optional: Auth Landing Page (if used)
-import AuthLanding from './pages/AuthLanding';
-
-function AppContent() {
-  const location = useLocation();
-  const isAuthPage = ['/auth', '/signin', '/signup'].includes(location.pathname);
-
+export default function App() {
   return (
-    <div>
-      {/* Show Navbar conditionally */}
-      {!isAuthPage && <Navbar />}
-
+    <Router>
       <Routes>
-        {/* Home / Landing Page */}
+        {/* public home with navbar */}
         <Route
           path="/"
           element={
             <>
-              <HeroSection />
-              <AboutSection />
-              <ImpactMetricsSection />
-              <Ending />
+              <Navbar />
+              <Hero />
             </>
           }
         />
 
-        {/* Authentication */}
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/signin" element={<SignInPage />} />
-        <Route path="/signup" element={<AuthPage />} />
+        {/* other app pages */}
+        <Route path="/report" element={<Report />} />
 
-        {/* Protected & App Routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <PrivateRoute>
-              <ProfilePage />
-            </PrivateRoute>
-          }
-        />
-        <Route path="/report" element={<ReportIssue />} />
-        <Route path="/view" element={<ViewIssues />} />
+        {/* Admin Routes */}
+        <Route path="/admin" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/team" element={<TeamManagement />} />
+        <Route path="/admin/stats" element={<StatsDashboard />} />
+        <Route path="/admin/change-password" element={<ChangePassword />} />
+        <Route path="/admin/security" element={<SecuritySettings />} />
 
-        {/* Auth Landing (if needed) */}
-        <Route path="/auth-landing" element={<AuthLanding />} />
+        {/* auth pages (no navbar) */}
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
 
-        {/* Fallback */}
-        <Route path="*" element={<NotFound />} />
+        {/* catch-all -> redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </div>
+    </Router>
   );
 }
-
-function App() {
-  return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
-  );
-}
-
-export default App;

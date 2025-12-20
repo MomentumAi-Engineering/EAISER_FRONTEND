@@ -1,0 +1,50 @@
+const [useCurrentLocation, setUseCurrentLocation] = useState(false);
+const [manualAddress, setManualAddress] = useState('');
+const [manualZip, setManualZip] = useState('');
+
+// When user clicks "Use my current location"
+const handleUseCurrentLocation = () => {
+  setUseCurrentLocation(true);
+  setManualAddress('');
+  setManualZip('');
+  // Fetch GPS coordinates
+  navigator.geolocation.getCurrentPosition((position) => {
+    setUserLat(position.coords.latitude);
+    setUserLon(position.coords.longitude);
+  });
+};
+
+// When user starts typing manual address/zip
+const handleManualInput = () => {
+  setUseCurrentLocation(false);
+  setUserLat(null);
+  setUserLon(null);
+};
+
+// Conditional rendering
+{!useCurrentLocation && (
+  <>
+    <input 
+      value={manualAddress}
+      onChange={(e) => {
+        setManualAddress(e.target.value);
+        handleManualInput();
+      }}
+      placeholder="Enter address"
+    />
+    <input 
+      value={manualZip}
+      onChange={(e) => {
+        setManualZip(e.target.value);
+        handleManualInput();
+      }}
+      placeholder="Enter ZIP code"
+    />
+  </>
+)}
+
+{!manualAddress && !manualZip && (
+  <button onClick={handleUseCurrentLocation}>
+    Use My Current Location
+  </button>
+)}

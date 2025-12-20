@@ -1,152 +1,112 @@
-import React, { useState, useEffect } from 'react';
-import { Menu, X, Home, FileText, AlertCircle, LayoutDashboard } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import ProfileAvatar from './ProfileAvatar';
-import { isAuthenticated } from '../utils/auth';
+import React, { useState, useEffect } from "react";
+import { Menu, X } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 
-const Navbar = () => {
-  const navigate = useNavigate();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeItem, setActiveItem] = useState('Home');
-  const [isScrolled, setIsScrolled] = useState(false);
+export default function Navbar() {
+  const [open, setOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const menuItems = [
-    { name: 'Home', icon: Home, path: '/' },
-        ...(isLoggedIn ? [{ name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' }] : []),
-    { name: 'Report Issues', icon: AlertCircle, path: '/report' },
-    { name: 'My Issues', icon: FileText, path: '/view' },
-  ];
-
-  // Detect scroll
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+    // Check token on mount and when location changes
+    const token = localStorage.getItem("token");
+    setIsLoggedIn(!!token);
+  }, [location]);
+
+  useEffect(() => {
+    // Listen for storage changes (for cross-tab communication)
+    const handleStorageChange = () => {
+      const token = localStorage.getItem("token");
+      setIsLoggedIn(!!token);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  useEffect(() => {
-    // Check authentication status
-    setIsLoggedIn(isAuthenticated());
-  }, []);
-
-  const handleLoginClick = () => {
-    navigate('/signin');
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setIsLoggedIn(false);
+    navigate("/");
+    setOpen(false);
   };
 
   return (
-    <nav
-      className={`fixed top-0 left-0 z-50 transition-all duration-300 
-        ${isScrolled
-          ? 'top-2 left-1/2 transform -translate-x-1/2 w-[90%] rounded-2xl'
-          : 'w-full rounded-none'}
-        bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-900 shadow-2xl`}
-    >
-      <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          
-          {/* Logo Section */}
-          <div className="flex-shrink-0 flex items-center">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-200">
-                <span className="text-white font-bold text-lg">E</span>
-              </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-300 to-white bg-clip-text text-transparent">
-                EaiserAI
-              </h1>
-            </div>
-          </div>
+    <nav className="w-full bg-gradient-to-r from-black via-zinc-900 to-black text-yellow-400 shadow-xl fixed top-0 left-0 z-50 border-b border-yellow-400/30 backdrop-blur-xl">
+      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        {/* Logo */}
+        <h1 className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow-md">
+          EaiserAI
+        </h1>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="ml-10 flex items-baseline space-x-8">
-              {menuItems.map((item) => {
-                const IconComponent = item.icon;
-                return (
-                  <button
-                    key={item.name}
-                    onClick={() => {
-                      setActiveItem(item.name);
-                      if (item.path) navigate(item.path);
-                    }}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
-                      activeItem === item.name
-                        ? 'bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/30'
-                        : 'text-gray-200 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    <IconComponent size={18} />
-                    <span>{item.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+        {/* Desktop Menu */}
+        <ul className="hidden md:flex gap-10 text-lg font-semibold">
+          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
+            <Link to="/">Home</Link>
+          </li>
+          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
+            <Link to="/report">Report Issue</Link>
+          </li>
+        </ul>
 
-            {/* Login or Profile Avatar */}
-            <div className="ml-6">
-              {isLoggedIn ? (
-                <ProfileAvatar />
-              ) : (
-                <button 
-                  onClick={handleLoginClick}
-                  className="px-6 py-2 bg-gradient-to-r from-cyan-400 to-blue-500 text-white font-semibold rounded-full shadow-lg hover:scale-105 transform transition-transform duration-300 hover:shadow-xl"
-                >
-                  Login
-                </button>
-              )}
-            </div>
-            </div>
-            {/* Mobile Menu Button */}
-            <div className="md:hidden">
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-gray-200 hover:text-white transition-colors duration-200"
-              >
-                {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        {/* Desktop auth links */}
+        <div className="hidden md:flex items-center">
+          {!isLoggedIn ? (
+            <Link to="/signup">
+              <button className="bg-yellow-400 text-black px-6 py-2 rounded-2xl font-bold shadow-md hover:bg-yellow-300 transition-all duration-300 hover:scale-105">
+                Sign Up
               </button>
-            </div>
-          </div>
-       </div>
- 
-       {/* Mobile Navigation Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden absolute top-16 left-0 right-0 bg-gradient-to-b from-blue-900/95 to-indigo-900/95 backdrop-blur-lg border-t border-white/20 shadow-2xl z-50">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            {menuItems.map((item) => {
-              const IconComponent = item.icon;
-              return (
-                <button
-                  key={item.name}
-                  onClick={() => {
-                    setActiveItem(item.name);
-                    setIsMenuOpen(false);
-                    if (item.path) navigate(item.path);
-                  }}
-                  className={`flex items-center space-x-3 w-full px-4 py-3 rounded-lg text-left transition-all duration-300 ${
-                    activeItem === item.name
-                      ? 'bg-white/20 text-white shadow-lg border border-white/30'
-                      : 'text-gray-200 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <IconComponent size={20} />
-                  <span className="font-medium">{item.name}</span>
-                </button>
-              );
-            })}
+            </Link>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 text-white px-6 py-2 rounded-2xl font-bold shadow-md hover:bg-red-600 transition-all duration-300 hover:scale-105"
+            >
+              Logout
+            </button>
+          )}
+        </div>
 
-            {/* Mobile Login/Profile */}
-            {isLoggedIn ? (
-              <div className="w-full mt-2 flex justify-center">
-                <ProfileAvatar />
-              </div>
+        {/* Mobile Icon */}
+        <button className="md:hidden" onClick={() => setOpen(!open)}>
+          {open ? <X size={28} /> : <Menu size={28} />}
+        </button>
+      </div>
+
+      {/* Mobile Menu */}
+      {open && (
+        <div className="md:hidden w-full bg-black/95 text-yellow-300 px-6 py-5 space-y-4 border-t border-yellow-400/20 animate-slide-down">
+          <Link
+            to="/"
+            onClick={() => setOpen(false)}
+            className="block hover:text-white transition"
+          >
+            Home
+          </Link>
+          <Link
+            to="/report"
+            onClick={() => setOpen(false)}
+            className="block hover:text-white transition"
+          >
+            Report Issue
+          </Link>
+
+          {/* Mobile auth links */}
+          <div>
+            {!isLoggedIn ? (
+              <Link to="/signup" onClick={() => setOpen(false)} className="block">
+                <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
+                  Sign Up
+                </button>
+              </Link>
             ) : (
-              <button 
-                onClick={handleLoginClick}
-                className="w-full mt-2 px-6 py-3 bg-gradient-to-r from-cyan-400 to-blue-500 text-white font-semibold rounded-full shadow-lg hover:scale-105 transform transition-transform duration-300 hover:shadow-xl"
+              <button
+                onClick={handleLogout}
+                className="w-full bg-red-500 text-white py-2 rounded-xl font-semibold hover:bg-red-600 transition"
               >
-                Login
+                Logout
               </button>
             )}
           </div>
@@ -154,6 +114,4 @@ const Navbar = () => {
       )}
     </nav>
   );
-};
-
-export default Navbar;
+}
