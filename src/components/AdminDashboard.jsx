@@ -21,6 +21,10 @@ export default function AdminDashboard() {
   const [adminList, setAdminList] = useState([]);
   const [selectedAdmin, setSelectedAdmin] = useState('');
 
+  const [viewReportModal, setViewReportModal] = useState(null);
+  const [isEditingReport, setIsEditingReport] = useState(false);
+  const [editReportData, setEditReportData] = useState({ summary: '', issue_type: '', confidence: 0 });
+
   // View Mode State
   const [viewMode, setViewMode] = useState('all'); // 'all' or 'assigned'
 
@@ -171,6 +175,77 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error('Failed to assign issue:', err);
       alert('Failed to assign issue: ' + err.message);
+    }
+  };
+
+  const openReportModal = (issue) => {
+    setViewReportModal(issue);
+    setIsEditingReport(false);
+  };
+
+  const startEditingReport = () => {
+    const report = viewReportModal.report?.report || viewReportModal.report || {};
+    const aiData = report.unified_report || report.issue_overview || {};
+    setEditReportData({
+      summary: aiData.summary_explanation || viewReportModal.description || '',
+      issue_type: aiData.issue_type || viewReportModal.issue_type || 'unknown',
+      confidence: aiData.confidence_percent || 0
+    });
+    setIsEditingReport(true);
+  };
+
+  const saveReportChanges = async () => {
+    try {
+      const id = viewReportModal._id || viewReportModal.issue_id;
+      await apiClient.updateIssueReport(id, editReportData.summary, editReportData.issue_type, Number(editReportData.confidence));
+
+      // Update local state temporarily so UI reflects changes
+      // Deep clone to avoid reference issues
+      const updated = JSON.parse(JSON.stringify(viewReportModal));
+
+      // 1. Update top level fields (fallbacks)
+      updated.issue_type = editReportData.issue_type;
+      updated.description = editReportData.summary;
+      updated.confidence = Number(editReportData.confidence);
+
+      // 2. Update nested report structure intelligently
+      // Determine the root of the report object (handles wrappers)
+      let reportRoot = null;
+      if (updated.report) {
+        if (updated.report.report) {
+          reportRoot = updated.report.report;
+        } else {
+          reportRoot = updated.report;
+        }
+      }
+
+      if (reportRoot) {
+        // ensure sub-objects exist
+        if (!reportRoot.unified_report) reportRoot.unified_report = {};
+        if (!reportRoot.issue_overview) reportRoot.issue_overview = {};
+
+        // Update Unified Report
+        reportRoot.unified_report.summary_explanation = editReportData.summary;
+        reportRoot.unified_report.issue_type = editReportData.issue_type;
+        reportRoot.unified_report.confidence_percent = Number(editReportData.confidence);
+
+        // Update Issue Overview
+        reportRoot.issue_overview.summary_explanation = editReportData.summary;
+        reportRoot.issue_overview.issue_type = editReportData.issue_type;
+        reportRoot.issue_overview.confidence_percent = Number(editReportData.confidence);
+      }
+
+      setViewReportModal(updated);
+      setIsEditingReport(false);
+
+      // Update main list so grid reflects changes immediately
+      setReviews(prev => prev.map(r => {
+        const rId = r._id || r.issue_id;
+        if (rId === id) return updated;
+        return r;
+      }));
+    } catch (err) {
+      alert('Failed to update report: ' + err.message);
     }
   };
 
@@ -339,7 +414,10 @@ export default function AdminDashboard() {
               return (
                 <div key={id} className="bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-xl overflow-hidden flex flex-col hover:border-gray-500 transition-all shadow-xl">
                   {/* Image Header */}
-                  <div className="relative h-48 bg-gray-800">
+                  <div
+                    className="relative h-48 bg-gray-800 cursor-pointer group"
+                    onClick={() => openReportModal(review)}
+                  >
                     {/* Selection Checkbox */}
                     {hasPermission('assign_issue') && (
                       <button
@@ -417,7 +495,7 @@ export default function AdminDashboard() {
                     {canActOnIssue(review) && (
                       <div className="grid grid-cols-2 gap-3">
                         <button
-                          onClick={() => confirmDecline(id)}
+                          onClick={() => handleDecline(id)}
                           disabled={processingId === id}
                           className="flex items-center justify-center gap-2 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg transition-colors disabled:opacity-50"
                         >
@@ -650,6 +728,221 @@ export default function AdminDashboard() {
                 <CheckCircle2 className="w-4 h-4" />
                 Assign
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Report Modal */}
+      {viewReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden shadow-2xl relative flex flex-col md:flex-row">
+            <button
+              onClick={() => setViewReportModal(null)}
+              className="absolute top-4 right-4 z-20 p-2 bg-black/50 rounded-full text-white hover:bg-white hover:text-black transition-all border border-white/10"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Image Side */}
+            <div className="w-full md:w-1/2 bg-black flex items-center justify-center p-4 relative group">
+              {(() => {
+                const id = viewReportModal._id || viewReportModal.issue_id;
+                let imageUrl = null;
+                if (viewReportModal.image_url) {
+                  imageUrl = `${apiClient.baseURL}${viewReportModal.image_url}`;
+                } else if (viewReportModal.image_id) {
+                  imageUrl = `${apiClient.baseURL}/issues/${id}/image`;
+                }
+
+                return imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt="Evidence Full"
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                  />
+                ) : (
+                  <div className="text-gray-500 flex flex-col items-center">
+                    <AlertTriangle className="w-12 h-12 mb-2 opacity-50" />
+                    <span>No Image Available</span>
+                  </div>
+                );
+              })()}
+
+              <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur px-3 py-1.5 rounded-lg border border-white/10 text-xs text-white">
+                ID: {viewReportModal._id || viewReportModal.issue_id}
+              </div>
+            </div>
+
+            {/* Details Side */}
+            <div className="w-full md:w-1/2 p-8 overflow-y-auto bg-gray-900 text-left">
+              {/* Header Actions */}
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                    <ShieldAlert className="w-8 h-8 text-blue-500" />
+                  </div>
+                  <div>
+                    {isEditingReport ? (
+                      <input
+                        value={editReportData.issue_type}
+                        onChange={(e) => setEditReportData({ ...editReportData, issue_type: e.target.value })}
+                        className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xl font-bold text-white w-full mb-1"
+                        placeholder="Issue Type"
+                      />
+                    ) : (
+                      <h2 className="text-2xl font-bold text-white capitalize">
+                        {(() => {
+                          const report = viewReportModal.report?.report || viewReportModal.report || {};
+                          const aiData = report.unified_report || report.issue_overview || {};
+                          const type = aiData.issue_type || viewReportModal.issue_type || 'Unknown';
+                          return type.replace(/_/g, ' ');
+                        })()}
+                      </h2>
+                    )}
+
+                    <p className="text-gray-400 text-sm">Created on {new Date(viewReportModal.timestamp).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                {/* Edit Controls */}
+                {canActOnIssue(viewReportModal) && (
+                  <div>
+                    {isEditingReport ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setIsEditingReport(false)}
+                          className="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 rounded border border-gray-600 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={saveReportChanges}
+                          className="px-3 py-1.5 text-xs bg-green-600 hover:bg-green-500 text-white rounded font-bold transition-colors flex items-center gap-1"
+                        >
+                          <Save className="w-3 h-3" /> Save
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={startEditingReport}
+                        className="px-3 py-1.5 text-xs bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded transition-colors flex items-center gap-1"
+                      >
+                        <Edit2 className="w-3 h-3" /> Edit Report
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-6">
+                {/* Confidence Score */}
+                {(() => {
+                  const report = viewReportModal.report?.report || viewReportModal.report || {};
+                  const aiData = report.unified_report || report.issue_overview || {};
+                  const confidence = isEditingReport ? editReportData.confidence : (aiData.confidence_percent || 0);
+                  return (
+                    <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-gray-400 text-sm">AI Confidence Score</span>
+                        {isEditingReport ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range" min="0" max="100"
+                              value={editReportData.confidence}
+                              onChange={(e) => setEditReportData({ ...editReportData, confidence: e.target.value })}
+                              className="accent-blue-500"
+                            />
+                            <span className="font-bold text-lg w-12 text-right">{editReportData.confidence}%</span>
+                          </div>
+                        ) : (
+                          <span className={`text-lg font-bold ${confidence > 80 ? 'text-green-500' : confidence < 50 ? 'text-red-500' : 'text-yellow-500'
+                            }`}>{confidence}%</span>
+                        )}
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${confidence > 80 ? 'bg-green-500' : confidence < 50 ? 'bg-red-500' : 'bg-yellow-500'
+                            }`}
+                          style={{ width: `${confidence}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Summary */}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-2">Analysis Summary</h3>
+                  <div className={`p-4 rounded-xl border ${isEditingReport ? 'bg-gray-800 border-blue-500/50 ring-1 ring-blue-500/20' : 'bg-gray-800/30 border-gray-700/50'}`}>
+                    {isEditingReport ? (
+                      <textarea
+                        value={editReportData.summary}
+                        onChange={(e) => setEditReportData({ ...editReportData, summary: e.target.value })}
+                        className="w-full bg-transparent text-gray-200 border-none outline-none resize-none h-32 focus:ring-0"
+                        placeholder="Enter analysis details..."
+                      />
+                    ) : (
+                      <p className="text-gray-300 leading-relaxed">
+                        {(() => {
+                          const report = viewReportModal.report?.report || viewReportModal.report || {};
+                          const aiData = report.unified_report || report.issue_overview || {};
+                          return aiData.summary_explanation || viewReportModal.description || "No description available.";
+                        })()}
+                      </p>
+                    )}
+                  </div>
+                  {isEditingReport && <p className="text-xs text-gray-500 mt-2 text-right">Visible to admins and sent in authority emails.</p>}
+                </div>
+
+                {/* Location & Reporter */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-800/30 p-4 rounded-xl border border-gray-700/50">
+                    <h4 className="text-xs text-gray-500 uppercase mb-1">Location</h4>
+                    <p className="text-gray-200 text-sm">{viewReportModal.location?.address || viewReportModal.address || 'Unknown'}</p>
+                  </div>
+                  <div className="bg-gray-800/30 p-4 rounded-xl border border-gray-700/50">
+                    <h4 className="text-xs text-gray-500 uppercase mb-1">Reporter</h4>
+                    <p className="text-gray-200 text-sm">{viewReportModal.reporter_email || 'Anonymous'}</p>
+                  </div>
+                </div>
+
+                {/* Assigned Authority */}
+                <div>
+                  <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-2">Recommended Authority</h3>
+                  {(() => {
+                    const report = viewReportModal.report?.report || viewReportModal.report || {};
+                    const auths = report.responsible_authorities_or_parties || [];
+                    const auth = auths[0];
+                    return auth ? (
+                      <div className="flex items-center gap-3 bg-purple-500/10 p-4 rounded-xl border border-purple-500/20">
+                        <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
+                          <ShieldCheck className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-purple-200">{auth.name}</div>
+                          <div className="text-xs text-purple-300/70">{auth.email}</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 bg-gray-800/30 p-4 rounded-xl border border-gray-700/50 italic">
+                        No specific authority recommended.
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Raw JSON Data */}
+                <details className="group">
+                  <summary className="cursor-pointer text-xs text-gray-500 hover:text-white transition-colors flex items-center gap-2 select-none">
+                    <span>View Raw Report Data</span>
+                    <div className="h-px bg-gray-700 flex-1"></div>
+                  </summary>
+                  <pre className="mt-4 p-4 bg-black rounded-xl overflow-auto text-xs text-green-400 font-mono border border-gray-800 max-h-60 shadow-inner">
+                    {JSON.stringify(viewReportModal, null, 2)}
+                  </pre>
+                </details>
+              </div>
             </div>
           </div>
         </div>
