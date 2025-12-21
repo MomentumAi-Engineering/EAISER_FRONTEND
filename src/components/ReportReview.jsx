@@ -394,10 +394,27 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         {confidence !== null && (
           <div className="mt-3">
             <p className="text-xs text-gray-400 mb-1">Confidence</p>
-            <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-gray-700">
-              <div className="h-full bg-blue-500/50" style={{ width: `${Math.max(0, Math.min(100, confidence))}%` }} />
-            </div>
-            <p className="text-xs text-gray-400 mt-1">{Math.max(0, Math.min(100, confidence))}%</p>
+            <div className="h-2 rounded-full overflow-hidden"
+              style={{
+                background: (() => {
+                  const val = Math.max(0, Math.min(100, Number(confidence) || 0));
+                  let color = '#ef4444'; // red-500
+                  if (val >= 80) color = '#4ade80'; // green-400
+                  else if (val >= 50) color = '#facc15'; // yellow-400
+                  return `linear-gradient(to right, ${color} 0%, ${color} ${val}%, #374151 ${val}%, #374151 100%)`;
+                })()
+              }}
+            />
+            <p className="text-xs mt-1" style={{
+              color: (() => {
+                const val = Math.max(0, Math.min(100, Number(confidence) || 0));
+                if (val >= 80) return '#4ade80';
+                if (val >= 50) return '#facc15';
+                return '#ef4444';
+              })()
+            }}>
+              {Math.max(0, Math.min(100, Number(confidence) || 0))}%
+            </p>
           </div>
         )}
       </div>

@@ -15,14 +15,58 @@ export default function SimpleReport() {
   const [reportResult, setReportResult] = useState(null);
   const [error, setError] = useState(null);
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setSelectedFile(file);
+      // Preview
       const reader = new FileReader();
       reader.onloadend = () => setSelectedImage(reader.result);
       reader.readAsDataURL(file);
+
+      // Compress
+      try {
+        const compressed = await compressImage(file, 1024, 0.5); // Max 1024px, 0.5 quality
+        setSelectedFile(compressed);
+        console.log(`Compressed image: ${file.size / 1024}KB -> ${compressed.size / 1024}KB`);
+      } catch (err) {
+        console.error("Compression failed, using original:", err);
+        setSelectedFile(file);
+      }
     }
+  };
+
+  const compressImage = (file, maxWidth, quality) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const elem = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+          elem.width = width;
+          elem.height = height;
+          const ctx = elem.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          elem.toBlob((blob) => {
+            if (!blob) { reject(new Error('Canvas is empty')); return; }
+            const newFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(newFile);
+          }, 'image/jpeg', quality);
+        };
+        img.onerror = (err) => reject(err);
+      };
+      reader.onerror = (err) => reject(err);
+    });
   };
 
   const handleCapture = () => {
@@ -86,22 +130,22 @@ export default function SimpleReport() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white p-6">
         <div className="max-w-4xl mx-auto">
-             <button
-              onClick={() => setReportResult(null)}
-              className="mb-4 inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-sm font-semibold"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Upload
-            </button>
-            <ReportReview 
-              issue={reportResult} 
-              imagePreview={selectedImage}
-              imageName={selectedFile?.name}
-              userAddress={formData.streetAddress}
-              userZip={formData.zipCode}
-              userLat={coords.latitude}
-              userLon={coords.longitude}
-            />
+          <button
+            onClick={() => setReportResult(null)}
+            className="mb-4 inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-sm font-semibold"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Upload
+          </button>
+          <ReportReview
+            issue={reportResult}
+            imagePreview={selectedImage}
+            imageName={selectedFile?.name}
+            userAddress={formData.streetAddress}
+            userZip={formData.zipCode}
+            userLat={coords.latitude}
+            userLon={coords.longitude}
+          />
         </div>
       </div>
     );
@@ -125,11 +169,11 @@ export default function SimpleReport() {
           </div> */}
           Report an Issue
         </h1>
-        
+
         {error && (
-            <div className="bg-red-500/10 border border-red-500/50 text-red-200 p-4 rounded-xl text-sm">
-                {error}
-            </div>
+          <div className="bg-red-500/10 border border-red-500/50 text-red-200 p-4 rounded-xl text-sm">
+            {error}
+          </div>
         )}
 
         {/* Upload Section */}
@@ -206,11 +250,10 @@ export default function SimpleReport() {
 
             <button
               onClick={handleLocationPermission}
-              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
-                locationPermission
-                  ? "bg-green-600/20 border border-green-600 text-green-400"
-                  : "bg-gray-800 hover:bg-gray-700 border border-gray-700"
-              }`}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${locationPermission
+                ? "bg-green-600/20 border border-green-600 text-green-400"
+                : "bg-gray-800 hover:bg-gray-700 border border-gray-700"
+                }`}
             >
               <Navigation className="w-4 h-4" />
               {locationPermission ? "Location Access Granted" : "Use Current Location"}
@@ -230,7 +273,7 @@ export default function SimpleReport() {
         >
           {loading ? (
             <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Generating...
+              <Loader2 className="w-4 h-4 animate-spin" /> Generating...
             </>
           ) : (
             "Generate Report"

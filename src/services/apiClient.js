@@ -420,6 +420,22 @@ class ApiClient {
     });
   }
 
+  async updateReport(issue_id, summary, issue_type, confidence) {
+    const payload = { issue_id };
+    if (summary) payload.summary = summary;
+    if (issue_type) payload.issue_type = issue_type;
+    if (confidence !== undefined) payload.confidence = confidence;
+
+    return this.request('/api/admin/review/update-report', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify(payload),
+    });
+  }
+
   // ============================================
   // TEAM MANAGEMENT METHODS
   // ============================================
