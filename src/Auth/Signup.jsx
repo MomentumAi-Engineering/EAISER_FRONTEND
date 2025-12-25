@@ -82,7 +82,7 @@ export default function Signup() {
       setMessage(res?.message || 'Account created.');
 
       // After successful signup, log the user in by calling login endpoint
-      const loginRes = await axios.post('http://localhost:5000/api/auth/login', {
+      const loginRes = await axios.post('https://eaiser-db-backend.onrender.com/api/auth/login', {
         email: formData.email,
         password: formData.password
       });
