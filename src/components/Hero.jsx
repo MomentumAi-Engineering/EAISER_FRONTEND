@@ -93,7 +93,7 @@ export default function EaiserAIHero() {
 
             <div className="flex flex-wrap gap-4">
               <button
-                onClick={() => navigate('/report')}
+                onClick={() => navigate('/signup')}
                 className="group relative px-8 py-4 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl font-bold text-black overflow-hidden transition-all hover:shadow-2xl hover:shadow-yellow-500/50 hover:-translate-y-1"
               >
                 <span className="relative z-10 flex items-center gap-2">
