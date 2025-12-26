@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Camera, 
-  Upload, 
-  MapPin, 
-  FileText, 
-  Edit, 
-  Check, 
-  X, 
-  Loader, 
+import {
+  Camera,
+  Upload,
+  MapPin,
+  FileText,
+  Edit,
+  Check,
+  X,
+  Loader,
   AlertCircle,
   Image as ImageIcon,
   Map,
@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import './UploadForm.css';
 import API_BASE_URL from '../config';
+import heic2any from 'heic2any';
 
 function UploadForm({ setStatus, fetchIssues }) {
   const [image, setImage] = useState(null);
@@ -54,31 +55,31 @@ function UploadForm({ setStatus, fetchIssues }) {
   const [selectedAuthorities, setSelectedAuthorities] = useState([]);
   const [emailingAuthorities, setEmailingAuthorities] = useState(false);
   const [emailStatus, setEmailStatus] = useState('');
-  
+
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  
+
   const severities = [
     { value: 'low', label: 'Low', color: 'bg-green-500', icon: <Star className="w-4 h-4" /> },
     { value: 'medium', label: 'Medium', color: 'bg-yellow-500', icon: <Clock className="w-4 h-4" /> },
     { value: 'high', label: 'High', color: 'bg-orange-500', icon: <AlertCircle className="w-4 h-4" /> },
     { value: 'critical', label: 'Critical', color: 'bg-red-500', icon: <Zap className="w-4 h-4" /> }
   ];
-  
+
   const formSteps = [
     { title: 'Visual Evidence', icon: <ImageIcon className="w-5 h-5" /> },
     { title: 'Location', icon: <MapPin className="w-5 h-5" /> },
     { title: 'Review', icon: <FileText className="w-5 h-5" /> }
   ];
-  
+
   // Debug API response
   useEffect(() => {
     if (reportPreview) {
       console.log('Report Preview:', reportPreview);
     }
   }, [reportPreview]);
-  
+
   // Fetch authorities based on zip code from editedReport
   useEffect(() => {
     if (editedReport && editedReport.location && editedReport.location.zip_code) {
@@ -92,7 +93,7 @@ function UploadForm({ setStatus, fetchIssues }) {
       fetchAuthoritiesByZipCode(zipCode);
     }
   }, [zipCode]);
-  
+
   // Fetch authorities by zip code
   const fetchAuthoritiesByZipCode = async (zipCode) => {
     console.log('Fetching authorities for zip code:', zipCode);
@@ -105,7 +106,7 @@ function UploadForm({ setStatus, fetchIssues }) {
       const data = await response.json();
       console.log('Authorities data received:', data);
       setAvailableAuthorities(data);
-      
+
       // Initialize selected authorities from current report
       if (editedReport && editedReport.responsible_authorities_or_parties) {
         setSelectedAuthorities(editedReport.responsible_authorities_or_parties);
@@ -115,17 +116,49 @@ function UploadForm({ setStatus, fetchIssues }) {
       setStatus('Error fetching authorities. Using default list.');
     }
   };
-  
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
+
+  const handleImageChange = async (e) => {
+    let file = e.target.files[0];
     if (file) {
+      // Check for HEIC format
+      if (file.type === "image/heic" || file.type === "image/heif" || file.name.toLowerCase().endsWith('.heic')) {
+        try {
+          setIsLoading(true);
+          setStatus('Converting HEIC image to JPEG...');
+
+          const convertedBlob = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.8
+          });
+
+          // Handle case where heic2any returns array (multi-frame heic) vs single blob
+          const finalBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+
+          file = new File([finalBlob], file.name.replace(/\.heic$/i, ".jpg"), {
+            type: "image/jpeg",
+            lastModified: new Date().getTime()
+          });
+
+          setStatus('Image converted successfully');
+        } catch (err) {
+          console.error("HEIC conversion failed:", err);
+          setStatus("Failed to process HEIC image. Please try a JPEG/PNG.");
+          setFormErrors({ ...formErrors, image: 'Failed to process HEIC file' });
+          setIsLoading(false);
+          return;
+        } finally {
+          setIsLoading(false);
+        }
+      }
+
       if (file.size > 5 * 1024 * 1024) {
         setStatus('Image size exceeds 5MB limit');
-        setFormErrors({...formErrors, image: 'Image size exceeds 5MB limit'});
+        setFormErrors({ ...formErrors, image: 'Image size exceeds 5MB limit' });
         return;
       }
       setImage(file);
-      setFormErrors({...formErrors, image: null});
+      setFormErrors({ ...formErrors, image: null });
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result);
@@ -134,11 +167,11 @@ function UploadForm({ setStatus, fetchIssues }) {
       reader.readAsDataURL(file);
     }
   };
-  
+
   const triggerFileInput = () => {
     fileInputRef.current.click();
   };
-  
+
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -150,7 +183,7 @@ function UploadForm({ setStatus, fetchIssues }) {
       setStatus('Error accessing camera: ' + error.message);
     }
   };
-  
+
   const capturePhoto = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -162,11 +195,11 @@ function UploadForm({ setStatus, fetchIssues }) {
       const file = new File([blob], 'captured-image.jpg', { type: 'image/jpeg' });
       if (file.size > 5 * 1024 * 1024) {
         setStatus('Captured image size exceeds 5MB limit');
-        setFormErrors({...formErrors, image: 'Captured image size exceeds 5MB limit'});
+        setFormErrors({ ...formErrors, image: 'Captured image size exceeds 5MB limit' });
         return;
       }
       setImage(file);
-      setFormErrors({...formErrors, image: null});
+      setFormErrors({ ...formErrors, image: null });
       setPreview(imageDataUrl);
       setIsCameraActive(false);
       // Stop the camera stream
@@ -176,7 +209,7 @@ function UploadForm({ setStatus, fetchIssues }) {
       setActiveStep(1); // Move to next step
     }, 'image/jpeg');
   };
-  
+
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject;
@@ -184,11 +217,11 @@ function UploadForm({ setStatus, fetchIssues }) {
       setIsCameraActive(false);
     }
   };
-  
+
   const getLocation = () => {
     setIsLoading(true);
     setStatus('Getting your location...');
-    
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -198,47 +231,47 @@ function UploadForm({ setStatus, fetchIssues }) {
           });
           setStatus('Location captured successfully');
           setIsLoading(false);
-          setFormErrors({...formErrors, location: null});
+          setFormErrors({ ...formErrors, location: null });
         },
         (error) => {
           setStatus(`Error: ${error.message}`);
           setIsLoading(false);
-          setFormErrors({...formErrors, location: error.message});
+          setFormErrors({ ...formErrors, location: error.message });
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     } else {
       setStatus('Geolocation is not supported by your browser');
       setIsLoading(false);
-      setFormErrors({...formErrors, location: 'Geolocation is not supported by your browser'});
+      setFormErrors({ ...formErrors, location: 'Geolocation is not supported by your browser' });
     }
   };
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate form
     const errors = {};
     if (!image) errors.image = 'Please upload or capture an image';
     if (!address && !coordinates && !zipCode) errors.location = 'Please provide an address, zip code, or use current location';
-    
+
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-    
+
     setIsLoading(true);
     setStatus('Generating report...');
     const formData = new FormData();
     formData.append('image', image);
     formData.append('address', address);
     formData.append('zip_code', zipCode);
-    
+
     if (coordinates) {
       formData.append('latitude', coordinates.latitude);
       formData.append('longitude', coordinates.longitude);
     }
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/issues`, {
         method: 'POST',
@@ -247,7 +280,7 @@ function UploadForm({ setStatus, fetchIssues }) {
           'Accept': 'application/json'
         },
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         let errorMessage;
@@ -259,9 +292,9 @@ function UploadForm({ setStatus, fetchIssues }) {
         }
         throw new Error(errorMessage);
       }
-      
+
       const result = await response.json();
-      
+
       setStatus('Report generated! Please review.');
       setReportPreview(result.report);
       setEditedReport(result.report.report);
@@ -275,12 +308,12 @@ function UploadForm({ setStatus, fetchIssues }) {
     } catch (error) {
       console.error('Submit error:', error);
       setStatus(`Submit error: ${error.message}`);
-      setFormErrors({...formErrors, submit: error.message});
+      setFormErrors({ ...formErrors, submit: error.message });
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleEditChange = (section, field, value, index = null) => {
     setEditedReport((prev) => {
       const updated = { ...prev };
@@ -296,28 +329,28 @@ function UploadForm({ setStatus, fetchIssues }) {
       return updated;
     });
   };
-  
+
   const toggleEdit = () => {
     setIsEditing(!isEditing);
     setStatus(isEditing ? 'Report preview updated.' : 'Editing report...');
   };
-  
+
   const handleAccept = async () => {
     setIsLoading(true);
     setStatus('Submitting report...');
-  
+
     try {
       const response = await fetch(`${API_BASE_URL}/issues/${issueId}/accept`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           edited_report: editedReport,
           selected_authorities: selectedAuthorities // Pass selected authorities to backend
         }),
       });
-  
+
       const result = await response.json();
-  
+
       if (response.ok) {
         setSuccessMessage('Thank you for using SnapFix!');
         setStatus(`Issue submitted successfully! ID: ${result.id}`);
@@ -331,75 +364,75 @@ function UploadForm({ setStatus, fetchIssues }) {
         setActiveStep(0); // Reset to first step
       } else {
         setStatus(`Error: ${result.detail || 'Failed to submit issue'}`);
-        setFormErrors({...formErrors, accept: result.detail || 'Failed to submit issue'});
+        setFormErrors({ ...formErrors, accept: result.detail || 'Failed to submit issue' });
       }
     } catch (error) {
       setStatus('Network error. Please try again.');
       console.error('Accept error:', error);
-      setFormErrors({...formErrors, accept: 'Network error. Please try again'});
+      setFormErrors({ ...formErrors, accept: 'Network error. Please try again' });
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleDecline = () => {
     setShowDeclineForm(true);
     setStatus('Please provide a reason for rejecting the report.');
   };
-  
+
   const handleDeclineSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!declineReason) {
       setStatus('Please provide a decline reason.');
-      setFormErrors({...formErrors, decline: 'Please provide a decline reason'});
+      setFormErrors({ ...formErrors, decline: 'Please provide a decline reason' });
       return;
     }
-    
+
     setIsLoading(true);
     setStatus('Generating updated report...');
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/issues/${issueId}/decline`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ decline_reason: declineReason, edited_report: editedReport }),
       });
-      
+
       const result = await response.json();
-      
+
       if (response.ok) {
         setStatus('Updated report generated! Please review.');
         setReportPreview(result.report);
         setEditedReport(result.report.report);
         setShowDeclineForm(false);
         setDeclineReason('');
-        setFormErrors({...formErrors, decline: null});
+        setFormErrors({ ...formErrors, decline: null });
       } else {
         setStatus(`Error: ${result.detail || 'Failed to generate updated report'}`);
-        setFormErrors({...formErrors, decline: result.detail || 'Failed to generate updated report'});
+        setFormErrors({ ...formErrors, decline: result.detail || 'Failed to generate updated report' });
       }
     } catch (error) {
       setStatus('Network error. Please try again.');
       console.error('Decline error:', error);
-      setFormErrors({...formErrors, decline: 'Network error. Please try again'});
+      setFormErrors({ ...formErrors, decline: 'Network error. Please try again' });
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const nextStep = () => {
     if (activeStep < formSteps.length - 1) {
       setActiveStep(activeStep + 1);
     }
   };
-  
+
   const prevStep = () => {
     if (activeStep > 0) {
       setActiveStep(activeStep - 1);
     }
   };
-  
+
   const resetForm = () => {
     setImage(null);
     setPreview(null);
@@ -417,7 +450,7 @@ function UploadForm({ setStatus, fetchIssues }) {
     setFormErrors({});
     stopCamera();
   };
-  
+
   // Handle authority selection
   const handleAuthoritySelection = (authority, type) => {
     // Create authority object with proper type
@@ -425,15 +458,15 @@ function UploadForm({ setStatus, fetchIssues }) {
       ...authority,
       type: type || authority.type
     };
-    
+
     // Check if authority is already selected
-    const isSelected = selectedAuthorities.some(a => 
+    const isSelected = selectedAuthorities.some(a =>
       a.name === authorityWithType.name && a.type === authorityWithType.type
     );
-    
+
     if (isSelected) {
       // Remove from selection
-      setSelectedAuthorities(selectedAuthorities.filter(a => 
+      setSelectedAuthorities(selectedAuthorities.filter(a =>
         !(a.name === authorityWithType.name && a.type === authorityWithType.type)
       ));
     } else {
@@ -441,7 +474,7 @@ function UploadForm({ setStatus, fetchIssues }) {
       setSelectedAuthorities([...selectedAuthorities, authorityWithType]);
     }
   };
-  
+
   // Save selected authorities
   const saveSelectedAuthorities = () => {
     setEditedReport(prev => ({
@@ -484,12 +517,12 @@ function UploadForm({ setStatus, fetchIssues }) {
 
       const result = await response.json();
       setEmailStatus(`✅ Emails sent successfully to ${selectedAuthorities.length} authorities`);
-      
+
       // Auto-hide success message after 3 seconds
       setTimeout(() => {
         setEmailStatus('');
       }, 3000);
-      
+
     } catch (error) {
       console.error('Error sending emails:', error);
       setEmailStatus(`❌ Failed to send emails: ${error.message}`);
@@ -497,16 +530,16 @@ function UploadForm({ setStatus, fetchIssues }) {
       setEmailingAuthorities(false);
     }
   };
-  
+
   return (
-    <motion.div 
+    <motion.div
       className="upload-form-container"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
       <div className="form-header">
-        <motion.div 
+        <motion.div
           className="header-icon-container"
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -521,11 +554,11 @@ function UploadForm({ setStatus, fetchIssues }) {
           <p className="form-subtitle">Help improve your community by reporting issues</p>
         </div>
       </div>
-      
+
       {/* Progress Steps */}
       <div className="steps-container">
         {formSteps.map((step, index) => (
-          <motion.div 
+          <motion.div
             key={index}
             className={`step ${index <= activeStep ? 'active' : ''}`}
             initial={{ opacity: 0, y: 10 }}
@@ -543,10 +576,10 @@ function UploadForm({ setStatus, fetchIssues }) {
           </motion.div>
         ))}
       </div>
-      
+
       {!reportPreview ? (
-        <motion.form 
-          onSubmit={handleSubmit} 
+        <motion.form
+          onSubmit={handleSubmit}
           className="issue-form"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -555,7 +588,7 @@ function UploadForm({ setStatus, fetchIssues }) {
           {/* Step 1: Visual Evidence */}
           <AnimatePresence>
             {activeStep === 0 && (
-              <motion.div 
+              <motion.div
                 className="form-step"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -570,21 +603,21 @@ function UploadForm({ setStatus, fetchIssues }) {
                       <span className="tooltip-text">Upload a clear photo of the issue you're reporting</span>
                     </div>
                   </div>
-                  
+
                   <div className={`image-upload-area ${preview ? 'has-image' : ''} ${formErrors.image ? 'has-error' : ''}`}>
                     {preview ? (
                       <div className="image-preview-container">
-                        <motion.img 
-                          src={preview} 
-                          alt="Preview" 
+                        <motion.img
+                          src={preview}
+                          alt="Preview"
                           className="image-preview"
                           initial={{ scale: 0.9, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           transition={{ duration: 0.5 }}
                         />
                         <div className="image-buttons">
-                          <motion.button 
-                            type="button" 
+                          <motion.button
+                            type="button"
                             className="change-image-btn"
                             onClick={triggerFileInput}
                             whileHover={{ scale: 1.05 }}
@@ -592,8 +625,8 @@ function UploadForm({ setStatus, fetchIssues }) {
                           >
                             <Upload className="w-4 h-4" /> Change Image
                           </motion.button>
-                          <motion.button 
-                            type="button" 
+                          <motion.button
+                            type="button"
                             className="capture-image-btn"
                             onClick={startCamera}
                             whileHover={{ scale: 1.05 }}
@@ -605,16 +638,16 @@ function UploadForm({ setStatus, fetchIssues }) {
                       </div>
                     ) : (
                       <div className="upload-placeholder">
-                        <motion.div 
+                        <motion.div
                           className="upload-icon-container"
-                          animate={{ 
+                          animate={{
                             y: [0, -10, 0],
                             rotate: [0, 5, 0, -5, 0]
                           }}
-                          transition={{ 
-                            duration: 4, 
+                          transition={{
+                            duration: 4,
                             repeat: Infinity,
-                            ease: "easeInOut" 
+                            ease: "easeInOut"
                           }}
                         >
                           <ImageIcon className="upload-icon" />
@@ -622,8 +655,8 @@ function UploadForm({ setStatus, fetchIssues }) {
                         <p>Click to upload or capture an image</p>
                         <p className="hint">Max 5MB • JPEG, PNG</p>
                         <div className="image-buttons">
-                          <motion.button 
-                            type="button" 
+                          <motion.button
+                            type="button"
                             className="upload-btn"
                             onClick={triggerFileInput}
                             whileHover={{ scale: 1.05 }}
@@ -631,8 +664,8 @@ function UploadForm({ setStatus, fetchIssues }) {
                           >
                             <Upload className="w-4 h-4" /> Upload Image
                           </motion.button>
-                          <motion.button 
-                            type="button" 
+                          <motion.button
+                            type="button"
                             className="capture-btn"
                             onClick={startCamera}
                             whileHover={{ scale: 1.05 }}
@@ -650,10 +683,10 @@ function UploadForm({ setStatus, fetchIssues }) {
                       accept="image/*"
                       onChange={handleImageChange}
                     />
-                    
+
                     <AnimatePresence>
                       {isCameraActive && (
-                        <motion.div 
+                        <motion.div
                           className="camera-container"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -662,8 +695,8 @@ function UploadForm({ setStatus, fetchIssues }) {
                           <video ref={videoRef} className="camera-stream" />
                           <canvas ref={canvasRef} style={{ display: 'none' }} />
                           <div className="camera-controls">
-                            <motion.button 
-                              type="button" 
+                            <motion.button
+                              type="button"
                               className="capture-btn"
                               onClick={capturePhoto}
                               whileHover={{ scale: 1.1 }}
@@ -671,8 +704,8 @@ function UploadForm({ setStatus, fetchIssues }) {
                             >
                               <div className="capture-circle"></div>
                             </motion.button>
-                            <motion.button 
-                              type="button" 
+                            <motion.button
+                              type="button"
                               className="cancel-btn"
                               onClick={stopCamera}
                               whileHover={{ scale: 1.1 }}
@@ -685,9 +718,9 @@ function UploadForm({ setStatus, fetchIssues }) {
                       )}
                     </AnimatePresence>
                   </div>
-                  
+
                   {formErrors.image && (
-                    <motion.div 
+                    <motion.div
                       className="error-message"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -697,10 +730,10 @@ function UploadForm({ setStatus, fetchIssues }) {
                     </motion.div>
                   )}
                 </div>
-                
+
                 <div className="form-navigation">
-                  <motion.button 
-                    type="button" 
+                  <motion.button
+                    type="button"
                     className="nav-btn next"
                     onClick={nextStep}
                     disabled={!preview}
@@ -713,11 +746,11 @@ function UploadForm({ setStatus, fetchIssues }) {
               </motion.div>
             )}
           </AnimatePresence>
-          
+
           {/* Step 2: Location */}
           <AnimatePresence>
             {activeStep === 1 && (
-              <motion.div 
+              <motion.div
                 className="form-step"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -732,7 +765,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                       <span className="tooltip-text">Provide the location where the issue occurred</span>
                     </div>
                   </div>
-                  
+
                   <div className="location-inputs">
                     <div className="input-group">
                       <label className="input-label">Street Address</label>
@@ -747,7 +780,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="input-group">
                       <label className="input-label">Zip Code</label>
                       <div className="input-container">
@@ -763,13 +796,13 @@ function UploadForm({ setStatus, fetchIssues }) {
                         />
                       </div>
                     </div>
-                    
+
                     <div className="location-divider">
                       <div className="divider-line"></div>
                       <span className="divider-text">OR</span>
                       <div className="divider-line"></div>
                     </div>
-                    
+
                     <div className="gps-section">
                       <div className={`coordinates-display ${coordinates ? 'has-coordinates' : ''} ${formErrors.location ? 'has-error' : ''}`}>
                         {coordinates ? (
@@ -781,7 +814,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                           <span className="no-coordinates">No GPS coordinates available</span>
                         )}
                       </div>
-                      
+
                       <motion.button
                         type="button"
                         className={`gps-btn ${isLoading ? 'loading' : ''}`}
@@ -802,9 +835,9 @@ function UploadForm({ setStatus, fetchIssues }) {
                       </motion.button>
                     </div>
                   </div>
-                  
+
                   {formErrors.location && (
-                    <motion.div 
+                    <motion.div
                       className="error-message"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -814,10 +847,10 @@ function UploadForm({ setStatus, fetchIssues }) {
                     </motion.div>
                   )}
                 </div>
-                
+
                 <div className="form-navigation">
-                  <motion.button 
-                    type="button" 
+                  <motion.button
+                    type="button"
                     className="nav-btn prev"
                     onClick={prevStep}
                     whileHover={{ scale: 1.05 }}
@@ -825,8 +858,8 @@ function UploadForm({ setStatus, fetchIssues }) {
                   >
                     <ChevronLeft className="w-4 h-4" /> Previous
                   </motion.button>
-                  <motion.button 
-                    type="submit" 
+                  <motion.button
+                    type="submit"
                     className={`nav-btn submit ${isLoading ? 'loading' : ''}`}
                     disabled={isLoading || !image || (!address && !coordinates && !zipCode)}
                     whileHover={{ scale: 1.05 }}
@@ -848,7 +881,7 @@ function UploadForm({ setStatus, fetchIssues }) {
           </AnimatePresence>
         </motion.form>
       ) : (
-        <motion.div 
+        <motion.div
           className="report-preview-container"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -864,8 +897,8 @@ function UploadForm({ setStatus, fetchIssues }) {
                 <p className="preview-subtitle">Issue #{issueId}</p>
               </div>
             </div>
-            
-            <motion.button 
+
+            <motion.button
               className="edit-btn"
               onClick={toggleEdit}
               disabled={isLoading}
@@ -883,7 +916,7 @@ function UploadForm({ setStatus, fetchIssues }) {
               )}
             </motion.button>
           </div>
-          
+
           <div className="report-content">
             <div className="report-section">
               <h4 className="section-title">
@@ -894,7 +927,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                   <label className="report-label">Type</label>
                   <p className="report-value">{editedReport.issue_overview.issue_type}</p>
                 </div>
-                
+
                 <div className="report-item">
                   <label className="report-label">Severity</label>
                   {isEditing ? (
@@ -914,12 +947,12 @@ function UploadForm({ setStatus, fetchIssues }) {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="report-item">
                   <label className="report-label">Confidence</label>
                   <div className="confidence-bar">
                     <div className="confidence-track">
-                      <motion.div 
+                      <motion.div
                         className="confidence-fill"
                         initial={{ width: 0 }}
                         animate={{ width: `${editedReport.issue_overview.confidence}%` }}
@@ -929,13 +962,13 @@ function UploadForm({ setStatus, fetchIssues }) {
                     <span>{editedReport.issue_overview.confidence}%</span>
                   </div>
                 </div>
-                
+
                 <div className="report-item">
                   <label className="report-label">Category</label>
                   <p className="report-value">{editedReport.issue_overview.category}</p>
                 </div>
               </div>
-              
+
               <div className="report-item full-width">
                 <label className="report-label">Summary</label>
                 {isEditing ? (
@@ -951,7 +984,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                 )}
               </div>
             </div>
-            
+
             <div className="report-section">
               <h4 className="section-title">
                 <MapPin className="section-icon" /> Location Details
@@ -971,7 +1004,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                     <p className="report-value">{editedReport.location?.address || reportPreview.report.template_fields.address || 'Not specified'}</p>
                   )}
                 </div>
-                
+
                 <div className="report-item">
                   <label className="report-label">Zip Code</label>
                   {isEditing ? (
@@ -995,12 +1028,12 @@ function UploadForm({ setStatus, fetchIssues }) {
                     <p className="report-value">{editedReport.location?.zip_code || reportPreview.report.template_fields.zip_code || 'Not specified'}</p>
                   )}
                 </div>
-                
+
                 <div className="report-item full-width">
                   <label className="report-label">Map Link</label>
-                  <a 
-                    href={reportPreview.report.template_fields.map_link} 
-                    target="_blank" 
+                  <a
+                    href={reportPreview.report.template_fields.map_link}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="map-link"
                   >
@@ -1009,21 +1042,21 @@ function UploadForm({ setStatus, fetchIssues }) {
                 </div>
               </div>
             </div>
-            
+
             <div className="report-section">
               <h4 className="section-title">
                 <ImageIcon className="section-icon" /> Photo Evidence
               </h4>
               {reportPreview.image_content ? (
-                <motion.div 
+                <motion.div
                   className="image-container"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <img 
-                    src={`data:image/jpeg;base64,${reportPreview.image_content}`} 
-                    alt="Issue" 
-                    className="report-image" 
+                  <img
+                    src={`data:image/jpeg;base64,${reportPreview.image_content}`}
+                    alt="Issue"
+                    className="report-image"
                   />
                   <div className="image-info">
                     <p>{reportPreview.report.template_fields.image_filename || 'Not specified'}</p>
@@ -1036,7 +1069,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                 </div>
               )}
             </div>
-            
+
             <div className="report-section">
               <h4 className="section-title">
                 <Target className="section-icon" /> Recommended Actions
@@ -1057,8 +1090,8 @@ function UploadForm({ setStatus, fetchIssues }) {
               ) : (
                 <ul className="actions-list">
                   {editedReport.recommended_actions.map((action, index) => (
-                    <motion.li 
-                      key={index} 
+                    <motion.li
+                      key={index}
                       className="action-item"
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -1071,7 +1104,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                 </ul>
               )}
             </div>
-            
+
             <div className="report-section">
               <h4 className="section-title">
                 <Shield className="section-icon" /> AI Analysis
@@ -1081,20 +1114,20 @@ function UploadForm({ setStatus, fetchIssues }) {
                   <label className="analysis-label">Potential Impact</label>
                   <p className="analysis-value">{editedReport.detailed_analysis.potential_consequences_if_ignored}</p>
                 </div>
-                
+
                 <div className="analysis-item">
                   <label className="analysis-label">Urgency Reason</label>
                   <p className="analysis-value">{editedReport.detailed_analysis.public_safety_risk}</p>
                 </div>
               </div>
             </div>
-            
+
             <div className="report-section">
               <h4 className="section-title">
                 <Users className="section-icon" /> Responsible Authorities
                 {isEditing && (
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="edit-authorities-btn"
                     onClick={() => setShowAuthoritySelector(true)}
                   >
@@ -1104,8 +1137,8 @@ function UploadForm({ setStatus, fetchIssues }) {
               </h4>
               <div className="authorities-grid">
                 {editedReport.responsible_authorities_or_parties.map((authority, index) => (
-                  <motion.div 
-                    key={index} 
+                  <motion.div
+                    key={index}
                     className="authority-card"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1124,10 +1157,10 @@ function UploadForm({ setStatus, fetchIssues }) {
               </div>
             </div>
           </div>
-          
+
           {!showDeclineForm ? (
             <div className="report-actions">
-              <motion.button 
+              <motion.button
                 className="action-btn accept"
                 onClick={handleAccept}
                 disabled={isLoading}
@@ -1144,8 +1177,8 @@ function UploadForm({ setStatus, fetchIssues }) {
                   </>
                 )}
               </motion.button>
-              
-              <motion.button 
+
+              <motion.button
                 className="action-btn decline"
                 onClick={handleDecline}
                 disabled={isLoading}
@@ -1154,8 +1187,8 @@ function UploadForm({ setStatus, fetchIssues }) {
               >
                 <X className="w-4 h-4" /> Decline Report
               </motion.button>
-              
-              <motion.button 
+
+              <motion.button
                 className="action-btn secondary"
                 onClick={resetForm}
                 whileHover={{ scale: 1.05 }}
@@ -1165,8 +1198,8 @@ function UploadForm({ setStatus, fetchIssues }) {
               </motion.button>
             </div>
           ) : (
-            <motion.form 
-              onSubmit={handleDeclineSubmit} 
+            <motion.form
+              onSubmit={handleDeclineSubmit}
               className="decline-form"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1182,7 +1215,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                   required
                 />
                 {formErrors.decline && (
-                  <motion.div 
+                  <motion.div
                     className="error-message"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1192,10 +1225,10 @@ function UploadForm({ setStatus, fetchIssues }) {
                   </motion.div>
                 )}
               </div>
-              
+
               <div className="form-actions">
-                <motion.button 
-                  type="button" 
+                <motion.button
+                  type="button"
                   className="action-btn secondary"
                   onClick={() => setShowDeclineForm(false)}
                   whileHover={{ scale: 1.05 }}
@@ -1203,9 +1236,9 @@ function UploadForm({ setStatus, fetchIssues }) {
                 >
                   Cancel
                 </motion.button>
-                
-                <motion.button 
-                  type="submit" 
+
+                <motion.button
+                  type="submit"
                   className={`action-btn submit ${isLoading ? 'loading' : ''}`}
                   disabled={isLoading || !declineReason}
                   whileHover={{ scale: 1.05 }}
@@ -1224,10 +1257,10 @@ function UploadForm({ setStatus, fetchIssues }) {
               </div>
             </motion.form>
           )}
-          
+
           <AnimatePresence>
             {successMessage && (
-              <motion.div 
+              <motion.div
                 className="success-message"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1246,14 +1279,14 @@ function UploadForm({ setStatus, fetchIssues }) {
       {/* Authority Selector Modal */}
       <AnimatePresence>
         {showAuthoritySelector && (
-          <motion.div 
+          <motion.div
             className="modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setShowAuthoritySelector(false)}
           >
-            <motion.div 
+            <motion.div
               className="authority-selector-modal"
               initial={{ opacity: 0, scale: 0.9, y: 50 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1265,7 +1298,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                   <Users className="w-5 h-5" />
                   Select Authorities for {editedReport?.location?.zip_code || zipCode}
                 </h3>
-                <button 
+                <button
                   className="modal-close-btn"
                   onClick={() => setShowAuthoritySelector(false)}
                 >
@@ -1275,7 +1308,7 @@ function UploadForm({ setStatus, fetchIssues }) {
 
               <div className="modal-content">
                 {emailStatus && (
-                  <motion.div 
+                  <motion.div
                     className={`email-status ${emailStatus.includes('✅') ? 'success' : emailStatus.includes('❌') ? 'error' : 'info'}`}
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1287,26 +1320,25 @@ function UploadForm({ setStatus, fetchIssues }) {
                 <div className="authorities-section">
                   <h4>Available Authorities ({Object.keys(availableAuthorities).length})</h4>
                   <p className="section-description">
-                    Select multiple authorities to send your report. You can choose any authority, 
+                    Select multiple authorities to send your report. You can choose any authority,
                     not just the recommended ones.
                   </p>
                   {/* console.log('Available authorities in modal:', availableAuthorities) */}
                   <div className="authorities-grid">
                     {Object.entries(availableAuthorities).map(([type, authorities]) => (
                       authorities.map((authority, index) => {
-                        const isSelected = selectedAuthorities.some(selected => 
+                        const isSelected = selectedAuthorities.some(selected =>
                           selected.name === authority.name && selected.type === type
                         );
-                        const isRecommended = editedReport?.responsible_authorities_or_parties?.some(rec => 
+                        const isRecommended = editedReport?.responsible_authorities_or_parties?.some(rec =>
                           rec.name === authority.name && rec.type === type
                         );
-                        
+
                         return (
-                          <motion.div 
+                          <motion.div
                             key={`${type}-${index}`}
-                            className={`authority-card selectable ${
-                              isSelected ? 'selected' : ''
-                            } ${isRecommended ? 'recommended' : ''}`}
+                            className={`authority-card selectable ${isSelected ? 'selected' : ''
+                              } ${isRecommended ? 'recommended' : ''}`}
                             onClick={() => handleAuthoritySelection(authority, type)}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
@@ -1331,7 +1363,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                                 )}
                               </div>
                             </div>
-                            
+
                             <div className="authority-info">
                               <h5 className="authority-name">{authority.name}</h5>
                               <p className="authority-type">{type.replace('_', ' ').toUpperCase()}</p>
@@ -1358,7 +1390,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                     <h4>Selected Authorities ({selectedAuthorities.length})</h4>
                     <div className="selected-authorities-list">
                       {selectedAuthorities.map((authority, index) => (
-                        <motion.div 
+                        <motion.div
                           key={index}
                           className="selected-authority-item"
                           initial={{ opacity: 0, x: -10 }}
@@ -1367,7 +1399,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                         >
                           <Building className="w-4 h-4" />
                           <span>{authority.name} ({authority.type})</span>
-                          <button 
+                          <button
                             className="remove-authority-btn"
                             onClick={() => handleAuthoritySelection(authority, authority.type)}
                           >
@@ -1381,7 +1413,7 @@ function UploadForm({ setStatus, fetchIssues }) {
               </div>
 
               <div className="modal-actions">
-                <motion.button 
+                <motion.button
                   className="modal-btn secondary"
                   onClick={() => setShowAuthoritySelector(false)}
                   whileHover={{ scale: 1.02 }}
@@ -1389,8 +1421,8 @@ function UploadForm({ setStatus, fetchIssues }) {
                 >
                   Cancel
                 </motion.button>
-                
-                <motion.button 
+
+                <motion.button
                   className="modal-btn primary"
                   onClick={saveSelectedAuthorities}
                   disabled={selectedAuthorities.length === 0}
@@ -1400,8 +1432,8 @@ function UploadForm({ setStatus, fetchIssues }) {
                   <Save className="w-4 h-4" />
                   Save Selection ({selectedAuthorities.length})
                 </motion.button>
-                
-                <motion.button 
+
+                <motion.button
                   className={`modal-btn email ${emailingAuthorities ? 'loading' : ''}`}
                   onClick={sendEmailToAuthorities}
                   disabled={selectedAuthorities.length === 0 || emailingAuthorities}

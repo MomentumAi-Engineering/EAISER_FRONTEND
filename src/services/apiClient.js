@@ -408,8 +408,21 @@ class ApiClient {
     });
   }
 
-  async deactivateUser(user_email, reason, admin_id = 'admin') {
-    const payload = { user_email, reason, admin_id };
+  // Ticket 4: New Status
+  async setIssueStatus(issue_id, status, admin_id = 'admin', notes = '') {
+    return this.request('/api/admin/review/set-status', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ issue_id, status, admin_id, notes })
+    });
+  }
+
+  // Ticket 5: Enhanced Deactivate User
+  async deactivateUser(user_email, reason, admin_id = 'admin', issue_id = null, force_confirm = false) {
+    const payload = { user_email, reason, admin_id, issue_id, force_confirm };
     return this.request('/api/admin/review/deactivate-user', {
       method: 'POST',
       headers: {
