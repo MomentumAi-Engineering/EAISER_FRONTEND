@@ -10,6 +10,7 @@ import TeamManagement from './components/TeamManagement';
 import StatsDashboard from './components/StatsDashboard';
 import ChangePassword from './components/ChangePassword';
 import SecuritySettings from './components/SecuritySettings';
+import UserDash from './pages/UserDashboard';
 
 export default function App() {
   return (
@@ -36,6 +37,9 @@ export default function App() {
         <Route path="/admin/stats" element={<StatsDashboard />} />
         <Route path="/admin/change-password" element={<ChangePassword />} />
         <Route path="/admin/security" element={<SecuritySettings />} />
+        
+        {/* user dashboard*/}
+        <Route path="/dashboard" element={<UserDash/>} />
 
         {/* auth pages (no navbar) */}
         <Route path="/signup" element={<Signup />} />

@@ -5,26 +5,27 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Check token on mount & route change
   useEffect(() => {
-    // Check token on mount and when location changes
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
   }, [location]);
 
+  // Cross-tab logout/login sync
   useEffect(() => {
-    // Listen for storage changes (for cross-tab communication)
     const handleStorageChange = () => {
       const token = localStorage.getItem("token");
       setIsLoggedIn(!!token);
     };
-
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
+  // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -33,9 +34,20 @@ export default function Navbar() {
     setOpen(false);
   };
 
+  // 🔒 Report Issue Lock
+  const handleReportClick = () => {
+    if (!isLoggedIn) {
+      navigate("/signup");
+    } else {
+      navigate("/report");
+    }
+    setOpen(false);
+  };
+
   return (
     <nav className="w-full bg-gradient-to-r from-black via-zinc-900 to-black text-yellow-400 shadow-xl fixed top-0 left-0 z-50 border-b border-yellow-400/30 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        
         {/* Logo */}
         <h1 className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow-md">
           EaiserAI
@@ -43,15 +55,21 @@ export default function Navbar() {
 
         {/* Desktop Menu */}
         <ul className="hidden md:flex gap-10 text-lg font-semibold">
-          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
+          <li className="hover:text-white transition-all duration-300 hover:scale-110">
             <Link to="/">Home</Link>
           </li>
-          <li className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer">
-            <Link to="/report">Report Issue</Link>
+
+          <li>
+            <button
+              onClick={handleReportClick}
+              className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer"
+            >
+              Report Issue
+            </button>
           </li>
         </ul>
 
-        {/* Desktop auth links */}
+        {/* Desktop Auth */}
         <div className="hidden md:flex items-center">
           {!isLoggedIn ? (
             <Link to="/signup">
@@ -69,7 +87,7 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile Icon */}
+        {/* Mobile Menu Icon */}
         <button className="md:hidden" onClick={() => setOpen(!open)}>
           {open ? <X size={28} /> : <Menu size={28} />}
         </button>
@@ -78,6 +96,7 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {open && (
         <div className="md:hidden w-full bg-black/95 text-yellow-300 px-6 py-5 space-y-4 border-t border-yellow-400/20 animate-slide-down">
+          
           <Link
             to="/"
             onClick={() => setOpen(false)}
@@ -85,31 +104,29 @@ export default function Navbar() {
           >
             Home
           </Link>
-          <Link
-            to="/report"
-            onClick={() => setOpen(false)}
+
+          <button
+            onClick={handleReportClick}
             className="block hover:text-white transition"
           >
-            Report Issue
-          </Link>
+            🔒 Report Issue
+          </button>
 
-          {/* Mobile auth links */}
-          <div>
-            {!isLoggedIn ? (
-              <Link to="/signup" onClick={() => setOpen(false)} className="block">
-                <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
-                  Sign Up
-                </button>
-              </Link>
-            ) : (
-              <button
-                onClick={handleLogout}
-                className="w-full bg-red-500 text-white py-2 rounded-xl font-semibold hover:bg-red-600 transition"
-              >
-                Logout
+          {/* Mobile Auth */}
+          {!isLoggedIn ? (
+            <Link to="/signup" onClick={() => setOpen(false)}>
+              <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
+                Sign Up
               </button>
-            )}
-          </div>
+            </Link>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="w-full bg-red-500 text-white py-2 rounded-xl font-semibold hover:bg-red-600 transition"
+            >
+              Logout
+            </button>
+          )}
         </div>
       )}
     </nav>
