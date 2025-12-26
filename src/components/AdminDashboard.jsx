@@ -227,6 +227,48 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleSetStatus = async (issueId, newStatus) => {
+    try {
+      setProcessingId(issueId);
+      await apiClient.setIssueStatus(issueId, newStatus, 'admin', 'Status updated via Dashboard');
+      setReviews(prev => prev.map(r =>
+        (r._id === issueId || r.issue_id === issueId) ? { ...r, status: newStatus } : r
+      ));
+      alert(`Status updated to ${newStatus}`);
+    } catch (err) {
+      alert("Failed to update status: " + err.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleDeactivateUser = async (email, issueId) => {
+    if (!email) return alert("No reporter email found.");
+    const reason = prompt(`Deactivate user ${email}? Enter reason:`, "Spam / Fake Reports");
+    if (!reason) return;
+
+    if (!window.confirm(`Are you SURE you want to deactivate ${email}? This action prevents them from logging in.`)) return;
+
+    try {
+      await apiClient.deactivateUser(email, reason, 'admin', issueId);
+      alert(`User ${email} deactivated.`);
+    } catch (err) {
+      // Simple check for the warning message
+      if (err.message && (err.message.includes("low AI confidence") || err.message.includes("Low confidence"))) {
+        if (window.confirm("⚠️ SYSTEM WARNING:\nThe AI confidence for this report is LOW. Banning this user implies they submitted a fake report, but the AI is not sure.\n\nDo you want to FORCE deactivate anyway?")) {
+          try {
+            await apiClient.deactivateUser(email, reason, 'admin', issueId, true); // force_confirm=true
+            alert(`User ${email} deactivated (Forced).`);
+          } catch (e2) {
+            alert("Failed to deactivate: " + e2.message);
+          }
+        }
+      } else {
+        alert("Failed to deactivate: " + err.message);
+      }
+    }
+  };
+
   // Switch view mode
   const switchViewMode = async (mode) => {
     setViewMode(mode);
@@ -774,6 +816,30 @@ export default function AdminDashboard() {
                       </a>
                     </div>
                   </div>
+
+                  {/* Reporter Info */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Reporter</h3>
+                    <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700/50 flex justify-between items-center">
+                      <div className="flex items-center gap-3 text-gray-300">
+                        <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold">
+                          {(detailModal.reporter_email || '?')[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold">{detailModal.reporter_email || 'Anonymous'}</div>
+                          <div className="text-xs text-gray-500">Reporter</div>
+                        </div>
+                      </div>
+                      {detailModal.reporter_email && (
+                        <button
+                          onClick={() => handleDeactivateUser(detailModal.reporter_email, detailModal._id || detailModal.issue_id)}
+                          className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded text-xs transition-colors flex items-center gap-1"
+                        >
+                          <ShieldAlert className="w-3 h-3" /> Ban User
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Right Column: Editable Details */}
@@ -868,6 +934,22 @@ export default function AdminDashboard() {
               >
                 Close
               </button>
+
+              {/* Status Dropdown */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Set Status:</span>
+                <select
+                  className="bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 outline-none"
+                  value={detailModal.status || 'needs_review'}
+                  onChange={(e) => handleSetStatus(detailModal._id || detailModal.issue_id, e.target.value)}
+                >
+                  <option value="needs_review">Needs Review</option>
+                  <option value="investigating">Investigating</option>
+                  <option value="needs_support">Needs Support</option>
+                  <option value="no_action_required">No Action Required</option>
+                  <option value="duplicate">Duplicate</option>
+                </select>
+              </div>
 
               {/* Right: Actions */}
               <div className="flex gap-3">
