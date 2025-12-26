@@ -22,7 +22,7 @@ class ApiClient {
       envApi ||
       (isDev
         ? 'http://127.0.0.1:8000'
-        : 'https://eaiser-backend.onrender.com')
+        : 'https://eaiser-backend-rf95.onrender.com')
     ).replace(/\/$/, '');
 
 
