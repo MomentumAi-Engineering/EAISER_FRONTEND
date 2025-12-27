@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Upload, Camera, MapPin, Navigation, X, ArrowLeft, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,6 +16,9 @@ export default function SimpleReport() {
   const [loading, setLoading] = useState(false);
   const [reportResult, setReportResult] = useState(null);
   const [error, setError] = useState(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -71,8 +74,57 @@ export default function SimpleReport() {
     });
   };
 
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      setIsCameraActive(true);
+      // Wait for the video element to be rendered
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      alert("Could not access camera. Please check permissions.");
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject;
+      stream.getTracks().forEach(track => track.stop());
+    }
+    setIsCameraActive(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageDataUrl = canvas.toDataURL('image/jpeg');
+      setSelectedImage(imageDataUrl);
+
+      // Convert to file
+      canvas.toBlob((blob) => {
+        const file = new File([blob], "captured-photo.jpg", { type: "image/jpeg", lastModified: Date.now() });
+        setSelectedFile(file);
+      }, 'image/jpeg');
+
+      stopCamera();
+    }
+  };
+
   const handleCapture = () => {
-    alert("Camera functionality would open here");
+    startCamera();
   };
 
   const handleLocationPermission = () => {
@@ -282,6 +334,40 @@ export default function SimpleReport() {
           )}
         </button>
       </div>
+      {/* Camera Overlay */}
+      {isCameraActive && createPortal(
+        <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-black rounded-2xl overflow-hidden border border-gray-800">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="w-full h-[60vh] object-cover"
+            />
+            <canvas ref={canvasRef} className="hidden" />
+
+            {/* Camera Controls */}
+            <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-8">
+              <button
+                onClick={stopCamera}
+                className="p-4 rounded-full bg-gray-800/80 text-white backdrop-blur-sm border border-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              <button
+                onClick={capturePhoto}
+                className="p-1 rounded-full border-4 border-white/30"
+              >
+                <div className="w-16 h-16 bg-white rounded-full active:scale-95 transition-transform" />
+              </button>
+            </div>
+          </div>
+          <p className="text-gray-400 mt-4 text-sm">Make sure the issue is clearly visible</p>
+        </div>,
+        document.body
+      )}
+
       {/* AI Scanner Overlay */}
       {loading && createPortal(
         <AnimatePresence>
