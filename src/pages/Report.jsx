@@ -19,9 +19,21 @@ export default function SimpleReport() {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const mobileInputRef = useRef(null);
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
+    processFile(file);
+  };
+
+  const handleMobileCapture = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const processFile = async (file) => {
     if (file) {
       // Preview
       const reader = new FileReader();
@@ -85,8 +97,13 @@ export default function SimpleReport() {
         }
       }, 100);
     } catch (err) {
-      console.error("Error accessing camera:", err);
-      alert("Could not access camera. Please check permissions.");
+      console.error("Error accessing camera, falling back to mobile capture:", err);
+      // Fallback for mobile/insecure contexts
+      if (mobileInputRef.current) {
+        mobileInputRef.current.click();
+      } else {
+        alert("Could not access camera. Please check permissions or try uploading a file.");
+      }
     }
   };
 
@@ -269,6 +286,16 @@ export default function SimpleReport() {
           >
             <Camera className="w-4 h-4" /> Capture with Camera
           </button>
+
+          {/* Hidden Fallback Input for Mobile Camera */}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            ref={mobileInputRef}
+            onChange={handleMobileCapture}
+            className="hidden"
+          />
         </div>
 
         {/* Location Section */}
