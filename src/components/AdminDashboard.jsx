@@ -289,10 +289,27 @@ export default function AdminDashboard() {
     }
   };
 
-  if (loading) {
+  if (loading && reviews.length === 0) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <div className="min-h-screen bg-black text-white p-6 md:p-12">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between mb-10">
+            <div className="h-10 w-64 bg-gray-800 rounded animate-pulse"></div>
+            <div className="h-10 w-32 bg-gray-800 rounded animate-pulse"></div>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden h-96">
+                <div className="h-48 bg-gray-800 animate-pulse"></div>
+                <div className="p-5 space-y-4">
+                  <div className="h-6 w-3/4 bg-gray-800 rounded animate-pulse"></div>
+                  <div className="h-4 w-full bg-gray-800 rounded animate-pulse"></div>
+                  <div className="h-4 w-1/2 bg-gray-800 rounded animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -347,9 +364,10 @@ export default function AdminDashboard() {
             </button>
             <button
               onClick={fetchReviews}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm border border-gray-700 transition-all"
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 hover:text-white text-gray-400 rounded-lg text-sm border border-gray-700 transition-all flex items-center gap-2"
             >
-              Refresh
+              <Loader2 className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </header>
@@ -414,12 +432,16 @@ export default function AdminDashboard() {
             {reviews.map((review) => {
               const id = review._id || review.issue_id;
               // Extract data safely
+              // Extract data safely
               const report = review.report?.report || review.report || {};
               const aiData = report.unified_report || report.issue_overview || {};
               const issueType = aiData.issue_type || review.issue_type || 'Unknown';
               const confidence = aiData.confidence_percent || 0;
-              const summary = aiData.summary_explanation || review.description || "No description";
+              // 🟢 Ticket 2: Prefer "User Friendly" summary, fall back to "Technical" or standard
+              const summary = aiData.user_feedback || aiData.summary_explanation || review.description || "No description";
 
+              // 🟢 Ticket 2: Admin Analysis for tooltip or extra info
+              const adminAnalysis = aiData.admin_analysis || "No technical analysis available";
 
               // Correct Image URL Logic:
               let imageUrl = null;
@@ -432,7 +454,7 @@ export default function AdminDashboard() {
               }
 
               return (
-                <div key={id} onClick={() => openDetailModal(review)} className="bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-xl overflow-hidden flex flex-col hover:border-gray-500 transition-all shadow-xl cursor-pointer">
+                <div key={id} onClick={() => openDetailModal(review)} className="group bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-xl overflow-hidden flex flex-col hover:border-purple-500/50 hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-300 cursor-pointer transform hover:-translate-y-1">
                   {/* Image Header */}
                   <div
                     className="relative h-48 bg-gray-800 cursor-pointer group"
@@ -794,6 +816,17 @@ export default function AdminDashboard() {
                   </div>
 
                   <div>
+                    <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">AI Analysis Summary</h3>
+                    <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700/50 text-gray-300 text-sm leading-relaxed whitespace-pre-line">
+                      {(() => {
+                        const r = detailModal.report?.report || detailModal.report || {};
+                        const ov = r.issue_overview || {};
+                        return ov.summary_explanation || detailModal.description || "No analysis available.";
+                      })()}
+                    </div>
+                  </div>
+
+                  <div>
                     <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Location</h3>
                     <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700/50">
                       <div className="flex items-center gap-3 text-gray-300 mb-2">
@@ -982,6 +1015,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-    </div >
+    </div>
   );
 }

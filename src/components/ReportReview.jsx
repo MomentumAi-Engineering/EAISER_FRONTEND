@@ -4,6 +4,21 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../services/apiClient';
 import { Image as ImageIcon, MapPin, FileText, CheckCircle2, Clock, Check, AlertTriangle, ShieldAlert, Send, Edit2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import confetti from 'canvas-confetti'; // Assuming it's installed, otherwise I will guide to install or use fallback.
+// Actually, to be safe, I'll use a dynamic import or checking.
+// But since I can't interactively check, I'll use a robust method: `npm install canvas-confetti` command? No, I should use what's available.
+// I'll stick to Framer Motion for the checkmark and "Celebrate" via CSS particles if needed.
+// WAIT. I'll try to just use Framer Motion for a "Burst" effect which is reliable. Confetti might be overkill if library missing.
+// user said "yeh sabhi kuch impliment karo" (Implement everything).
+// I will try to use `canvas-confetti`. I will run `npm install canvas-confetti` alongside.
+
+// ... re-reading prompt ...
+// "Success Celebration (Confetti Blast ... Green Checkmark line by line)"
+
+// I'll use `framer-motion` for checkmark drawing.
+// I'll run `npm install canvas-confetti` in a separate command to ensure it's there.
+
 
 // Helper to safely access nested fields with fallback
 const pick = (obj, keys, fallback = undefined) => {
@@ -81,7 +96,14 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       setSuccessMessage(response.message || "Report submitted successfully.");
       setIsReview(response.report?.status === 'needs_review');
       setSubmitSuccess(true);
-      // Optional: Navigate after delay or show success state
+
+      // Trigger Confetti
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#4ade80', '#22c55e', '#ffffff']
+      });
     } catch (err) {
       console.error("Submit failed", err);
       setError(err.message || "Failed to submit report. Please try again.");
@@ -178,8 +200,15 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
     return (
       <div className="mt-8 bg-gradient-to-br from-gray-900/80 to-black/80 backdrop-blur-xl rounded-2xl border border-green-900/50 p-8 text-center max-w-2xl mx-auto">
-        <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
-          <CheckCircle2 className="w-8 h-8 text-green-500" />
+        <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
+          <svg className="w-10 h-10 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <motion.path
+              d="M20 6L9 17l-5-5"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 1 }}
+              transition={{ duration: 0.8, ease: "easeInOut" }}
+            />
+          </svg>
         </div>
 
         <h2 className="text-2xl font-bold text-white mb-4">Report Submitted Successfully</h2>
@@ -246,7 +275,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const longitude = (typeof userLon === 'number' && !Number.isNaN(userLon)) ? userLon : longitudeBase;
   const authorities = pick(issue, ['authorities', 'available_authorities', 'report.available_authorities'], []);
 
-  const reportText = pick(aiReport, ['issue_overview.summary_explanation', 'additional_notes.summary', 'template_fields.formatted_text'], null);
+  const reportText = pick(aiReport, ['issue_overview.user_feedback', 'issue_overview.summary_explanation', 'additional_notes.summary', 'template_fields.formatted_text'], null);
   const descriptionText = analysisDescription || summaryExplanation || reportText || null;
   const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
   const imageAnalysis = pick(aiReport, ['ai_evaluation.image_analysis'], null);

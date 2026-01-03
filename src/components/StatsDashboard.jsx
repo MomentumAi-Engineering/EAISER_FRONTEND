@@ -1,8 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
-import { BarChart3, TrendingUp, Users, AlertCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, AlertCircle, CheckCircle, XCircle, Clock, Loader2, RefreshCw, FileText } from 'lucide-react';
 import { hasPermission, getCurrentAdmin } from '../utils/permissions';
+
+const CountUp = ({ end, duration = 2000 }) => {
+    const [count, setCount] = useState(0);
+
+    useEffect(() => {
+        let startTime;
+        let animationFrame;
+
+        const animate = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const progress = timestamp - startTime;
+            const percentage = Math.min(progress / duration, 1);
+
+            // Easing function for smooth effect
+            const easeOutQuart = 1 - Math.pow(1 - percentage, 4);
+
+            setCount(Math.floor(easeOutQuart * end));
+
+            if (progress < duration) {
+                animationFrame = requestAnimationFrame(animate);
+            }
+        };
+
+        animationFrame = requestAnimationFrame(animate);
+
+        return () => cancelAnimationFrame(animationFrame);
+    }, [end, duration]);
+
+    return <>{count}</>;
+};
 
 export default function StatsDashboard() {
     const navigate = useNavigate();
@@ -34,7 +64,7 @@ export default function StatsDashboard() {
     if (loading) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
-                <div className="text-white text-xl">Loading statistics...</div>
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
             </div>
         );
     }
@@ -56,32 +86,39 @@ export default function StatsDashboard() {
                     >
                         ← Back
                     </button>
+                    <button
+                        onClick={fetchStats}
+                        className="ml-3 p-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-all border border-gray-700 hover:border-gray-600 hover:text-white"
+                        title="Refresh Stats"
+                    >
+                        <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
                 </div>
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <StatCard
-                        icon={<AlertCircle className="w-8 h-8" />}
                         title="Total Issues"
-                        value={stats?.total_issues || 0}
+                        value={<CountUp end={stats.total_issues || 0} />}
+                        icon={<FileText className="w-8 h-8" />}
                         color="blue"
                     />
                     <StatCard
-                        icon={<Clock className="w-8 h-8" />}
                         title="Pending Review"
-                        value={stats?.pending_review || 0}
+                        value={<CountUp end={stats.pending_review || 0} />}
+                        icon={<Clock className="w-8 h-8" />}
                         color="yellow"
                     />
                     <StatCard
-                        icon={<CheckCircle className="w-8 h-8" />}
                         title="Approved"
-                        value={stats?.approved || 0}
+                        value={<CountUp end={stats.approved || 0} />}
+                        icon={<CheckCircle className="w-8 h-8" />}
                         color="green"
                     />
                     <StatCard
-                        icon={<XCircle className="w-8 h-8" />}
                         title="Declined"
-                        value={stats?.declined || 0}
+                        value={<CountUp end={stats.declined || 0} />}
+                        icon={<XCircle className="w-8 h-8" />}
                         color="red"
                     />
                 </div>
@@ -97,7 +134,7 @@ export default function StatsDashboard() {
                         <div className="space-y-3">
                             {stats?.by_type && Object.entries(stats.by_type).map(([type, count]) => (
                                 <div key={type} className="flex items-center justify-between">
-                                    <span className="text-gray-300 capitalize">{type}</span>
+                                    <span className="text-gray-300 capitalize">{type.replace(/_/g, ' ')}</span>
                                     <div className="flex items-center gap-3">
                                         <div className="w-32 bg-gray-700 rounded-full h-2">
                                             <div
