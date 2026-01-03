@@ -34,13 +34,9 @@ export default function Navbar() {
     setOpen(false);
   };
 
-  // 🔒 Report Issue Lock
+  // Report Issue
   const handleReportClick = () => {
-    if (!isLoggedIn) {
-      navigate("/signup");
-    } else {
-      navigate("/report");
-    }
+    navigate("/report");
     setOpen(false);
   };
 
@@ -109,7 +105,7 @@ export default function Navbar() {
             onClick={handleReportClick}
             className="block hover:text-white transition"
           >
-            🔒 Report Issue
+            Report Issue
           </button>
 
           {/* Mobile Auth */}
