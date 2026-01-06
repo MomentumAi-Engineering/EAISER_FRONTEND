@@ -28,7 +28,7 @@ const getApiBase = () => {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
-      return 'http://localhost:5000';
+      return 'http://localhost:8000';
     }
   }
 
@@ -40,14 +40,26 @@ const API_BASE = getApiBase();
 
 async function request(path, body) {
   const url = API_BASE ? `${API_BASE}${path}` : path;
+  console.log(`[Auth API] Requesting: ${url}`);
+
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const data = await res.json().catch(() => ({}));
+
+  const text = await res.text();
+  let data = {};
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    console.warn("Server response was not JSON:", text);
+    data = { message: text };
+  }
+
   if (!res.ok) {
-    const err = new Error(data?.message || 'Request failed');
+    console.error(`[Auth API] Error ${res.status}:`, data);
+    const err = new Error(data?.detail || data?.message || `Request failed with status ${res.status}`);
     err.response = data;
     throw err;
   }
@@ -56,7 +68,8 @@ async function request(path, body) {
 
 // dob removed from signup params and payload
 export async function signup({ fullName, email, password }) {
-  return request('/api/auth/signup', { fullName, email, password });
+  // Backend expects "name", not "fullName"
+  return request('/api/auth/signup', { name: fullName, email, password });
 }
 
 export async function login({ email, password }) {
@@ -64,5 +77,5 @@ export async function login({ email, password }) {
 }
 
 export async function googleSignIn(idToken) {
-  return request('/api/auth/google', { idToken });
+  return request('/api/auth/google', { credential: idToken });
 }

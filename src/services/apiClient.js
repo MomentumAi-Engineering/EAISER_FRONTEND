@@ -272,11 +272,28 @@ class ApiClient {
     });
   }
 
+  // User Dashboard
+  async getMyIssues() {
+    return this.request('/api/issues/my-issues', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+  }
+
   // --- Admin Review API ---
 
   async getPendingReviews() {
     return this.request('/api/admin/review/pending', {
-      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken') || 'demo_token'}` }
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      }
+    });
+  }
+
+  async getResolvedReviews() {
+    return this.request('/api/admin/review/resolved', {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      }
     });
   }
 
@@ -525,6 +542,101 @@ class ApiClient {
         Authorization: `Bearer ${localStorage.getItem('adminToken')}`
       },
       body: JSON.stringify(payload),
+    });
+  }
+
+  // --- Admin Mapping Review ---
+
+  async getUnmappedIssues(resolved = false) {
+    return this.request(`/api/admin/review/mapping-review?resolved=${resolved}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+    });
+  }
+
+  async resolveMapping(review_id, issue_type, mapped_departments) {
+    if (!Array.isArray(mapped_departments)) mapped_departments = [mapped_departments];
+    return this.request(`/api/admin/review/mapping-review/${review_id}/resolve`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ issue_type, mapped_departments })
+    })
+  }
+
+  // --- Authority Management (Zip Codes) ---
+
+  async getAuthorities() {
+    return this.request('/api/admin/review/authorities', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+    });
+  }
+
+  async updateAuthority(zip_code, data) {
+    return this.request('/api/admin/review/authorities', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ zip_code, data })
+    });
+  }
+
+  async getAllMappings() {
+    return this.request('/api/admin/review/mappings', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+    });
+  }
+
+  async updateMapping(issue_type, departments) {
+    return this.request('/api/admin/review/mappings/update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ issue_type, departments })
+    });
+  }
+
+  async getMappingStats() {
+    return this.request('/api/admin/review/stats/mapping', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+    });
+  }
+
+  async getMappingHistory() {
+    return this.request('/api/admin/review/mapping-history', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+    });
+  }
+  async getUsers(params = {}) {
+    // Build query string
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/api/admin/users/list?${query}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+    });
+  }
+
+  async toggleUserStatus(user_id, is_active, reason = '') {
+    return this.request('/api/admin/users/toggle-status', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ user_id, is_active, reason })
+    });
+  }
+
+  async deleteUser(user_id) {
+    return this.request(`/api/admin/users/delete/${user_id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      }
     });
   }
 }

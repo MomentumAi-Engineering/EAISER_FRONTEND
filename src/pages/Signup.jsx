@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
+import { signup, login } from '../api/auth';
 import DarkElegantBackground from '../components/DarkElegantBackground';
-=======
-import { AUTH_BASE_URL } from '../config';
->>>>>>> c1f4cb62ba125be0caa7af768211e8dc6b7974b7
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -20,41 +17,31 @@ export default function AuthPage() {
     setLoading(true);
 
     try {
-      const endpoint = isSignIn ? 'login' : 'signup';
-      const payload = isSignIn ? { email, password } : { name, email, password };
+      let data;
+      if (isSignIn) {
+        data = await login({ email, password });
+      } else {
+        data = await signup({ fullName: name, email, password });
+      }
 
-<<<<<<< HEAD
-      const res = await fetch(`http://localhost:5000/api/auth/${endpoint}`, {
-=======
-      const res = await fetch(`${AUTH_BASE_URL}/${endpoint}`, {
-
->>>>>>> c1f4cb62ba125be0caa7af768211e8dc6b7974b7
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
       setLoading(false);
 
-      if (res.ok) {
-        // Save JWT token in localStorage
-        localStorage.setItem('token', data.token);
-        // Store user data for profile avatar
+      if (data.access_token) {
+        localStorage.setItem('auth_token', data.access_token);
+        localStorage.setItem('token', data.access_token);
         localStorage.setItem('userData', JSON.stringify(data.user));
+
         console.log(`${isSignIn ? 'Login' : 'Signup'} successful:`, data.user);
         alert(`${isSignIn ? 'Login' : 'Signup'} successful!`);
-
-        // Redirect to your main app page
--        navigate('/snapfix'); // change '/snapfix' to your desired route
-+        navigate('/dashboard');
+        navigate('/dashboard');
       } else {
-        alert(data.error || 'Something went wrong');
+        alert('Login succeeded but no token received.');
       }
+
     } catch (err) {
       setLoading(false);
-      console.error('Error:', err);
-      alert('Failed to connect to backend');
+      console.error('Auth Error:', err);
+      alert(err.message || 'Authentication failed');
     }
   };
 
@@ -164,9 +151,8 @@ export default function AuthPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              className={`w-full bg-white text-black font-semibold py-2.5 rounded-full hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 mt-4 text-sm ${
-                loading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`w-full bg-white text-black font-semibold py-2.5 rounded-full hover:bg-gray-100 transition-colors flex items-center justify-center gap-2 mt-4 text-sm ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               disabled={loading}
             >
               {loading ? 'Please wait...' : isSignIn ? 'Sign In' : 'Get Started'}

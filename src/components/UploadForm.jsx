@@ -57,6 +57,9 @@ function UploadForm({ setStatus, fetchIssues }) {
   const [emailingAuthorities, setEmailingAuthorities] = useState(false);
   const [emailStatus, setEmailStatus] = useState('');
 
+  // alert modal state
+  const [alertModal, setAlertModal] = useState({ show: false, title: '', message: '', type: 'error' });
+
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -308,7 +311,31 @@ function UploadForm({ setStatus, fetchIssues }) {
       setActiveStep(2); // Move to review step
     } catch (error) {
       console.error('Submit error:', error);
-      setStatus(`Submit error: ${error.message}`);
+
+      const errorMsg = error.message.toLowerCase();
+      let alertTitle = 'Submission Failed';
+      let alertType = 'error';
+
+      if (errorMsg.includes('fake') || errorMsg.includes('ai-generated') || errorMsg.includes('manipulated')) {
+        alertTitle = '⚠️ Fake Image Detected';
+        setStatus('Analysis failed: This image appears to be AI-generated or manipulated.');
+      } else if (errorMsg.includes('blurry') || errorMsg.includes('unclear')) {
+        alertTitle = '📸 Image Too Blurry';
+        alertType = 'warning';
+        setStatus('Analysis failed: The image is too blurry to analyze.');
+      } else if (errorMsg.includes('size')) {
+        alertTitle = '📁 File Too Large';
+      } else {
+        setStatus(`Submit error: ${error.message}`);
+      }
+
+      setAlertModal({
+        show: true,
+        title: alertTitle,
+        message: error.message,
+        type: alertType
+      });
+
       setFormErrors({ ...formErrors, submit: error.message });
     } finally {
       setIsLoading(false);
@@ -1527,6 +1554,53 @@ function UploadForm({ setStatus, fetchIssues }) {
         </AnimatePresence>,
         document.body
       )}
+
+      {/* Alert Modal */}
+      <AnimatePresence>
+        {alertModal.show && (
+          <motion.div
+            className="modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setAlertModal({ ...alertModal, show: false })}
+          >
+            <motion.div
+              className={`authority-selector-modal alert-modal ${alertModal.type}`}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: '400px', textAlign: 'center' }}
+            >
+              <div className="modal-header" style={{ justifyContent: 'center', borderBottom: 'none', paddingBottom: 0 }}>
+                <div className={`alert-icon-wrapper ${alertModal.type === 'error' ? 'text-red-500' : 'text-yellow-500'}`}>
+                  {alertModal.type === 'error' ? (
+                    <Shield className="w-12 h-12 mx-auto mb-2" />
+                  ) : (
+                    <AlertCircle className="w-12 h-12 mx-auto mb-2" />
+                  )}
+                </div>
+              </div>
+
+              <div className="modal-content" style={{ padding: '0 20px 20px' }}>
+                <h3 className="text-xl font-bold mb-2 text-white">{alertModal.title}</h3>
+                <p className="text-gray-300 mb-6">{alertModal.message}</p>
+
+                <motion.button
+                  className="action-btn secondary"
+                  onClick={() => setAlertModal({ ...alertModal, show: false })}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{ width: '100%', justifyContent: 'center' }}
+                >
+                  OK, I Understand
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

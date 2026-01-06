@@ -2525,3 +2525,34 @@
   filter: blur(1px);
   opacity: 0.3;
 }
+/* Alert Modal Styles */
+.alert-modal.error {
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  box-shadow: 0 10px 40px -10px rgba(239, 68, 68, 0.4);
+}
+
+.alert-modal.warning {
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  box-shadow: 0 10px 40px -10px rgba(234, 179, 8, 0.4);
+}
+
+.alert-icon-wrapper {
+  margin-bottom: 0.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  display: inline-flex;
+  margin-top: -30px; /* Pull up to sit on edge */
+  position: relative;
+  background: #1e1e28;
+  border: 4px solid #1e1e28;
+}
+
+.alert-modal.error .alert-icon-wrapper {
+   color: #ef4444;
+}
+
+.alert-modal.warning .alert-icon-wrapper {
+   color: #eab308;
+}
+

@@ -9,20 +9,21 @@ import {
   Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import apiClient from "../services/apiClient";
 import ReportReview from "../components/ReportReview";
 import { GoogleMap, Marker, LoadScript } from "@react-google-maps/api";
+import Navbar from "../components/Navbar";
+import { useReportContext } from "../context/ReportContext";
 
 export default function SimpleReport() {
   const navigate = useNavigate();
+  // Use Global Context
+  const { generateReport, loading, error, reportResult, clearReport } = useReportContext();
+
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [locationPermission, setLocationPermission] = useState(false);
   const [coords, setCoords] = useState(null);
   const [formData, setFormData] = useState({ streetAddress: "", zipCode: "" });
-  const [loading, setLoading] = useState(false);
-  const [reportResult, setReportResult] = useState(null);
-  const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
@@ -81,32 +82,85 @@ export default function SimpleReport() {
     }
   };
 
+  /* 
+   * GUEST REPORT LIMIT LOGIC
+   * -------------------------
+   */
+  const GUEST_LIMIT = 3;
+
+  const checkGuestLimit = () => {
+    const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token"); // Example key
+
+    if (authToken) {
+      return true; // Logged in users have no limit here
+    }
+
+    const currentCount = parseInt(localStorage.getItem("guest_report_count") || "0", 10);
+
+    if (currentCount >= GUEST_LIMIT) {
+      return false;
+    }
+    return true;
+  };
+
+  const incrementGuestCount = () => {
+    const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token");
+    if (!authToken) {
+      const currentCount = parseInt(localStorage.getItem("guest_report_count") || "0", 10);
+      localStorage.setItem("guest_report_count", currentCount + 1);
+    }
+  };
+
   const handleGenerateReport = async () => {
+    // 1. Check Guest Limit
+    if (!checkGuestLimit()) {
+      const confirmLogin = window.confirm(
+        "You have reached the limit of 3 free reports as a guest.\n\nPlease login to your account to view the dashboard, track status, and submit unlimited reports."
+      );
+      if (confirmLogin) {
+        navigate("/login"); // Redirect to login page
+      }
+      return;
+    }
+
     if (!selectedFile) {
       alert("Please upload an image first.");
       return;
     }
 
-    setLoading(true);
-    setError(null);
-
+    // Get user email if logged in
+    let userEmail = undefined;
     try {
-      const response = await apiClient.createIssue({
-        imageFile: selectedFile,
-        description: "User reported issue via web interface",
-        address: formData.streetAddress || "",
-        zip_code: formData.zipCode || "",
-        latitude: coords?.lat || 0,
-        longitude: coords?.lng || 0,
-      });
+      const userData = localStorage.getItem('userData') || localStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        userEmail = user.email;
+      }
+    } catch (e) {
+      console.error("Failed to retrieve user email", e);
+    }
 
-      console.log("Report generated:", response);
-      setReportResult(response);
-    } catch (err) {
-      console.error("Error generating report:", err);
-      setError(err.message || "Failed to generate report. Please try again.");
-    } finally {
-      setLoading(false);
+    // Use Context Action
+    await generateReport({
+      imageFile: selectedFile,
+      description: "User reported issue via web interface",
+      address: formData.streetAddress || "",
+      zip_code: formData.zipCode || "",
+      latitude: coords?.lat || 0,
+      longitude: coords?.lng || 0,
+      user_email: userEmail
+    });
+
+    // 2. Increment Guest Counter on Success
+    incrementGuestCount();
+
+    // Optional: Show message after 3rd report
+    const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token");
+    if (!authToken) {
+      const newCount = parseInt(localStorage.getItem("guest_report_count") || "0", 10);
+      if (newCount >= GUEST_LIMIT) {
+        alert("You have used your 3 free guest reports. To view the dashboard or report status, please login.");
+      }
     }
   };
 
@@ -115,7 +169,7 @@ export default function SimpleReport() {
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white p-6">
         <div className="max-w-4xl mx-auto">
           <button
-            onClick={() => setReportResult(null)}
+            onClick={clearReport}
             className="mb-4 inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-sm font-semibold"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -136,16 +190,9 @@ export default function SimpleReport() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white p-6">
-      <div className="max-w-3xl mx-auto space-y-8">
-        <button
-          onClick={() => navigate("/")}
-          className="mb-2 inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-sm font-semibold"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Home
-        </button>
-
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white">
+      <Navbar />
+      <div className="max-w-3xl mx-auto space-y-8 p-6 pt-24">
         <h1 className="text-3xl font-black text-white flex items-center gap-3">
           Report an Issue
         </h1>
@@ -267,11 +314,10 @@ export default function SimpleReport() {
 
             <button
               onClick={handleLocationPermission}
-              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
-                locationPermission
-                  ? "bg-green-600/20 border border-green-600 text-green-400"
-                  : "bg-gray-800 hover:bg-gray-700 border border-gray-700"
-              }`}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${locationPermission
+                ? "bg-green-600/20 border border-green-600 text-green-400"
+                : "bg-gray-800 hover:bg-gray-700 border border-gray-700"
+                }`}
             >
               <Navigation className="w-4 h-4" />
               {locationPermission ? "Location Access Granted" : "Use Current Location"}

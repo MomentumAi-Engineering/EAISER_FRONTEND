@@ -30,6 +30,10 @@ function Dashboard() {
 
   useEffect(() => {
     fetchIssues();
+    const interval = setInterval(() => {
+      fetchIssues(); // Poll for updates
+    }, 30000); // 30 seconds
+    return () => clearInterval(interval);
   }, []);
 
   const total = issues.length;
