@@ -68,8 +68,8 @@ async function request(path, body) {
 
 // dob removed from signup params and payload
 export async function signup({ fullName, email, password }) {
-  // Backend expects "name", not "fullName"
-  return request('/api/auth/signup', { name: fullName, email, password });
+  // Backend expects "fullName"
+  return request('/api/auth/signup', { fullName, email, password });
 }
 
 export async function login({ email, password }) {
