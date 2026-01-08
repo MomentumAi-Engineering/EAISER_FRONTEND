@@ -280,9 +280,9 @@ export default function EaiserLogin() {
           {/* Footer */}
           <p className="text-center text-gray-400 text-xs mt-5">
             Don't have an account?{' '}
-            <a href="#" className="text-yellow-400 font-semibold hover:text-yellow-300 transition-colors">
+            <Link to="/signup" className="text-yellow-400 font-semibold hover:text-yellow-300 transition-colors">
               Sign Up
-            </a>
+            </Link>
           </p>
         </div>
       </div>

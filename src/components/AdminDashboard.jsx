@@ -59,6 +59,7 @@ export default function AdminDashboard() {
   const fetchReviews = async () => {
     try {
       setLoading(true);
+      setReviews([]); // Clear data first
       const data = await apiClient.getPendingReviews();
       setReviews(data);
       setError(null);
@@ -273,6 +274,7 @@ export default function AdminDashboard() {
   const switchViewMode = async (mode) => {
     setViewMode(mode);
     setLoading(true);
+    setReviews([]); // Clear data while loading to prevent stale renders
 
     try {
       if (mode === 'assigned') {
@@ -471,7 +473,11 @@ export default function AdminDashboard() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {reviews.map((review) => {
                 const id = review._id || review.issue_id;
-                // Extract data safely
+
+                // Define status helper
+                const statusLower = (review.status || '').toLowerCase();
+                const isResolved = ['approved', 'rejected', 'declined', 'submitted', 'resolved'].includes(statusLower);
+
                 // Extract data safely
                 const report = review.report?.report || review.report || {};
                 const aiData = report.unified_report || report.issue_overview || {};
@@ -494,14 +500,20 @@ export default function AdminDashboard() {
                 }
 
                 return (
-                  <div key={id} onClick={() => openDetailModal(review)} className="group bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-xl overflow-hidden flex flex-col hover:border-purple-500/50 hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-300 cursor-pointer transform hover:-translate-y-1">
+                  <div key={id} onClick={() => !isResolved && openDetailModal(review)} className={`group bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-xl overflow-hidden flex flex-col hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-300 transform ${!isResolved ? 'cursor-pointer hover:-translate-y-1 hover:border-purple-500/50' : 'cursor-default opacity-80'}`}>
                     {/* Image Header */}
                     <div
-                      className="relative h-48 bg-gray-800 cursor-pointer group"
-                      onClick={() => openReportModal(review)}
+                      className={`relative h-48 bg-gray-800 group ${!isResolved ? 'cursor-pointer' : ''}`}
+                      onClick={(e) => {
+                        if (isResolved) {
+                          e.stopPropagation();
+                          return;
+                        }
+                        openReportModal(review);
+                      }}
                     >
                       {/* Selection Checkbox */}
-                      {hasPermission('assign_issue') && (
+                      {hasPermission('assign_issue') && !isResolved && (
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleIssueSelection(id); }}
                           className="absolute top-3 left-3 z-10 p-1 rounded hover:scale-110 transition-transform bg-black/40 backdrop-blur-sm"
@@ -550,7 +562,7 @@ export default function AdminDashboard() {
                       <div className="text-xs text-gray-500 mb-4 space-y-1">
                         <p>📍 {review.location?.address || review.address || 'Unknown Location'}</p>
                         <p>🕒 {new Date(review.timestamp).toLocaleString()}</p>
-                        <p>👤 {review.reporter_email || 'Anonymous'}</p>
+                        <p>👤 <span className="text-white font-medium">{review.user_reputation?.name || 'User'}</span> <span className="text-gray-500 text-xs">({review.reporter_email || review.user_email || 'No Email'})</span></p>
 
                         {/* Show Resolver Info if available */}
                         {review.admin_review && review.admin_review.admin_id && (
@@ -568,42 +580,51 @@ export default function AdminDashboard() {
                               📌 Assigned to: {review.assigned_to}
                             </div>
                           ) : (
-                            <button
-                              onClick={() => openAssignmentModal(review)}
-                              className="w-full py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg transition-all text-sm flex items-center justify-center gap-2"
-                            >
-                              <Users className="w-4 h-4" />
-                              Assign to Team Member
-                            </button>
+                            !isResolved && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openAssignmentModal(review); }}
+                                className="w-full py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg transition-all text-sm flex items-center justify-center gap-2"
+                              >
+                                <Users className="w-4 h-4" />
+                                Assign to Team Member
+                              </button>
+                            )
                           )}
                         </div>
-                      )}
-
-                      {/* Actions */}
-                      {/* Action Buttons - Only show if admin can act on this issue */}
-                      {canActOnIssue(review) && (
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDecline(id); }}
-                            disabled={processingId === id}
-                            className="flex items-center justify-center gap-2 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg transition-colors disabled:opacity-50"
-                          >
-                            {processingId === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
-                            Decline
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openApproveModal(review); }}
-                            disabled={processingId === id}
-                            className="flex items-center justify-center gap-2 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg transition-colors disabled:opacity-50"
-                          >
-                            {processingId === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                            Review
-                          </button>
+                      )}                      {/* Action Buttons - Hide if already resolved */}
+                      {isResolved ? (
+                        <div className="mt-4 p-2 bg-gray-800 rounded border border-gray-700 text-center text-sm text-gray-400">
+                          <CheckCircle2 className="w-4 h-4 inline mr-2 text-green-500" />
+                          Review Completed
                         </div>
+                      ) : (
+                        /* Only show actions if admin can act AND issue is pending */
+                        <>
+                          {canActOnIssue(review) && (
+                            <div className="grid grid-cols-2 gap-3">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDecline(id); }}
+                                disabled={processingId === id}
+                                className="flex items-center justify-center gap-2 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                {processingId === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                                Decline
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openApproveModal(review); }}
+                                disabled={processingId === id}
+                                className="flex items-center justify-center gap-2 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                {processingId === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                Review
+                              </button>
+                            </div>
+                          )}
+                        </>
                       )}
 
                       {/* Show message if user cannot act on this issue */}
-                      {!canActOnIssue(review) && (
+                      {!canActOnIssue(review) && !isResolved && (
                         <div className="text-center py-3 text-gray-500 text-sm">
                           <ShieldAlert className="w-4 h-4 inline mr-2" />
                           Not assigned to you
@@ -911,10 +932,10 @@ export default function AdminDashboard() {
                       <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700/50 flex justify-between items-center">
                         <div className="flex items-center gap-3 text-gray-300">
                           <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold">
-                            {(detailModal.reporter_email || '?')[0].toUpperCase()}
+                            {(detailModal.user_reputation?.name || detailModal.reporter_email || detailModal.user_email || '?')[0].toUpperCase()}
                           </div>
                           <div>
-                            <div className="text-sm font-bold">{detailModal.reporter_email || 'Anonymous'}</div>
+                            <div className="text-sm font-bold text-white">{detailModal.user_reputation?.name || 'User'} <span className="text-gray-500 font-normal text-xs">({detailModal.reporter_email || detailModal.user_email || 'Anonymous'})</span></div>
                             <div className="text-xs text-gray-500 flex items-center gap-2">
                               <span>Reporter</span>
                               {detailModal.user_reputation && (

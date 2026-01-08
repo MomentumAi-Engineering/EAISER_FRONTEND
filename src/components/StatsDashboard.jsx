@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
-import { BarChart3, TrendingUp, Users, AlertCircle, CheckCircle, XCircle, Clock, Loader2, RefreshCw, FileText } from 'lucide-react';
+import { ArrowLeft, RefreshCw, AlertTriangle, FileText, CheckCircle2, TrendingUp, Users, AlertCircle, Clock, Calendar, BarChart3, Brain, Zap, Cpu, Loader2, XCircle } from 'lucide-react';
 import { hasPermission, getCurrentAdmin } from '../utils/permissions';
 
-const CountUp = ({ end, duration = 2000 }) => {
+const CountUp = ({ end, duration = 2000, decimals = 0, separator = ',' }) => {
     const [count, setCount] = useState(0);
 
     useEffect(() => {
@@ -19,7 +19,7 @@ const CountUp = ({ end, duration = 2000 }) => {
             // Easing function for smooth effect
             const easeOutQuart = 1 - Math.pow(1 - percentage, 4);
 
-            setCount(Math.floor(easeOutQuart * end));
+            setCount(easeOutQuart * end);
 
             if (progress < duration) {
                 animationFrame = requestAnimationFrame(animate);
@@ -31,7 +31,10 @@ const CountUp = ({ end, duration = 2000 }) => {
         return () => cancelAnimationFrame(animationFrame);
     }, [end, duration]);
 
-    return <>{count}</>;
+    return <>{count.toLocaleString('en-US', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+    })}</>;
 };
 
 export default function StatsDashboard() {
@@ -75,8 +78,13 @@ export default function StatsDashboard() {
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
                     <div>
-                        <h1 className="text-4xl font-bold text-blue-500">
+                        <h1 className="text-4xl font-bold text-blue-500 flex items-center gap-3">
                             Statistics Dashboard
+                            {currentAdmin && (
+                                <span className={`text-xs px-2 py-1 rounded bg-gray-800 text-gray-300 border border-gray-700 capitalize`}>
+                                    Role: {currentAdmin.role?.replace('_', ' ')}
+                                </span>
+                            )}
                         </h1>
                         <p className="text-gray-400 mt-2">Overview of system performance and metrics</p>
                     </div>
@@ -95,7 +103,114 @@ export default function StatsDashboard() {
                     </button>
                 </div>
 
-                {/* Stats Grid */}
+                {/* Debug Info for User */}
+                {currentAdmin?.role === 'super_admin' && !stats?.financials && (
+                    <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl mb-6 text-red-300">
+                        ⚠️ You are Super Admin, but financial data is missing from the server response. Check backend logs.
+                    </div>
+                )}
+                {/* 🟢 ADVANCED SYSTEM ANALYSIS (SUPER ADMIN) */}
+                {stats.financials && stats.ai_performance && (
+                    <div className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 bg-amber-500/20 rounded-lg border border-amber-500/30">
+                                <Cpu className="w-5 h-5 text-amber-500" />
+                            </div>
+                            <h2 className="text-xl font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent">
+                                Advanced System Analysis
+                            </h2>
+                            <span className="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
+                                SUPER ADMIN
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+                            {/* 1. Model Info - Large Card */}
+                            <div className="md:col-span-2 bg-gradient-to-br from-gray-900 to-amber-950/30 border border-amber-500/20 rounded-xl p-5 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <Brain className="w-24 h-24 text-amber-500" />
+                                </div>
+
+                                <div className="relative z-10">
+                                    <h3 className="text-amber-400 text-sm font-semibold tracking-wider mb-1">ACTIVE MODEL</h3>
+                                    <div className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                                        {stats.ai_performance.provider} {stats.ai_performance.model_name}
+                                        <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full border border-green-500/30 flex items-center gap-1">
+                                            <Zap className="w-3 h-3 fill-current" /> Active
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 mt-4">
+                                        <div>
+                                            <p className="text-gray-500 text-xs uppercase">Architecture</p>
+                                            <p className="text-gray-300 font-mono text-sm">{stats.ai_performance.architecture}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-500 text-xs uppercase">Context Window</p>
+                                            <p className="text-gray-300 font-mono text-sm">{stats.ai_performance.context_window}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 2. Performance Metrics */}
+                            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 flex flex-col justify-between hover:border-amber-500/30 transition-colors">
+                                <div>
+                                    <p className="text-gray-400 text-xs font-semibold mb-1">AVG CONFIDENCE</p>
+                                    <div className="text-3xl font-bold text-white">
+                                        <CountUp end={stats.ai_performance.avg_confidence} decimals={1} duration={2} />%
+                                    </div>
+                                </div>
+                                <div className="mt-2 w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                                    <div className="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full" style={{ width: `${stats.ai_performance.avg_confidence}%` }}></div>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 flex flex-col justify-between hover:border-amber-500/30 transition-colors">
+                                <div>
+                                    <p className="text-gray-400 text-xs font-semibold mb-1">AVG RESPONSE TIME</p>
+                                    <div className="text-3xl font-bold text-white">
+                                        <CountUp end={stats.ai_performance.avg_latency_ms} duration={2} separator="," /> <span className="text-sm font-normal text-gray-500">ms</span>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-green-400 flex items-center gap-1 mt-2">
+                                    <Zap className="w-3 h-3" /> Optimized
+                                </p>
+                            </div>
+
+                            {/* 3. Financial Row - Spanning Full Width underneath */}
+
+                            {/* Total Reports */}
+                            <div className="bg-black/40 border border-gray-800 rounded-xl p-4 flex flex-col justify-center">
+                                <p className="text-gray-500 text-xs uppercase">Total Processed Reports</p>
+                                <p className="text-2xl font-bold text-white"><CountUp end={stats.financials.total_ai_reports} duration={2} /></p>
+                            </div>
+
+                            {/* Cost Per Query */}
+                            <div className="bg-black/40 border border-gray-800 rounded-xl p-4 flex flex-col justify-center">
+                                <p className="text-gray-500 text-xs uppercase">Cost Per Query</p>
+                                <p className="text-2xl font-bold text-white">${stats.financials.cost_per_report}</p>
+                            </div>
+
+                            {/* Total Spend */}
+                            <div className="md:col-span-2 bg-gradient-to-r from-amber-900/20 to-orange-900/20 border border-amber-500/30 rounded-xl p-4 flex items-center justify-between relative overflow-hidden">
+                                <div className="relative z-10">
+                                    <p className="text-amber-500 text-xs font-bold uppercase mb-1">Total System Spend (Lifetime)</p>
+                                    <p className="text-3xl font-bold text-white mb-1">
+                                        $<CountUp end={Math.floor(stats.financials.total_cost_usd)} duration={2} />
+                                        <span className="text-lg text-gray-400">{(stats.financials.total_cost_usd % 1).toFixed(4).substring(1)}</span>
+                                    </p>
+                                    <p className="text-[10px] text-gray-500">Currency: {stats.financials.currency}</p>
+                                </div>
+                                <div className="absolute right-0 bottom-0 opacity-10">
+                                    <TrendingUp className="w-24 h-24 text-amber-500" />
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <StatCard
                         title="Total Issues"
@@ -112,7 +227,7 @@ export default function StatsDashboard() {
                     <StatCard
                         title="Approved"
                         value={<CountUp end={stats.approved || 0} />}
-                        icon={<CheckCircle className="w-8 h-8" />}
+                        icon={<CheckCircle2 className="w-8 h-8" />}
                         color="green"
                     />
                     <StatCard
@@ -191,7 +306,7 @@ export default function StatsDashboard() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 

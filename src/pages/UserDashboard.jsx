@@ -111,7 +111,8 @@ export default function UserDashboard() {
         // Strictly filter "Pending" to only statuses waiting for Admin action (Excluding 'submitted' as per user request)
         const pending = validData.filter(i => ['needs_review', 'under_review', 'under_admin_review'].includes(i.status?.toLowerCase())).length;
 
-        const rate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+        const denominator = resolved + pending;
+        const rate = denominator > 0 ? Math.round((resolved / denominator) * 100) : 0;
 
         setStats({
           totalReported: total,
@@ -335,9 +336,12 @@ export default function UserDashboard() {
                             {issue.issue_type?.replace(/_/g, ' ') || 'Issue'}
                           </h3>
                           <div className="flex items-center gap-3 mt-2">
-                            <span className={`px-2 py-1 rounded text-xs font-semibold capitalize ${['resolved', 'completed', 'accepted', 'rejected'].includes(issue.status?.toLowerCase())
-                              ? issue.status?.toLowerCase() === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
-                              : 'bg-orange-500/20 text-orange-400'
+                            <span className={`px-2 py-1 rounded text-xs font-semibold capitalize ${(() => {
+                                const s = issue.status?.toLowerCase();
+                                if (['rejected', 'declined'].includes(s)) return 'bg-red-500/20 text-red-400';
+                                if (['resolved', 'completed', 'accepted', 'approved', 'submitted'].includes(s)) return 'bg-green-500/20 text-green-400';
+                                return 'bg-orange-500/20 text-orange-400';
+                              })()
                               }`}>
                               {issue.status}
                             </span>

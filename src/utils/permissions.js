@@ -12,7 +12,8 @@ const PERMISSIONS = {
     approve_assigned: ['super_admin', 'admin', 'team_member'],
     decline_assigned: ['super_admin', 'admin', 'team_member'],
     view_stats: ['super_admin', 'admin', 'viewer'],
-    manage_team: ['super_admin']
+    manage_team: ['super_admin'],
+    manage_users: ['super_admin']
 };
 
 /**

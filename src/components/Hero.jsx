@@ -114,7 +114,14 @@ export default function EaiserAIHero() {
               transition={{ delay: 0.6 }}
             >
               <button
-                onClick={() => navigate('/signup')}
+                onClick={() => {
+                  const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+                  if (token) {
+                    navigate('/report');
+                  } else {
+                    navigate('/signup');
+                  }
+                }}
                 className="group relative px-8 py-4 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl font-bold text-black overflow-hidden transition-all hover:shadow-2xl hover:shadow-yellow-500/50 hover:-translate-y-1"
               >
                 <span className="relative z-10 flex items-center gap-2">
@@ -208,7 +215,7 @@ export default function EaiserAIHero() {
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <div className="text-gray-400">Powered by Neural Networks</div>
+                  <div className="text-gray-400">Powered by Momntum Ai</div>
                   <Sparkles className="w-5 h-5 text-yellow-400" />
                 </div>
               </motion.div>
@@ -240,7 +247,7 @@ export default function EaiserAIHero() {
                 </h3>
 
                 <p className="text-lg text-gray-400 mb-6 leading-relaxed">
-                  Our neural networks instantly classify issues as public or business-related with 95% accuracy.
+                  Our EAiSER Ai instantly classify issues as public or business-related with 95% accuracy.
                 </p>
 
                 <div className="inline-flex items-center gap-2 text-yellow-400 font-semibold group-hover:gap-4 transition-all">
