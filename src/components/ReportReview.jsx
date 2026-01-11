@@ -104,6 +104,13 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         origin: { y: 0.6 },
         colors: ['#4ade80', '#22c55e', '#ffffff']
       });
+
+      // Automatically redirect after 3 seconds to clear state and show fresh form
+      setTimeout(() => {
+        // Force full reload to ensure previous report state is completely cleared
+        window.location.href = '/';
+      }, 3000);
+
     } catch (err) {
       console.error("Submit failed", err);
       setError(err.message || "Failed to submit report. Please try again.");
