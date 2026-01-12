@@ -11,5 +11,19 @@ export default defineConfig({
     host: 'localhost',
     port: 5173,
     open: true
+  },
+  build: {
+    target: 'esnext',
+    minify: 'esbuild', // Faster than terser
+    cssMinify: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['framer-motion', 'lucide-react'],
+          map: ['leaflet', 'react-leaflet'], // Optimizes map loading
+        }
+      }
+    }
   }
 })
