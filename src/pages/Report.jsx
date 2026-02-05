@@ -21,6 +21,7 @@ export default function SimpleReport() {
 
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [isManualMode, setIsManualMode] = useState(false);
   const [locationPermission, setLocationPermission] = useState(false);
   const [coords, setCoords] = useState(null);
   const [formData, setFormData] = useState({ streetAddress: "", zipCode: "" });
@@ -123,7 +124,7 @@ export default function SimpleReport() {
       return;
     }
 
-    if (!selectedFile) {
+    if (!selectedFile && !isManualMode) {
       alert("Please upload an image first.");
       return;
     }
@@ -142,13 +143,16 @@ export default function SimpleReport() {
 
     // Use Context Action
     await generateReport({
-      imageFile: selectedFile,
-      description: "User reported issue via web interface",
+      imageFile: isManualMode ? null : selectedFile,
+      description: isManualMode
+        ? `${formData.description || ''}\nTime: ${formData.incidentDate || 'Not specified'}`
+        : "User reported issue via web interface",
       address: formData.streetAddress || "",
       zip_code: formData.zipCode || "",
       latitude: coords?.lat || 0,
       longitude: coords?.lng || 0,
-      user_email: userEmail
+      user_email: userEmail,
+      issue_type: isManualMode ? (formData.issueType || 'Manual Report') : 'other'
     });
 
     // 2. Increment Guest Counter on Success
@@ -203,68 +207,157 @@ export default function SimpleReport() {
           </div>
         )}
 
-        {/* Upload Section */}
-        <div className="bg-gradient-to-br from-gray-900/50 to-black/50 border border-gray-800 rounded-2xl p-6">
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <Upload className="w-5 h-5 text-gray-400" /> Photo Evidence
-          </h2>
+        {/* Manual Mode Toggle */}
+        <div className="flex justify-end mb-2">
+          {!isManualMode && (
+            <button
+              onClick={() => setIsManualMode(true)}
+              className="text-yellow-500 hover:text-yellow-400 text-sm font-semibold underline"
+            >
+              Skip & Report Manually
+            </button>
+          )}
+          {isManualMode && (
+            <button
+              onClick={() => setIsManualMode(false)}
+              className="text-blue-500 hover:text-blue-400 text-sm font-semibold underline"
+            >
+              Back to Photo Upload
+            </button>
+          )}
+        </div>
 
-          <input
-            ref={fileInputRef}
-            id="file-upload"
-            type="file"
-            accept=".png,.jpg,.jpeg,.webp,.bmp,.gif,.tiff,.heic"
-            onChange={handleFileChange}
-            className="hidden"
-          />
+        {/* Upload Section - Only show if NOT in manual mode */}
+        {!isManualMode ? (
+          <div className="bg-gradient-to-br from-gray-900/50 to-black/50 border border-gray-800 rounded-2xl p-6">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Upload className="w-5 h-5 text-gray-400" /> Photo Evidence
+            </h2>
 
-          {selectedImage ? (
-            <div className="relative group">
-              <img
-                src={selectedImage}
-                alt="Selected issue"
-                className="w-full h-64 object-cover rounded-xl border border-gray-700"
-              />
-              <div className="absolute top-2 right-2 flex gap-2">
-                <button
-                  onClick={() => {
-                    setSelectedImage(null);
-                    setSelectedFile(null);
-                  }}
-                  className="p-2 bg-red-500/80 hover:bg-red-600 rounded-lg"
+            <input
+              ref={fileInputRef}
+              id="file-upload"
+              type="file"
+              accept=".png,.jpg,.jpeg,.webp,.bmp,.gif,.tiff,.heic"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            {selectedImage ? (
+              <div className="relative group">
+                <img
+                  src={selectedImage}
+                  alt="Selected issue"
+                  className="w-full h-64 object-cover rounded-xl border border-gray-700"
+                />
+                <div className="absolute top-2 right-2 flex gap-2">
+                  <button
+                    onClick={() => {
+                      setSelectedImage(null);
+                      setSelectedFile(null);
+                    }}
+                    className="p-2 bg-red-500/80 hover:bg-red-600 rounded-lg"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-semibold"
+                  >
+                    Change Image
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="border-2 border-dashed border-gray-700 rounded-xl p-8 text-center hover:border-gray-600 transition-colors">
+                <Upload className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+                <p className="text-sm text-gray-400 mb-4">
+                  Drop your image here or click to upload
+                </p>
+                <label
+                  htmlFor="file-upload"
+                  className="inline-block px-6 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-semibold cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-semibold"
+                  Choose File
+                </label>
+
+                <div className="mt-6 pt-4 border-t border-gray-800">
+                  <p className="text-gray-500 text-xs mb-3">Don't have a photo?</p>
+                  <button
+                    onClick={() => setIsManualMode(true)}
+                    className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-semibold text-sm border border-gray-700"
+                  >
+                    continue with Manual Report
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold text-sm"
+            >
+              <Camera className="w-4 h-4" /> Capture with Camera
+            </button>
+          </div>
+        ) : (
+          <div className="bg-yellow-900/10 border border-yellow-700/50 rounded-2xl p-6 mb-6">
+            <h2 className="text-lg font-bold text-yellow-500 mb-2">Manual Report Mode</h2>
+            <p className="text-gray-400 text-sm mb-4">
+              You are submitting a report without visual evidence. Please provide the details below.
+            </p>
+
+            <div className="space-y-4">
+              {/* Issue Type */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-2">Type of Issue</label>
+                <select
+                  name="issueType"
+                  value={formData.issueType || 'other'}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/10 border border-gray-700 rounded-xl text-sm text-gray-200 outline-none focus:border-yellow-500 appearance-none [&_option]:bg-gray-900 [&_option]:text-gray-200"
                 >
-                  Change Image
-                </button>
+                  <option value="other">Select Issue Type...</option>
+                  <option value="pothole">Pothole</option>
+                  <option value="road_damage">Road Damage</option>
+                  <option value="broken_streetlight">Broken Streetlight</option>
+                  <option value="garbage">Garbage / Trash</option>
+                  <option value="flood">Flooding</option>
+                  <option value="water_leakage">Water Leakage</option>
+                  <option value="fire">Fire Hazard</option>
+                  <option value="dead_animal">Dead Animal</option>
+                  <option value="vandalism">Vandalism</option>
+                  <option value="other_issue">Other Issue</option>
+                </select>
+              </div>
+
+              {/* Date/Time */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-2">Date & Time of Incident</label>
+                <input
+                  type="datetime-local"
+                  name="incidentDate"
+                  value={formData.incidentDate || ''}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-sm text-gray-200 outline-none focus:border-yellow-500"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-2">Description</label>
+                <textarea
+                  name="description"
+                  value={formData.description || ''}
+                  onChange={handleChange}
+                  rows={4}
+                  placeholder="Describe the issue in detail..."
+                  className="w-full px-4 py-3 bg-white/5 border border-gray-700 rounded-xl text-sm text-gray-200 outline-none focus:border-yellow-500"
+                />
               </div>
             </div>
-          ) : (
-            <div className="border-2 border-dashed border-gray-700 rounded-xl p-8 text-center hover:border-gray-600 transition-colors">
-              <Upload className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-              <p className="text-sm text-gray-400 mb-4">
-                Drop your image here or click to upload
-              </p>
-              <label
-                htmlFor="file-upload"
-                className="inline-block px-6 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-semibold cursor-pointer"
-              >
-                Choose File
-              </label>
-            </div>
-          )}
-
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl font-semibold text-sm"
-          >
-            <Camera className="w-4 h-4" /> Capture with Camera
-          </button>
-        </div>
+          </div>
+        )}
 
         {/* Location Section */}
         <div className="bg-gradient-to-br from-gray-900/50 to-black/50 border border-gray-800 rounded-2xl p-6">
@@ -336,7 +429,15 @@ export default function SimpleReport() {
                   zoom={15}
                   mapContainerStyle={{ width: "100%", height: "100%" }}
                 >
-                  <Marker position={coords} />
+                  <Marker
+                    position={coords}
+                    draggable={true}
+                    onDragEnd={(e) => {
+                      const lat = e.latLng.lat();
+                      const lng = e.latLng.lng();
+                      setCoords({ lat, lng });
+                    }}
+                  />
                 </GoogleMap>
               </LoadScript>
             </div>

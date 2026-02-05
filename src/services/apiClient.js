@@ -66,12 +66,14 @@ class ApiClient {
     user_email = undefined,
     issue_type = 'other',
   }) {
-    if (!imageFile || !(imageFile instanceof File)) {
-      // Enforce correct usage (image is required and must be a File)
-      throw new Error('imageFile is required and must be a File');
+    if (!imageFile && issue_type !== 'Manual Report') {
+      // Only enforce image if NOT a manual report (though backend handles this too)
+      // For now, we allow null imageFile to be passed through
     }
     const form = new FormData();
-    form.append('image', imageFile);
+    if (imageFile) {
+      form.append('image', imageFile);
+    }
     form.append('description', description);
     form.append('address', address);
     if (zip_code) form.append('zip_code', zip_code);
@@ -637,6 +639,22 @@ class ApiClient {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('adminToken')}`
       }
+    });
+  }
+
+  // --- Authority Actions (Step 1) ---
+
+  async getAuthorityIssue(token) {
+    return this.request(`/api/authority-action/validate/${token}`, {
+      method: 'GET'
+    });
+  }
+
+  async updateAuthorityIssue(token, status, notes = '') {
+    return this.request(`/api/authority-action/update/${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, notes })
     });
   }
 }

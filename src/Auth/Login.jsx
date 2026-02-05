@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { googleSignIn } from '../api/auth';
 
-const GOOGLE_CLIENT_ID = import.meta?.env?.VITE_GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_ID = import.meta?.env?.VITE_GOOGLE_CLIENT_ID || '194899266265-sopp3sj9bkdor1ufeghm1bclpphrjuk1.apps.googleusercontent.com';
 
 export default function EaiserLogin() {
   const [showPassword, setShowPassword] = useState(false);
@@ -85,13 +85,18 @@ export default function EaiserLogin() {
   };
 
   const handleGoogleCredential = async (response) => {
+    setLoading(true); // ✅ HERE, not before
+
     try {
       const data = await googleSignIn(response.credential);
+
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+
       navigate('/');
+
     } catch (err) {
-      setError(err?.response?.message || err.message || 'Google sign-in failed');
+      setError(err?.message || "Google sign-in failed");
     } finally {
       setLoading(false);
     }
@@ -99,35 +104,46 @@ export default function EaiserLogin() {
 
   const handleGoogleClick = async () => {
     setError(null);
+    // Reset Google One Tap cooldown cookie to allow prompt to show again immediately
+    document.cookie = "g_state=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT";
 
-    if (!GOOGLE_CLIENT_ID) {
-      setError('Google Sign-In is not configured. Please see the console or usage instructions.');
-      console.warn("Missing VITE_GOOGLE_CLIENT_ID in .env file. Google Sign-In requires a valid Client ID.");
-      return;
-    }
-
-    setLoading(true);
     try {
       const googleId = await loadGoogleScript();
+
+      if (!GOOGLE_CLIENT_ID) {
+        throw new Error("Google Client ID missing");
+      }
+
       if (!googleInitRef.current) {
         googleId.initialize({
           client_id: GOOGLE_CLIENT_ID,
           callback: handleGoogleCredential,
-          use_fedcm_for_prompt: false
         });
         googleInitRef.current = true;
       }
+
       googleId.prompt((notification) => {
-        const notDisplayed = notification.isNotDisplayed && notification.isNotDisplayed();
-        const skipped = notification.isSkippedMoment && notification.isSkippedMoment();
-        if (notDisplayed || skipped) {
+        // ❗ Handle ALL outcomes
+        if (notification.isNotDisplayed()) {
+          console.log("Google prompt not displayed reason:", notification.getNotDisplayedReason());
+          setError(`Google popup blocked: ${notification.getNotDisplayedReason()}`);
           setLoading(false);
-          setError('Google sign-in was cancelled.');
+        }
+
+        if (notification.isSkippedMoment()) {
+          setError("Google sign-in skipped");
+          setLoading(false);
+        }
+
+        if (notification.isDismissedMoment()) {
+          setError("Google sign-in closed");
+          setLoading(false);
         }
       });
+
     } catch (err) {
       setLoading(false);
-      setError(err?.message || 'Google sign-in failed to start.');
+      setError(err.message || "Google sign-in failed");
     }
   };
 

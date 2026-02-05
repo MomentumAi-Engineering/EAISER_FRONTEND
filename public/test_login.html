@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Google Login Test</title>
+    <meta name="referrer" content="no-referrer-when-downgrade" />
+</head>
+
+<body
+    style="background-color: #222; color: white; display: flex; flex-direction: column; align-items: center; padding-top: 50px; font-family: sans-serif;">
+
+    <h2>Google Config Tester</h2>
+    <p>This page tests if your Client ID allows this specific URL Origin.</p>
+
+    <div id="g_id_onload" data-client_id="194899266265-sopp3sj9bkdor1ufeghm1bclpphrjuk1.apps.googleusercontent.com"
+        data-callback="handleCredentialResponse" data-auto_prompt="false">
+    </div>
+
+    <div class="g_id_signin" data-type="standard"></div>
+
+    <div id="output" style="margin-top: 20px; color: yellow;">Waiting for login...</div>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        function handleCredentialResponse(response) {
+            console.log("Encoded JWT ID token: " + response.credential);
+            document.getElementById("output").innerText = "✅ SUCCESS! Token received (check console). Config is CORRECT.";
+            document.getElementById("output").style.color = "lightgreen";
+        }
+    </script>
+</body>
+
+</html>

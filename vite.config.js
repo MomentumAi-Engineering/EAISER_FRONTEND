@@ -8,7 +8,7 @@ export default defineConfig({
   tailwindcss(),
   ],
   server: {
-    host: 'localhost',
+    host: true,
     port: 5173,
     open: true
   },
@@ -27,3 +27,4 @@ export default defineConfig({
     }
   }
 })
+// Force restart

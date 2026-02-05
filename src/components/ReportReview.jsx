@@ -83,16 +83,64 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const [successMessage, setSuccessMessage] = useState("");
   const [isReview, setIsReview] = useState(false);
 
+  // EDIT MODE STATE
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    issue_type: 'Other',
+    severity: 'medium',
+    summary: '',
+    description: ''
+  });
+
+  // Initialize Edit Mode for Manual Reports
+  useEffect(() => {
+    const type = pick(issue, ['issue_overview.issue_type', 'report.report.issue_overview.issue_type', 'report.unified_report.issue_type', 'issue_type'], 'Unknown');
+    const conf = pick(issue, ['report.report.unified_report.confidence_percent', 'report.issue_overview.confidence'], 100);
+
+    // Set initial form values
+    const initialSummary = pick(issue, ['report.report.issue_overview.summary_explanation', 'summary'], '');
+
+    setEditForm({
+      issue_type: type,
+      severity: pick(issue, ['severity', 'priority'], 'medium'),
+      summary: initialSummary,
+      description: initialSummary
+    });
+
+    // Auto-enter edit mode for manual reports
+    if (type === 'Manual Report' || conf === 0) {
+      setIsEditing(true);
+    }
+  }, [issue]);
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = async () => {
-    if (selectedAuths.length === 0) {
-      setError("Please select at least one authority to submit the report.");
-      return;
+    let finalAuths = selectedAuths;
+
+    // For Manual Reports or Low Confidence, allow submission to Internal Team
+    if (finalAuths.length === 0) {
+      if (editForm.issue_type === 'Manual Report' || confidence === 0) {
+        finalAuths = [{
+          name: "Internal Review Team",
+          email: "eaiser@momntumai.com", // Default Admin Email
+          type: "internal"
+        }];
+      } else {
+        setError("Please select at least one authority to submit the report.");
+        return;
+      }
     }
 
     setSubmitting(true);
     setError(null);
     try {
-      const response = await apiClient.submitIssue(issueId, selectedAuths);
+      // Pass editForm if isEditing was used, otherwise undefined
+      const reportData = isEditing ? editForm : undefined;
+      const response = await apiClient.submitIssue(issueId, finalAuths, reportData);
       setSuccessMessage(response.message || "Report submitted successfully.");
       setIsReview(response.report?.status === 'needs_review');
       setSubmitSuccess(true);
@@ -270,6 +318,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     else if (labelsText.includes('fire') || labelsText.includes('smoke')) issueType = 'fire';
     else if (labelsText.includes('roadkill') || labelsText.includes('dead animal') || labelsText.includes('carcass') || labelsText.includes('animal')) issueType = 'dead_animal';
   }
+
+  // Is Manual Report Check
+  const isManualReport = String(issueType) === 'Manual Report' || (confidence !== null && Number(confidence) === 0);
   const aiSeverity = pick(aiOverview, ['severity'], pick(issue, ['severity', 'priority'], ''));
   const category = pick(issue, ['category'], '');
   const zipCodeBase = pick(issue, ['zip_code', 'location.zip_code'], '—');
@@ -360,13 +411,17 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
             </div>
           </div>
           <button
-            onClick={() => {
-              const el = document.getElementById('edit-summary');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="px-3 py-2 bg-white/5 hover:bg-white/10 border border-gray-700 rounded-lg text-xs"
+            onClick={() => setIsEditing(!isEditing)}
+            className={`px-3 py-2 border rounded-lg text-xs transition-all ${isEditing
+              ? 'bg-yellow-500 text-black border-yellow-500'
+              : 'bg-white/5 hover:bg-white/10 border-gray-700'
+              }`}
           >
-            Edit Report
+            {isEditing ? (
+              <span className="flex items-center gap-1"><Check className="w-3 h-3" /> Done Editing</span>
+            ) : (
+              <span className="flex items-center gap-1"><Edit2 className="w-3 h-3" /> Edit Report</span>
+            )}
           </button>
         </div>
         <div className="mt-4 flex items-center gap-6">
@@ -392,13 +447,51 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       <div className="grid md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
           <p className="text-xs text-gray-400">Issue Type</p>
-          <p className="text-sm font-semibold">{String(issueType)}</p>
+          {isEditing ? (
+            <select
+              name="issue_type"
+              value={editForm.issue_type}
+              onChange={handleEditChange}
+              className="w-full bg-black/20 border border-gray-600 rounded px-2 py-1 text-sm mt-1 focus:border-yellow-500 outline-none"
+            >
+              <option value="Manual Report">Manual Report</option>
+              <option value="pothole">Pothole</option>
+              <option value="road_damage">Road Damage</option>
+              <option value="broken_streetlight">Broken Streetlight</option>
+              <option value="garbage">Garbage / Trash</option>
+              <option value="flood">Flooding</option>
+              <option value="water_leakage">Water Leakage</option>
+              <option value="fire">Fire Hazard</option>
+              <option value="dead_animal">Dead Animal</option>
+              <option value="other">Other</option>
+            </select>
+          ) : (
+            <p className="text-sm font-semibold">{String(issueType)}</p>
+          )}
         </div>
 
         {confidence !== null && (
           <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
             <p className="text-xs text-gray-400">Confidence</p>
             <p className="text-sm font-semibold">{String(confidence)}</p>
+          </div>
+        )}
+
+        {/* Severity Input (New) */}
+        {isEditing && (
+          <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+            <p className="text-xs text-gray-400">Severity</p>
+            <select
+              name="severity"
+              value={editForm.severity}
+              onChange={handleEditChange}
+              className="w-full bg-black/20 border border-gray-600 rounded px-2 py-1 text-sm mt-1 focus:border-yellow-500 outline-none"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
           </div>
         )}
       </div>
@@ -419,13 +512,25 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
       {/* Issue Overview summary text */}
       <div className="mb-6">
-        <p className="text-sm font-bold mb-2">Summary</p>
-        {templateSummary ? (
-          <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap">
-            {String(templateSummary)}
-          </div>
+        <p className="text-sm font-bold mb-2">Description / Summary</p>
+
+        {isEditing ? (
+          <textarea
+            name="summary"
+            value={editForm.summary}
+            onChange={handleEditChange}
+            rows={4}
+            className="w-full bg-white/5 border border-gray-700 rounded-xl p-4 text-sm text-gray-200 focus:border-yellow-500 outline-none"
+            placeholder="Describe the issue in detail..."
+          />
         ) : (
-          <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs text-gray-400">No summary provided.</div>
+          templateSummary ? (
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap">
+              {String(templateSummary)}
+            </div>
+          ) : (
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs text-gray-400">No summary provided.</div>
+          )
         )}
         {confidence !== null && (
           <div className="mt-3">
@@ -460,51 +565,53 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         </div>
       )}
 
-      {/* AI Generated Items */}
-      <div className="mb-6">
-        <p className="text-sm font-bold mb-2">AI Generated Items</p>
-        {summaryExplanation && (
-          <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap mb-3">
-            {String(summaryExplanation)}
-          </div>
-        )}
-        {imageAnalysis && (
-          <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap mb-3">
-            {String(imageAnalysis)}
-          </div>
-        )}
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
-            <p className="text-xs text-gray-400 mb-2">Detected Problems</p>
-            <div className="flex flex-wrap gap-2">
-              {(Array.isArray(detectedProblems) && detectedProblems.length > 0 ? detectedProblems : derivedProblems).map((it, idx) => (
-                <span key={idx} className="px-3 py-1 rounded-full text-xs bg-red-500/20 border border-red-500/40 text-red-300">
-                  {String(it)}
-                </span>
-              ))}
-              {(!detectedProblems || detectedProblems.length === 0) && derivedProblems.length === 0 && (
-                <span className="text-xs text-gray-400">No specific problems listed</span>
+      {/* AI Generated Items - Hidden for Manual Reports */}
+      {!isManualReport && (
+        <div className="mb-6">
+          <p className="text-sm font-bold mb-2">AI Generated Items</p>
+          {summaryExplanation && (
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap mb-3">
+              {String(summaryExplanation)}
+            </div>
+          )}
+          {imageAnalysis && (
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap mb-3">
+              {String(imageAnalysis)}
+            </div>
+          )}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
+              <p className="text-xs text-gray-400 mb-2">Detected Problems</p>
+              <div className="flex flex-wrap gap-2">
+                {(Array.isArray(detectedProblems) && detectedProblems.length > 0 ? detectedProblems : derivedProblems).map((it, idx) => (
+                  <span key={idx} className="px-3 py-1 rounded-full text-xs bg-red-500/20 border border-red-500/40 text-red-300">
+                    {String(it)}
+                  </span>
+                ))}
+                {(!detectedProblems || detectedProblems.length === 0) && derivedProblems.length === 0 && (
+                  <span className="text-xs text-gray-400">No specific problems listed</span>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
+              <p className="text-xs text-gray-400 mb-2">Recommended Actions</p>
+              {Array.isArray(recommendedActions) && recommendedActions.length > 0 ? (
+                <ul className="space-y-2 text-sm text-gray-200">
+                  {recommendedActions.map((act, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-green-400" />
+                      <span>{String(act)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-gray-400">No recommendations provided</p>
               )}
             </div>
           </div>
-
-          <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
-            <p className="text-xs text-gray-400 mb-2">Recommended Actions</p>
-            {Array.isArray(recommendedActions) && recommendedActions.length > 0 ? (
-              <ul className="space-y-2 text-sm text-gray-200">
-                {recommendedActions.map((act, i) => (
-                  <li key={i} className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-400" />
-                    <span>{String(act)}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-xs text-gray-400">No recommendations provided</p>
-            )}
-          </div>
         </div>
-      </div>
+      )}
 
       {/* Image Preview if available */}
       {imagePreview && (
@@ -571,8 +678,8 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       <div className="flex gap-3">
         <button
           onClick={handleSubmit}
-          disabled={submitting || selectedAuths.length === 0}
-          className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${submitting || selectedAuths.length === 0
+          disabled={submitting || (selectedAuths.length === 0 && editForm.issue_type !== 'Manual Report' && confidence !== 0)}
+          className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${submitting || (selectedAuths.length === 0 && editForm.issue_type !== 'Manual Report' && confidence !== 0)
             ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
             : 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-lg hover:shadow-yellow-500/20'
             }`}

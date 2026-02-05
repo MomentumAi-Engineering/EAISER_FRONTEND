@@ -14,7 +14,7 @@ export const ReportProvider = ({ children }) => {
     // You can extend this to store form data if needed to restore the form state
     // const [formData, setFormData] = useState({});
 
-    const generateReport = async ({ imageFile, description, address, zip_code, latitude, longitude, user_email }) => {
+    const generateReport = async ({ imageFile, description, address, zip_code, latitude, longitude, user_email, issue_type }) => {
         setLoading(true);
         setInProgress(true);
         setError(null);
@@ -28,7 +28,8 @@ export const ReportProvider = ({ children }) => {
                 zip_code,
                 latitude,
                 longitude,
-                user_email
+                user_email,
+                issue_type
             });
             setReportResult(response);
         } catch (err) {

@@ -16,6 +16,8 @@ import AuthorityManagement from './components/AuthorityManagement';
 import UserManagement from './components/UserManagement';
 import ProfilePage from './pages/Profile';
 
+import AuthorityAction from './pages/AuthorityAction';
+
 import { ReportProvider } from './context/ReportContext';
 
 export default function App() {
@@ -36,6 +38,7 @@ export default function App() {
 
           {/* other app pages */}
           <Route path="/report" element={<Report />} />
+          <Route path="/authority-action" element={<AuthorityAction />} />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLogin />} />
