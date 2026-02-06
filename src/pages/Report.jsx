@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ReportReview from "../components/ReportReview";
+import AILoader from "../components/AILoader";
 import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 import Navbar from "../components/Navbar";
 import { useReportContext } from "../context/ReportContext";
@@ -233,6 +234,23 @@ export default function SimpleReport() {
           />
         </div>
       </div>
+    );
+  }
+
+  // Show Ultra-Advanced AI Loader during generation
+  if (loading) {
+    return (
+      <AILoader
+        status="loading"
+        messages={[
+          "Analyzing civic issue data...",
+          "Scanning location & severity...",
+          "Matching authority jurisdiction...",
+          "Finalizing verified report...",
+          "Verifying visual evidence accuracy...",
+          "Syncing with authority databases..."
+        ]}
+      />
     );
   }
 

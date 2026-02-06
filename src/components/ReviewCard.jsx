@@ -36,13 +36,18 @@ const ReviewCard = memo(({
     const confidence = aiData.confidence_percent || 0;
     const summary = aiData.user_feedback || aiData.summary_explanation || review.description || "No description";
 
-    // Image URL logic
+    // Image URL logic - Fixed for proper loading
     let imageUrl = null;
     if (review.image_url) {
-        imageUrl = `${baseURL}${review.image_url}`;
+        // If image_url starts with /, don't add baseURL prefix
+        imageUrl = review.image_url.startsWith('http')
+            ? review.image_url
+            : `${baseURL}${review.image_url.startsWith('/') ? '' : '/'}${review.image_url}`;
     } else if (review.image_id) {
-        imageUrl = `${baseURL}/issues/${id}/image`;
+        imageUrl = `${baseURL}/api/issues/${id}/image`;
     }
+
+    console.log('Image URL:', imageUrl, 'for issue:', id);
 
     // Confidence color (muted, professional)
     const confidenceColor = confidence > 80

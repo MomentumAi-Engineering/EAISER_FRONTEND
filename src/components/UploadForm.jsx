@@ -279,6 +279,12 @@ function UploadForm({ setStatus, fetchIssues }) {
       formData.append('longitude', coordinates.longitude);
     }
 
+    // Attach user email to link issue to account
+    const user = JSON.parse(localStorage.getItem('userData') || localStorage.getItem('user') || '{}');
+    if (user && user.email) {
+      formData.append('user_email', user.email);
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/issues`, {
         method: 'POST',
@@ -584,57 +590,120 @@ function UploadForm({ setStatus, fetchIssues }) {
 
   return (
     <motion.div
-      className="upload-form-container"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
+      className="upload-form-container relative overflow-hidden"
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      <div className="form-header">
+      {/* Dynamic Background Elements */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <motion.div
+          className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/20 rounded-full blur-[100px]"
+          animate={{ x: [0, 50, 0], y: [0, 30, 0], scale: [1, 1.2, 1] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[100px]"
+          animate={{ x: [0, -50, 0], y: [0, -30, 0], scale: [1, 1.2, 1] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        />
+      </div>
+
+      <div className="form-header relative z-10">
         <motion.div
           className="header-icon-container"
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.2, type: "spring", stiffness: 300 }}
+          initial={{ scale: 0.8, opacity: 0, rotate: -45 }}
+          animate={{ scale: 1, opacity: 1, rotate: 0 }}
+          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
         >
-          <div className="header-icon-bg">
-            <Camera className="header-icon" />
+          <div className="header-icon-bg relative group">
+            <div className="absolute inset-0 bg-blue-500/30 blur-md group-hover:blur-xl transition-all duration-500 opacity-50"></div>
+            <Camera className="header-icon relative z-10 w-8 h-8" />
           </div>
         </motion.div>
-        <div>
-          <h3 className="form-title">Report an Issue</h3>
-          <p className="form-subtitle">Help improve your community by reporting issues</p>
-
-          {/* NUCLEAR TEST BUTTON */}
-          <button
-            type="button"
-            onClick={enterManualMode}
-            className="w-full bg-red-600 text-white font-bold py-4 px-6 rounded-xl mt-4 text-xl hover:bg-red-700 transition"
-          >
-            🚨 CLICK HERE FOR MANUAL REPORT (TEST)
-          </button>
+        <div className="flex-1">
+          <h3 className="form-title text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-200 to-blue-400">
+            Report an Issue
+          </h3>
+          <p className="form-subtitle text-blue-300/60 font-medium tracking-wide">
+            AI-POWERED ANALYSIS & REPORTING SYSTEM
+          </p>
         </div>
+
+        {/* Advanced Manual Mode Trigger */}
+        <motion.button
+          type="button"
+          onClick={enterManualMode}
+          className="group relative px-4 py-2 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 hover:border-blue-500/50 rounded-lg overflow-hidden transition-all duration-300"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="flex items-center gap-2 relative z-10">
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+            <span className="text-xs font-bold text-gray-300 group-hover:text-blue-200 uppercase tracking-wider">Manual Override</span>
+          </div>
+        </motion.button>
       </div>
 
       {/* Progress Steps */}
-      <div className="steps-container">
-        {formSteps.map((step, index) => (
-          <motion.div
-            key={index}
-            className={`step ${index <= activeStep ? 'active' : ''} ${index < activeStep ? 'completed' : ''}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <div className="step-number">
-              {index < activeStep ? <Check className="w-4 h-4" /> : index + 1}
-            </div>
-            <div className="step-info">
-              <div className="step-icon">{step.icon}</div>
-              <span className="step-title">{step.title}</span>
-            </div>
-            {index < formSteps.length - 1 && <div className="step-line"></div>}
-          </motion.div>
-        ))}
+      <div className="steps-container relative z-10 mb-10 px-4">
+        {/* Connecting Line Background */}
+        <div className="absolute top-[22px] left-[10%] right-[10%] h-[2px] bg-gray-700/50 rounded-full z-0"></div>
+
+        {/* Animated Progress Line */}
+        <motion.div
+          className="absolute top-[22px] left-[10%] h-[2px] bg-gradient-to-r from-blue-500 to-purple-500 rounded-full z-0 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+          initial={{ width: "0%" }}
+          animate={{ width: `${(activeStep / (formSteps.length - 1)) * 80}%` }}
+          transition={{ duration: 0.5, ease: "easeInOut" }}
+        />
+
+        {formSteps.map((step, index) => {
+          const isActive = index === activeStep;
+          const isCompleted = index < activeStep;
+
+          return (
+            <motion.div
+              key={index}
+              className={`step flex flex-col items-center relative z-10 ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <motion.div
+                className={`step-number w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all duration-300 relative
+                  ${isActive
+                    ? 'bg-gray-900 border-blue-500 text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.4)]'
+                    : isCompleted
+                      ? 'bg-blue-500 border-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]'
+                      : 'bg-gray-800/80 border-gray-700 text-gray-500'
+                  }`}
+                animate={isActive ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+                transition={isActive ? { repeat: Infinity, duration: 2 } : {}}
+              >
+                {isCompleted ? <Check className="w-5 h-5" /> : index + 1}
+
+                {/* Active Ripple */}
+                {isActive && (
+                  <motion.div
+                    className="absolute inset-0 rounded-full border border-blue-500"
+                    animate={{ scale: [1, 1.5], opacity: [1, 0] }}
+                    transition={{ repeat: Infinity, duration: 1.5 }}
+                  />
+                )}
+              </motion.div>
+
+              <div className="step-info mt-3 flex flex-col items-center gap-1">
+                <span className={`step-title text-xs font-bold uppercase tracking-wider transition-colors duration-300
+                  ${isActive || isCompleted ? 'text-blue-200' : 'text-gray-600'}
+                `}>
+                  {step.title}
+                </span>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
 
       <AnimatePresence mode='wait'>
@@ -657,39 +726,66 @@ function UploadForm({ setStatus, fetchIssues }) {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                 >
-                  <div className="form-section">
-                    <div className="section-header">
-                      <label className="section-label">Visual Evidence</label>
-                      <div className="section-tooltip">
-                        <Info className="tooltip-icon" />
+                  <div className="form-section relative overflow-hidden group">
+                    {/* Holographic Border Effect */}
+                    <div className="absolute inset-0 border border-blue-500/20 rounded-2xl z-0 pointer-events-none"></div>
+                    <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-blue-400 rounded-tl-lg"></div>
+                    <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-blue-400 rounded-tr-lg"></div>
+                    <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-blue-400 rounded-bl-lg"></div>
+                    <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-blue-400 rounded-br-lg"></div>
+
+                    <div className="section-header relative z-10 mb-6">
+                      <label className="section-label flex items-center gap-2 text-xl font-bold text-blue-100">
+                        <Camera className="w-5 h-5 text-blue-400" />
+                        Visual Evidence
+                      </label>
+                      <div className="section-tooltip ml-auto">
+                        <Info className="tooltip-icon text-blue-400/50 hover:text-blue-400 transition-colors" />
                         <span className="tooltip-text">Upload a clear photo of the issue you're reporting</span>
                       </div>
                     </div>
 
-                    <div className={`image-upload-area ${preview ? 'has-image' : ''} ${formErrors.image ? 'has-error' : ''}`}>
+                    <div
+                      className={`image-upload-area relative transition-all duration-300 ${preview ? 'has-image' : ''} ${formErrors.image ? 'border-red-500/50 bg-red-500/5' : 'border-blue-500/30 hover:border-blue-400/60 bg-blue-500/5 hover:bg-blue-500/10'}`}
+                      style={{ borderRadius: '16px', borderStyle: 'dashed', borderWidth: '2px' }}
+                    >
+                      {/* Scanning Grid Background */}
+                      <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(0deg,transparent_24%,#3b82f6_25%,#3b82f6_26%,transparent_27%,transparent_74%,#3b82f6_75%,#3b82f6_76%,transparent_77%,transparent),linear-gradient(90deg,transparent_24%,#3b82f6_25%,#3b82f6_26%,transparent_27%,transparent_74%,#3b82f6_75%,#3b82f6_76%,transparent_77%,transparent)] bg-[size:40px_40px] pointer-events-none"></div>
+
                       {preview ? (
-                        <div className="image-preview-container">
-                          <motion.img
-                            src={preview}
-                            alt="Preview"
-                            className="image-preview"
+                        <div className="image-preview-container relative z-10 w-full flex flex-col items-center">
+                          <motion.div
+                            className="relative rounded-lg overflow-hidden border border-blue-500/30 shadow-2xl"
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ duration: 0.5 }}
-                          />
-                          <div className="image-buttons">
+                          >
+                            <img
+                              src={preview}
+                              alt="Preview"
+                              className="image-preview max-h-[300px] object-contain bg-black/50"
+                            />
+                            {/* Scanning Line Animation overlay on preview */}
+                            <motion.div
+                              className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-blue-500/10 to-transparent pointer-events-none"
+                              animate={{ top: ['-100%', '100%'] }}
+                              transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                            />
+                          </motion.div>
+
+                          <div className="image-buttons mt-6 flex gap-4">
                             <motion.button
                               type="button"
-                              className="change-image-btn"
+                              className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg font-bold shadow-lg shadow-blue-900/40 flex items-center gap-2"
                               onClick={triggerFileInput}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
-                              <Upload className="w-4 h-4" /> Change Image
+                              <Upload className="w-4 h-4" /> Change Frame
                             </motion.button>
                             <motion.button
                               type="button"
-                              className="capture-image-btn bg-red-500/20 border-red-500/50 hover:bg-red-500/30 text-red-200"
+                              className="px-6 py-2 bg-red-500/10 border border-red-500/50 hover:bg-red-500/20 text-red-200 rounded-lg font-bold flex items-center gap-2"
                               onClick={() => {
                                 setImage(null);
                                 setPreview(null);
@@ -697,29 +793,43 @@ function UploadForm({ setStatus, fetchIssues }) {
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
-                              <X className="w-4 h-4" /> Remove
+                              <X className="w-4 h-4" /> Discard
                             </motion.button>
                           </div>
                         </div>
                       ) : (
-                        <div className="upload-placeholder">
+                        <div className="upload-placeholder py-12 flex flex-col items-center justify-center relative z-10">
                           {isCameraActive ? (
-                            <div className="camera-container">
-                              <video ref={videoRef} className="camera-stream" autoPlay />
+                            <div className="camera-container rounded-xl overflow-hidden border border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.2)]">
+                              <video ref={videoRef} className="camera-stream w-full max-w-md" autoPlay />
                               <canvas ref={canvasRef} style={{ display: 'none' }} />
-                              <div className="camera-controls">
+
+                              {/* Camera HUD Overlay */}
+                              <div className="absolute inset-0 pointer-events-none border-[20px] border-black/30">
+                                <div className="absolute top-4 left-4 w-16 h-[2px] bg-green-500/80"></div>
+                                <div className="absolute top-4 left-4 w-[2px] h-16 bg-green-500/80"></div>
+                                <div className="absolute bottom-4 right-4 w-16 h-[2px] bg-green-500/80"></div>
+                                <div className="absolute bottom-4 right-4 w-[2px] h-16 bg-green-500/80"></div>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-12 h-12 border border-green-500/50 rounded-full flex items-center justify-center">
+                                    <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="camera-controls absolute bottom-4 left-0 right-0 flex justify-center gap-8 pointer-events-auto">
                                 <motion.button
                                   type="button"
-                                  className="capture-btn"
+                                  className="w-16 h-16 rounded-full bg-white/20 backdrop-blur border-2 border-white flex items-center justify-center hover:bg-white/30 transition-all"
                                   onClick={capturePhoto}
                                   whileHover={{ scale: 1.1 }}
                                   whileTap={{ scale: 0.9 }}
                                 >
-                                  <div className="capture-circle"></div>
+                                  <div className="w-12 h-12 bg-white rounded-full"></div>
                                 </motion.button>
                                 <motion.button
                                   type="button"
-                                  className="cancel-btn"
+                                  className="w-12 h-12 rounded-full bg-red-500/80 text-white flex items-center justify-center hover:bg-red-600 transition-all"
                                   onClick={stopCamera}
                                   whileHover={{ scale: 1.1 }}
                                   whileTap={{ scale: 0.9 }}
@@ -731,41 +841,45 @@ function UploadForm({ setStatus, fetchIssues }) {
                           ) : (
                             <>
                               <motion.div
-                                className="upload-icon-container"
+                                className="upload-icon-container relative mb-6"
                                 animate={{
                                   y: [0, -10, 0],
-                                  rotate: [0, 5, 0, -5, 0]
                                 }}
                                 transition={{
-                                  duration: 4,
+                                  duration: 3,
                                   repeat: Infinity,
                                   ease: "easeInOut"
                                 }}
                               >
-                                <ImageIcon className="upload-icon" />
+                                <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
+                                <ImageIcon className="upload-icon w-20 h-20 text-blue-400 relative z-10" />
                               </motion.div>
-                              <p>Click to upload or capture an image</p>
-                              <p className="hint">Max 5MB • JPEG, PNG</p>
-                              <div className="image-buttons">
+                              <h4 className="text-xl font-bold text-white mb-2">Upload Evidence</h4>
+                              <p className="text-blue-200/60 mb-8 max-w-sm mx-auto">
+                                Drag & drop or capture a photo. AI analysis will begin automatically.
+                              </p>
+
+                              <div className="image-buttons flex gap-4 w-full max-w-md justify-center">
                                 <motion.button
                                   type="button"
-                                  className="upload-btn"
+                                  className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-xl font-bold shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
                                   onClick={triggerFileInput}
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
+                                  whileHover={{ scale: 1.02, translateY: -2 }}
+                                  whileTap={{ scale: 0.98 }}
                                 >
-                                  <Upload className="w-4 h-4" /> Upload Image
+                                  <Upload className="w-5 h-5" /> Select File
                                 </motion.button>
                                 <motion.button
                                   type="button"
-                                  className="capture-btn"
+                                  className="flex-1 py-3 bg-gray-700/50 hover:bg-gray-700 text-white rounded-xl font-bold border border-gray-600 flex items-center justify-center gap-2"
                                   onClick={startCamera}
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
+                                  whileHover={{ scale: 1.02, translateY: -2 }}
+                                  whileTap={{ scale: 0.98 }}
                                 >
-                                  <Camera className="w-4 h-4" /> Capture Photo
+                                  <Camera className="w-5 h-5" /> Camera
                                 </motion.button>
                               </div>
+                              <p className="hint text-xs mt-4 text-gray-500">Supports JPEG, PNG, HEIC • Max 10MB</p>
                             </>
                           )}
                         </div>
@@ -773,7 +887,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                       <input
                         type="file"
                         ref={fileInputRef}
-                        className="file-input"
+                        className="file-input hidden"
                         accept="image/*"
                         onChange={handleImageChange}
                         disabled={isCameraActive}
@@ -781,36 +895,39 @@ function UploadForm({ setStatus, fetchIssues }) {
                     </div>
                     {formErrors.image && (
                       <motion.div
-                        className="error-message"
+                        className="error-message mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-200"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                       >
-                        <AlertCircle className="error-icon" />
+                        <AlertCircle className="w-5 h-5" />
                         {formErrors.image}
                       </motion.div>
                     )}
 
                     {/* Manual Mode Option */}
                     {!preview && !isCameraActive && (
-                      <div className="text-center mt-4 border-t border-gray-700/50 pt-4">
-                        <p className="text-gray-400 text-sm mb-2">Can't take a photo?</p>
+                      <div className="text-center mt-6 pt-6 border-t border-blue-500/20">
                         <motion.button
                           type="button"
                           onClick={enterManualMode}
-                          className="text-purple-400 hover:text-purple-300 text-sm font-medium underline flex items-center justify-center gap-1 mx-auto"
-                          whileHover={{ scale: 1.05 }}
+                          className="group relative px-6 py-2 rounded-full bg-gray-900 border border-gray-700 hover:border-purple-500/50 transition-colors mx-auto flex items-center gap-2 overflow-hidden"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                         >
-                          <PenTool className="w-3 h-3" /> Continue with Manual Report
+                          <span className="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                          <PenTool className="w-4 h-4 text-purple-400" />
+                          <span className="text-sm font-medium text-gray-300 group-hover:text-purple-200">Continue with Manual Report</span>
+                          <ChevronRight className="w-4 h-4 text-purple-500/50 group-hover:translate-x-1 transition-transform" />
                         </motion.button>
                       </div>
                     )}
 
                   </div>
 
-                  <div className="form-navigation" style={{ justifyContent: 'flex-end' }}>
+                  <div className="form-navigation flex justify-end">
                     <motion.button
                       type="button"
-                      className="nav-btn next"
+                      className="nav-btn next px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-blue-900/40 flex items-center gap-2 disabled:opacity-50 disabled:grayscale"
                       onClick={nextStep}
                       disabled={!image && !isManualMode}
                       whileHover={{ scale: 1.05 }}
@@ -831,12 +948,15 @@ function UploadForm({ setStatus, fetchIssues }) {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                 >
-                  <div className="form-section">
-                    <div className="section-header">
-                      <label className="section-label">Location</label>
-                      <div className="section-tooltip">
-                        <Info className="tooltip-icon" />
-                        <span className="tooltip-text">Provide the exact location of the issue</span>
+                  <div className="form-section relative overflow-hidden bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-bl-full blur-xl pointer-events-none"></div>
+
+                    <div className="section-header relative z-10 mb-6 flex items-center justify-between border-b border-white/10 pb-4">
+                      <label className="section-label flex items-center gap-2 text-xl font-bold text-white">
+                        <MapPin className="w-5 h-5 text-blue-400" /> Location
+                      </label>
+                      <div className="bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 text-xs text-blue-300">
+                        Geospatial Data
                       </div>
                     </div>
 
@@ -847,20 +967,20 @@ function UploadForm({ setStatus, fetchIssues }) {
 
                     {formErrors.location && (
                       <motion.div
-                        className="error-message mt-4"
+                        className="error-message mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-200"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                       >
-                        <AlertCircle className="error-icon" />
+                        <AlertCircle className="w-5 h-5 flex-shrink-0" />
                         {formErrors.location}
                       </motion.div>
                     )}
                   </div>
 
-                  <div className="form-navigation">
+                  <div className="form-navigation flex justify-between gap-4 mt-6">
                     <motion.button
                       type="button"
-                      className="nav-btn prev"
+                      className="nav-btn prev px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold border border-gray-600 flex items-center gap-2"
                       onClick={prevStep}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -869,18 +989,18 @@ function UploadForm({ setStatus, fetchIssues }) {
                     </motion.button>
                     <motion.button
                       type="submit"
-                      className={`nav-btn submit ${isLoading ? 'loading' : ''}`}
+                      className={`nav-btn submit px-8 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 ${isLoading ? 'bg-gray-700 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white shadow-green-900/40'}`}
                       disabled={isLoading || (!image && !isManualMode) || (!address && !coordinates && !zipCode)}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={!isLoading ? { scale: 1.05 } : {}}
+                      whileTap={!isLoading ? { scale: 0.95 } : {}}
                     >
                       {isLoading ? (
                         <>
-                          <Loader className="w-4 h-4 animate-spin" /> Generating...
+                          <Loader className="w-4 h-4 animate-spin" /> Generating Report...
                         </>
                       ) : (
                         <>
-                          <Send className="w-4 h-4" /> Generate Report
+                          <Send className="w-4 h-4" /> Generate Analysis
                         </>
                       )}
                     </motion.button>
@@ -891,24 +1011,27 @@ function UploadForm({ setStatus, fetchIssues }) {
           </motion.form>
         ) : (
           <motion.div
-            className="report-preview-container"
-            initial={{ opacity: 0, y: 20 }}
+            className="report-preview-container relative"
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.6, type: "spring" }}
           >
-            <div className="preview-header">
-              <div className="header-left">
-                <div className="header-icon-bg">
-                  <FileText className="header-icon" />
+            {/* Holographic Card Container */}
+            <div className="absolute inset-0 bg-blue-900/10 backdrop-blur-3xl rounded-3xl -z-10 border border-blue-500/30 shadow-2xl"></div>
+
+            <div className="preview-header flex items-center justify-between p-6 border-b border-blue-500/20 bg-black/20 rounded-t-3xl">
+              <div className="header-left flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
+                  <FileText className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="preview-title">Review Generated Report</h3>
-                  <p className="preview-subtitle">Issue #{issueId}</p>
+                  <h3 className="text-xl font-bold text-white tracking-wide">Analysis Report</h3>
+                  <p className="text-sm text-blue-300/70 font-mono">ID: #{issueId}</p>
                 </div>
               </div>
 
               <motion.button
-                className="edit-btn"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${isEditing ? 'bg-green-500/20 text-green-300 border border-green-500/50' : 'bg-blue-500/10 text-blue-300 border border-blue-500/30 hover:bg-blue-500/20'}`}
                 onClick={toggleEdit}
                 disabled={isLoading}
                 whileHover={{ scale: 1.05 }}
@@ -916,11 +1039,11 @@ function UploadForm({ setStatus, fetchIssues }) {
               >
                 {isEditing ? (
                   <>
-                    <Save className="w-4 h-4" /> Save Draft
+                    <Save className="w-4 h-4" /> Save Changes
                   </>
                 ) : (
                   <>
-                    <Edit className="w-4 h-4" /> Edit Report
+                    <Edit className="w-4 h-4" /> Edit Details
                   </>
                 )}
               </motion.button>
@@ -928,120 +1051,140 @@ function UploadForm({ setStatus, fetchIssues }) {
 
             {/* Low Confidence / Manual Banner */}
             {isLowConfidence && (
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="bg-yellow-500/10 border-b border-yellow-500/20 p-4 flex items-start gap-4"
+              >
+                <div className="p-2 bg-yellow-500/20 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-yellow-500" />
+                </div>
                 <div>
-                  <h4 className="text-yellow-500 font-semibold text-sm">
-                    {isManualMode ? "Manual Report Mode" : "Low Confidence Analysis"}
+                  <h4 className="text-yellow-500 font-bold text-sm tracking-wide uppercase mb-1">
+                    {isManualMode ? "Manual Override Protocol Active" : "Low Confidence Detected"}
                   </h4>
-                  <p className="text-gray-300 text-xs mt-1">
+                  <p className="text-yellow-200/70 text-xs leading-relaxed max-w-2xl">
                     {isManualMode
-                      ? "You are submitting a manual report. Please ensure all details are correct and select the appropriate authorities manually."
-                      : "The AI had low confidence in this analysis. Please verify all details and select authorities manually if needed."}
+                      ? "System operating in manual mode. User input required for accurate classification and routing."
+                      : "AI analysis returned low confidence scores. Please manually verify all data points before submission."}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             )}
 
-            <div className="report-content">
-              <div className="report-section">
-                <h4 className="section-title">
-                  <Target className="section-icon" /> Issue Overview
+            <div className="report-content p-8 space-y-8">
+              <motion.div
+                className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200 mb-6 pb-2 border-b border-white/5">
+                  <Target className="w-5 h-5 text-blue-400" /> Issue Overview
                 </h4>
-                <div className="report-grid">
-                  <div className="report-item">
-                    <label className="report-label">Type</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Type</label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={editedReport.issue_overview.issue_type}
                         onChange={(e) => handleEditChange('issue_overview', 'issue_type', e.target.value)}
-                        className="edit-input"
+                        className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
                       />
                     ) : (
-                      <p className="report-value">{editedReport.issue_overview.issue_type}</p>
+                      <p className="text-lg font-medium text-white">{editedReport.issue_overview.issue_type}</p>
                     )}
                   </div>
 
-                  <div className="report-item">
-                    <label className="report-label">Severity</label>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Severity</label>
                     {isEditing ? (
                       <select
                         value={editedReport.issue_overview.severity}
                         onChange={(e) => handleEditChange('issue_overview', 'severity', e.target.value)}
-                        className="edit-select"
+                        className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
                       >
                         {severities.map((severity) => (
                           <option key={severity.value} value={severity.value}>{severity.label}</option>
                         ))}
                       </select>
                     ) : (
-                      <div className="severity-display">
-                        {severities.find(s => s.value === editedReport.issue_overview.severity)?.icon}
-                        <span>{severities.find(s => s.value === editedReport.issue_overview.severity)?.label}</span>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${severities.find(s => s.value === editedReport.issue_overview.severity)?.color || 'bg-gray-500'} shadow-[0_0_10px_currentColor]`}></div>
+                        <span className="text-lg font-medium text-white capitalize">{editedReport.issue_overview.severity}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="report-item">
-                    <label className="report-label">Confidence</label>
-                    <div className="confidence-bar">
-                      <div className="confidence-track">
-                        <motion.div
-                          className="confidence-fill"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${editedReport.issue_overview.confidence}%` }}
-                          transition={{ duration: 1, delay: 0.2 }}
-                        ></motion.div>
-                      </div>
-                      <span>{editedReport.issue_overview.confidence}%</span>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">AI Confidence</label>
+                    <div className="h-4 bg-gray-800 rounded-full overflow-hidden border border-gray-700 relative">
+                      <motion.div
+                        className={`h-full ${isManualMode ? 'bg-gray-600' : 'bg-gradient-to-r from-blue-600 to-cyan-400'}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${editedReport.issue_overview.confidence}%` }}
+                        transition={{ duration: 1, delay: 0.2 }}
+                      ></motion.div>
+                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white shadow-black drop-shadow-md">
+                        {isManualMode ? 'N/A' : `${editedReport.issue_overview.confidence}%`}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="report-item">
-                    <label className="report-label">Category</label>
-                    <p className="report-value">{editedReport.issue_overview.category}</p>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Category</label>
+                    <p className="text-lg font-medium text-white">{editedReport.issue_overview.category}</p>
                   </div>
                 </div>
 
-                <div className="report-item full-width">
-                  <label className="report-label">Summary</label>
+                <div className="mt-6 space-y-2">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Summary</label>
                   {isEditing ? (
                     <textarea
                       value={editedReport.issue_overview.summary_explanation}
                       onChange={(e) => handleEditChange('issue_overview', 'summary_explanation', e.target.value)}
-                      className="edit-textarea"
-                      rows="4"
+                      className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono min-h-[100px]"
+                      rows="3"
                       maxLength={200}
                     />
                   ) : (
-                    <p className="report-value">{editedReport.issue_overview.summary_explanation}</p>
+                    <p className="text-gray-300 leading-relaxed border-l-2 border-blue-500/50 pl-4 py-1">
+                      {editedReport.issue_overview.summary_explanation}
+                    </p>
                   )}
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="report-section">
-                <h4 className="section-title">
-                  <MapPin className="section-icon" /> Location Details
+              <motion.div
+                className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200 mb-6 pb-2 border-b border-white/5">
+                  <MapPin className="w-5 h-5 text-blue-400" /> Location Details
                 </h4>
-                <div className="report-grid">
-                  <div className="report-item">
-                    <label className="report-label">Address</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Address</label>
                     {isEditing ? (
                       <input
                         type="text"
                         value={editedReport.location?.address || reportPreview.report.template_fields.address || ''}
                         onChange={(e) => handleEditChange('location', 'address', e.target.value)}
-                        className="edit-input"
+                        className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
                         placeholder="Enter address"
                       />
                     ) : (
-                      <p className="report-value">{editedReport.location?.address || reportPreview.report.template_fields.address || 'Not specified'}</p>
+                      <p className="text-lg font-medium text-white truncate" title={editedReport.location?.address}>
+                        {editedReport.location?.address || reportPreview.report.template_fields.address || 'Not specified'}
+                      </p>
                     )}
                   </div>
 
-                  <div className="report-item">
-                    <label className="report-label">Zip Code</label>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Zip Code</label>
                     {isEditing ? (
                       <input
                         type="text"
@@ -1054,256 +1197,246 @@ function UploadForm({ setStatus, fetchIssues }) {
                             fetchAuthoritiesByZipCode(newZipCode);
                           }
                         }}
-                        className="edit-input"
+                        className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
                         placeholder="Enter zip code"
                         maxLength={5}
                         pattern="\d{5}"
                       />
                     ) : (
-                      <p className="report-value">{editedReport.location?.zip_code || reportPreview.report.template_fields.zip_code || 'Not specified'}</p>
+                      <p className="text-lg font-medium text-white font-mono tracking-wider">{editedReport.location?.zip_code || reportPreview.report.template_fields.zip_code || 'Not specified'}</p>
                     )}
                   </div>
 
-                  <div className="report-item full-width">
-                    <label className="report-label">Map Link</label>
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Map Reference</label>
                     <a
                       href={reportPreview.report.template_fields.map_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="map-link"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-900/20 text-blue-300 hover:bg-blue-900/40 hover:text-white transition-all border border-blue-500/30 group"
                     >
-                      <Map className="w-4 h-4" /> View on Map
+                      <Map className="w-4 h-4 group-hover:scale-110 transition-transform" /> View Geospatial Data
+                      <ExternalLink className="w-3 h-3 opacity-50" />
                     </a>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
               {!isManualMode && (
-                <div className="report-section">
-                  <h4 className="section-title">
-                    <ImageIcon className="section-icon" /> Photo Evidence
+                <motion.div
+                  className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200 mb-6 pb-2 border-b border-white/5">
+                    <ImageIcon className="w-5 h-5 text-blue-400" /> Evidence Analysis
                   </h4>
                   {reportPreview.image_content ? (
                     <motion.div
-                      className="image-container"
+                      className="relative rounded-xl overflow-hidden border border-gray-700 group max-w-md mx-auto"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
                       <img
                         src={`data:image/jpeg;base64,${reportPreview.image_content}`}
-                        alt="Issue"
-                        className="report-image"
+                        alt="Evidence"
+                        className="w-full h-auto object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                       />
-                      <div className="image-info">
-                        <p>{reportPreview.report.template_fields.image_filename || 'Not specified'}</p>
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform">
+                        <span className="text-xs text-green-400 font-mono">HASH: {issueId.substring(0, 8)}... VALID</span>
                       </div>
+
+                      {/* Corner markers */}
+                      <div className="absolute top-2 left-2 w-4 h-4 border-t border-l border-white/50"></div>
+                      <div className="absolute bottom-2 right-2 w-4 h-4 border-b border-r border-white/50"></div>
                     </motion.div>
                   ) : (
-                    <div className="no-image">
-                      <ImageIcon className="no-image-icon" />
-                      <p>No image available</p>
-                    </div>
+                    <div className="text-gray-400 text-center py-6 italic border border-dashed border-gray-700 rounded-xl">No imagery available</div>
                   )}
-                </div>
+                </motion.div>
               )}
 
               {!isManualMode && (
-                <div className="report-section">
-                  <h4 className="section-title">
-                    <Target className="section-icon" /> Recommended Actions
+                <motion.div
+                  className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200 mb-6 pb-2 border-b border-white/5">
+                    <Shield className="w-5 h-5 text-blue-400" /> AI Deep Analysis
                   </h4>
-                  {isEditing ? (
-                    <div className="actions-list">
-                      {editedReport.recommended_actions.map((action, index) => (
-                        <div key={index} className="action-item">
-                          <input
-                            type="text"
-                            value={action}
-                            onChange={(e) => handleEditChange(null, 'recommended_actions', e.target.value, index)}
-                            className="edit-input"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <ul className="actions-list">
-                      {editedReport.recommended_actions.map((action, index) => (
-                        <motion.li
-                          key={index}
-                          className="action-item"
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                        >
-                          <Check className="action-icon" />
-                          {action}
-                        </motion.li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-
-              {!isManualMode && (
-                <div className="report-section">
-                  <h4 className="section-title">
-                    <Shield className="section-icon" /> AI Analysis
-                  </h4>
-                  <div className="analysis-grid">
-                    <div className="analysis-item">
-                      <label className="analysis-label">Potential Impact</label>
-                      <p className="analysis-value">{editedReport.detailed_analysis.potential_consequences_if_ignored}</p>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="p-4 bg-red-900/10 border border-red-500/20 rounded-xl">
+                      <label className="text-xs font-bold text-red-400 uppercase tracking-wider mb-2 block">Potential Impact</label>
+                      <p className="text-sm text-gray-300 leading-relaxed">{editedReport.detailed_analysis.potential_consequences_if_ignored}</p>
                     </div>
 
-                    <div className="analysis-item">
-                      <label className="analysis-label">Urgency Reason</label>
-                      <p className="analysis-value">{editedReport.detailed_analysis.public_safety_risk}</p>
+                    <div className="p-4 bg-yellow-900/10 border border-yellow-500/20 rounded-xl">
+                      <label className="text-xs font-bold text-yellow-400 uppercase tracking-wider mb-2 block">Safety Risk Assessment</label>
+                      <p className="text-sm text-gray-300 leading-relaxed">{editedReport.detailed_analysis.public_safety_risk}</p>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )}
 
-              <div className="report-section">
-                <h4 className="section-title">
-                  <Users className="section-icon" /> Responsible Authorities
-                  <button
+              <motion.div
+                className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45 }}
+              >
+                <div className="flex items-center justify-between mb-6 pb-2 border-b border-white/5">
+                  <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200">
+                    <Users className="w-5 h-5 text-blue-400" /> Responsible Authorities
+                  </h4>
+                  <motion.button
                     type="button"
-                    className="edit-authorities-btn"
+                    className="flex items-center gap-2 text-xs bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 px-3 py-1.5 rounded-lg border border-purple-500/30 transition-all"
                     onClick={() => setShowAuthoritySelector(true)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    <Edit className="w-4 h-4" />  {selectedAuthorities.length > 0 ? "Edit Selection" : "Select Authorities"}
-                  </button>
-                </h4>
+                    <Edit className="w-3 h-3" />  {selectedAuthorities.length > 0 ? "Edit Selection" : "Select Authorities"}
+                  </motion.button>
+                </div>
 
                 {/* Adaptive Authority Display */}
                 {showRecommendedAuthorities ? (
-                  <div className="authorities-grid">
+                  <div className="grid gap-3">
                     {editedReport.responsible_authorities_or_parties.map((authority, index) => (
                       <motion.div
                         key={index}
-                        className="authority-card"
+                        className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
-                        whileHover={{ y: -5 }}
+                        whileHover={{ x: 5, backgroundColor: 'rgba(255,255,255,0.1)' }}
                       >
-                        <div className="authority-icon">
+                        <div className="w-10 h-10 rounded-full bg-blue-900/30 flex items-center justify-center border border-blue-500/30 text-blue-400">
                           <Building className="w-5 h-5" />
                         </div>
-                        <div className="authority-info">
-                          <h5 className="authority-name">{authority.name}</h5>
-                          <p className="authority-type">{authority.type}</p>
+                        <div>
+                          <h5 className="font-bold text-white text-sm">{authority.name}</h5>
+                          <p className="text-xs text-gray-400 uppercase tracking-wide">{authority.type}</p>
                         </div>
                       </motion.div>
                     ))}
                     {editedReport.responsible_authorities_or_parties.length === 0 && (
-                      <p className="text-gray-400 text-sm italic">No specific authorities recommended by AI.</p>
+                      <p className="text-gray-400 text-sm italic text-center py-4">No specific authorities recommended by AI.</p>
                     )}
                   </div>
                 ) : (
-                  <div className="low-confidence-authority-msg bg-gray-600/20 p-4 rounded-lg border border-dashed border-gray-600">
-                    <p className="text-gray-300 text-sm mb-2">
+                  <div className="flex flex-col items-center justify-center p-6 bg-yellow-900/5 rounded-xl border border-dashed border-yellow-700/30 tex-center">
+                    <AlertCircle className="w-8 h-8 text-yellow-600/50 mb-3" />
+                    <p className="text-yellow-500/70 text-sm mb-4 text-center">
                       {isManualMode
-                        ? "Manual Reporting: Please select authorities manually."
-                        : "Due to low confidence, no authorities were automatically recommended."
+                        ? "Manual Reporting Mode: Authority selection required."
+                        : "Low confidence analysis. Manual authority selection recommended."
                       }
                     </p>
-                    <button
+                    <motion.button
                       onClick={() => setShowAuthoritySelector(true)}
-                      className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-3 py-2 rounded flex items-center gap-2 transition-colors"
+                      className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-200 text-sm px-6 py-2 rounded-full border border-yellow-500/30 flex items-center gap-2 transition-colors"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      <Users className="w-4 h-4" /> Open Authority Selector
-                    </button>
+                      <Users className="w-4 h-4" /> Open Authority Matrix
+                    </motion.button>
                   </div>
                 )}
-              </div>
+              </motion.div>
             </div>
 
             {!showDeclineForm ? (
-              <div className="report-actions">
+              <div className="report-actions flex flex-wrap gap-4 mt-8 pb-8 border-t border-white/5 pt-8">
                 <motion.button
-                  className="action-btn accept"
+                  className="flex-[2] py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-green-900/40 flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
                   onClick={handleAccept}
                   disabled={isLoading}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={!isLoading ? { scale: 1.02, translateY: -2 } : {}}
+                  whileTap={!isLoading ? { scale: 0.98 } : {}}
                 >
                   {isLoading ? (
                     <>
-                      <Loader className="w-4 h-4 animate-spin" /> Accepting...
+                      <Loader className="w-5 h-5 animate-spin" /> Process...
                     </>
                   ) : (
                     <>
-                      <Check className="w-4 h-4" /> Accept Report
+                      <Check className="w-5 h-5" /> CONFIRM & SEND REPORT
                     </>
                   )}
                 </motion.button>
 
                 <motion.button
-                  className="action-btn decline"
+                  className="flex-1 py-4 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-300 rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
                   onClick={handleDecline}
                   disabled={isLoading}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  <X className="w-4 h-4" /> Decline Report
+                  <X className="w-5 h-5" /> Decline
                 </motion.button>
 
                 <motion.button
-                  className="action-btn secondary"
+                  className="flex-none px-4 py-4 bg-gray-800/50 hover:bg-gray-700/50 text-gray-400 hover:text-white rounded-xl font-bold border border-gray-700 flex items-center justify-center gap-2 transition-colors"
                   onClick={resetForm}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  title="Start Over"
                 >
-                  <RotateCcw className="w-4 h-4" /> New Report
+                  <RotateCcw className="w-5 h-5" />
                 </motion.button>
               </div>
             ) : (
               <motion.form
                 onSubmit={handleDeclineSubmit}
-                className="decline-form"
+                className="decline-form mt-8 bg-red-900/10 border border-red-500/20 rounded-2xl p-6"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
               >
-                <div className="form-section">
-                  <label className="section-label">Reason for Declining</label>
+                <div className="form-section mb-6">
+                  <label className="block text-red-300 font-bold mb-2 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" /> Reason for Rejection
+                  </label>
                   <textarea
-                    className="form-textarea"
+                    className="w-full bg-black/40 border border-red-500/30 rounded-xl p-4 text-white focus:outline-none focus:border-red-500 transition-colors min-h-[120px]"
                     rows="4"
                     value={declineReason}
                     onChange={(e) => setDeclineReason(e.target.value)}
-                    placeholder="Please explain why you are declining this report..."
+                    placeholder="Please explain why the AI analysis is incorrect or why you are declining the report..."
                     required
                   />
                   {formErrors.decline && (
                     <motion.div
-                      className="error-message"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-2 text-red-400 text-sm flex items-center gap-2"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
                     >
-                      <AlertCircle className="error-icon" />
+                      <AlertCircle className="w-4 h-4" />
                       {formErrors.decline}
                     </motion.div>
                   )}
                 </div>
 
-                <div className="form-actions">
+                <div className="form-actions flex gap-4">
                   <motion.button
                     type="button"
-                    className="action-btn secondary"
+                    className="flex-1 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold border border-gray-600"
                     onClick={() => setShowDeclineForm(false)}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     Cancel
                   </motion.button>
 
                   <motion.button
                     type="submit"
-                    className={`action-btn submit ${isLoading ? 'loading' : ''}`}
+                    className={`flex-1 py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold shadow-lg shadow-red-900/40 flex items-center justify-center gap-2 disabled:opacity-50`}
                     disabled={isLoading || !declineReason}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={!isLoading ? { scale: 1.02 } : {}}
+                    whileTap={!isLoading ? { scale: 0.98 } : {}}
                   >
                     {isLoading ? (
                       <>
@@ -1339,181 +1472,162 @@ function UploadForm({ setStatus, fetchIssues }) {
       </AnimatePresence>
 
       {/* Authority Selector Modal */}
+      {/* Authority Selector Modal */}
       <AnimatePresence>
         {showAuthoritySelector && (
           <motion.div
-            className="modal-overlay"
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setShowAuthoritySelector(false)}
           >
             <motion.div
-              className="authority-selector-modal"
-              initial={{ opacity: 0, scale: 0.9, y: 50 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 50 }}
+              className="bg-[#0f172a] border border-blue-500/30 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl relative"
+              initial={{ scale: 0.9, y: 50, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="modal-header">
-                <h3>
-                  <Users className="w-5 h-5" />
-                  Select Authorities for {editedReport?.location?.zip_code || zipCode}
-                </h3>
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"></div>
+
+              <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between bg-black/20">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-900/30 p-2 rounded-lg border border-blue-500/30">
+                    <Users className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white tracking-wide">Authority Matrix</h3>
+                    <p className="text-gray-400 text-xs font-mono uppercase">Zone Code: {editedReport?.location?.zip_code || zipCode || 'UNKNOWN'}</p>
+                  </div>
+                </div>
                 <button
-                  className="modal-close-btn"
+                  className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"
                   onClick={() => setShowAuthoritySelector(false)}
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
-              <div className="modal-content">
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-gradient-to-br from-[#0f172a] to-[#1e293b]">
                 {emailStatus && (
                   <motion.div
-                    className={`email-status ${emailStatus.includes('✅') ? 'success' : emailStatus.includes('❌') ? 'error' : 'info'}`}
-                    initial={{ opacity: 0, y: -10 }}
+                    className={`mb-6 p-4 rounded-xl border flex items-center gap-3 ${emailStatus.includes('✅')
+                      ? 'bg-green-500/10 border-green-500/30 text-green-300'
+                      : emailStatus.includes('❌')
+                        ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                        : 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+                      }`}
+                    initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                   >
+                    <Info className="w-5 h-5 flex-shrink-0" />
                     {emailStatus}
                   </motion.div>
                 )}
 
-                <div className="authorities-section">
-                  <h4>Available Authorities ({Object.keys(availableAuthorities).length})</h4>
-                  <p className="section-description">
-                    Select multiple authorities to send your report. You can choose any authority,
-                    not just the recommended ones.
+                <div className="mb-6">
+                  <h4 className="flex items-center gap-2 text-white font-bold mb-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]"></div>
+                    Active Units ({Object.keys(availableAuthorities).length} Types)
+                  </h4>
+                  <p className="text-sm text-gray-400">
+                    Select the relevant departments to route this report. AI recommendations are highlighted.
                   </p>
-                  {/* console.log('Available authorities in modal:', availableAuthorities) */}
-                  <div className="authorities-grid">
-                    {Object.entries(availableAuthorities).map(([type, authorities]) => (
-                      authorities.map((authority, index) => {
-                        const isSelected = selectedAuthorities.some(selected =>
-                          selected.name === authority.name && selected.type === type
-                        );
-                        const isRecommended = editedReport?.responsible_authorities_or_parties?.some(rec =>
-                          rec.name === authority.name && rec.type === type
-                        );
-
-                        return (
-                          <motion.div
-                            key={`${type}-${index}`}
-                            className={`authority-card selectable ${isSelected ? 'selected' : ''
-                              } ${isRecommended ? 'recommended' : ''}`}
-                            onClick={() => handleAuthoritySelection(authority, type)}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                          >
-                            <div className="authority-header">
-                              <div className="authority-icon">
-                                <Building className="w-4 h-4" />
-                              </div>
-                              <div className="authority-badges">
-                                {isRecommended && (
-                                  <span className="badge recommended-badge">
-                                    <Star className="w-3 h-3" /> Recommended
-                                  </span>
-                                )}
-                                {isSelected && (
-                                  <span className="badge selected-badge">
-                                    <Check className="w-3 h-3" /> Selected
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="authority-info">
-                              <h5 className="authority-name">{authority.name}</h5>
-                              <p className="authority-type">{type.replace('_', ' ').toUpperCase()}</p>
-                              {authority.email && (
-                                <p className="authority-email">
-                                  <Mail className="w-3 h-3" /> {authority.email}
-                                </p>
-                              )}
-                              {authority.phone && (
-                                <p className="authority-phone">
-                                  <Phone className="w-3 h-3" /> {authority.phone}
-                                </p>
-                              )}
-                            </div>
-                          </motion.div>
-                        );
-                      })
-                    ))}
-                  </div>
                 </div>
 
-                {selectedAuthorities.length > 0 && (
-                  <div className="selected-authorities-section">
-                    <h4>Selected Authorities ({selectedAuthorities.length})</h4>
-                    <div className="selected-authorities-list">
-                      {selectedAuthorities.map((authority, index) => (
-                        <motion.div
-                          key={index}
-                          className="selected-authority-item"
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: 10 }}
-                        >
-                          <Building className="w-4 h-4" />
-                          <span>{authority.name} ({authority.type})</span>
-                          <button
-                            className="remove-authority-btn"
-                            onClick={() => handleAuthoritySelection(authority, authority.type)}
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </motion.div>
-                      ))}
+                <div className="space-y-8">
+                  {Object.entries(availableAuthorities).map(([type, authorities]) => (
+                    <motion.div
+                      key={type}
+                      className="authority-group"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <h4 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4 border-b border-blue-500/20 pb-2 flex items-center justify-between">
+                        {type.replace(/_/g, ' ')}
+                        <span className="bg-blue-900/40 text-blue-300 px-2 py-0.5 rounded text-[10px]">{authorities.length} Units</span>
+                      </h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {authorities.map((auth, index) => {
+                          const isSelected = selectedAuthorities.includes(auth._id);
+                          return (
+                            <motion.div
+                              key={auth._id}
+                              className={`relative group cursor-pointer overflow-hidden rounded-xl border transition-all duration-300 ${isSelected
+                                ? 'bg-blue-600/20 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.2)]'
+                                : 'bg-white/5 border-white/10 hover:border-white/30 hover:bg-white/10'
+                                }`}
+                              onClick={() => handleAuthoritySelect(auth._id)}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <div className="p-4 relative z-10 flex gap-3">
+                                <div className={`mt-1 w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-400' : 'border-gray-500 bg-transparent'
+                                  }`}>
+                                  {isSelected && <Check className="w-3 h-3 text-white" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h5 className={`font-bold text-sm truncate transition-colors ${isSelected ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>
+                                    {auth.name}
+                                  </h5>
+                                  <p className="text-xs text-gray-500 truncate mt-0.5">{auth.email}</p>
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <span className="text-[10px] bg-black/40 px-2 py-1 rounded text-gray-400 border border-white/5 font-mono">
+                                      {auth.jurisdiction || 'LOCAL'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {isSelected && (
+                                <motion.div
+                                  className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10 z-0"
+                                  layoutId="selected-glow"
+                                />
+                              )}
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  ))}
+
+                  {Object.keys(availableAuthorities).length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+                      <Shield className="w-16 h-16 mb-4 opacity-20" />
+                      <p className="text-lg font-medium">No Authorities Found</p>
+                      <p className="text-sm opacity-60">Try entering a different zip code in the location settings.</p>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
-              <div className="modal-actions">
-                <motion.button
-                  className="modal-btn secondary"
-                  onClick={() => setShowAuthoritySelector(false)}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Cancel
-                </motion.button>
-
-                <motion.button
-                  className="modal-btn primary"
-                  onClick={saveSelectedAuthorities}
-                  disabled={selectedAuthorities.length === 0}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Save className="w-4 h-4" />
-                  Save Selection ({selectedAuthorities.length})
-                </motion.button>
-
-                <motion.button
-                  className={`modal-btn email ${emailingAuthorities ? 'loading' : ''}`}
-                  onClick={sendEmailToAuthorities}
-                  disabled={selectedAuthorities.length === 0 || emailingAuthorities}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  {emailingAuthorities ? (
-                    <>
-                      <Loader className="w-4 h-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="w-4 h-4" />
-                      Send Email to Selected ({selectedAuthorities.length})
-                    </>
-                  )}
-                </motion.button>
+              <div className="p-4 bg-black/40 border-t border-white/10 flex justify-between items-center backdrop-blur-md">
+                <div className="text-sm text-gray-400">
+                  <span className="text-white font-bold">{selectedAuthorities.length}</span> authorities selected
+                </div>
+                <div className="flex gap-3">
+                  <motion.button
+                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg font-bold border border-gray-600 text-sm"
+                    onClick={() => setShowAuthoritySelector(false)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Close
+                  </motion.button>
+                  <motion.button
+                    className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-lg hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-900/40 transition-colors"
+                    onClick={() => setShowAuthoritySelector(false)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Confirm Selection
+                  </motion.button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
@@ -1593,42 +1707,44 @@ function UploadForm({ setStatus, fetchIssues }) {
       <AnimatePresence>
         {alertModal.show && (
           <motion.div
-            className="modal-overlay"
+            className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setAlertModal({ ...alertModal, show: false })}
           >
             <motion.div
-              className={`authority-selector-modal alert-modal ${alertModal.type}`}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              className={`bg-[#0f172a] border rounded-2xl w-full max-w-sm overflow-hidden flex flex-col shadow-2xl relative ${alertModal.type === 'error' ? 'border-red-500/30' : 'border-yellow-500/30'
+                }`}
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              style={{ maxWidth: '400px', textAlign: 'center' }}
             >
-              <div className="modal-header" style={{ justifyContent: 'center', borderBottom: 'none', paddingBottom: 0 }}>
-                <div className={`alert-icon-wrapper ${alertModal.type === 'error' ? 'text-red-500' : 'text-yellow-500'}`}>
+              <div className={`p-6 text-center ${alertModal.type === 'error' ? 'bg-red-900/10' : 'bg-yellow-900/10'}`}>
+                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${alertModal.type === 'error' ? 'bg-red-500/20 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)]' : 'bg-yellow-500/20 text-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.3)]'
+                  }`}>
                   {alertModal.type === 'error' ? (
-                    <Shield className="w-12 h-12 mx-auto mb-2" />
+                    <Shield className="w-8 h-8" />
                   ) : (
-                    <AlertCircle className="w-12 h-12 mx-auto mb-2" />
+                    <AlertCircle className="w-8 h-8" />
                   )}
                 </div>
+                <h3 className="text-xl font-bold text-white mb-2">{alertModal.title}</h3>
+                <p className="text-gray-300 text-sm leading-relaxed">{alertModal.message}</p>
               </div>
 
-              <div className="modal-content" style={{ padding: '0 20px 20px' }}>
-                <h3 className="text-xl font-bold mb-2 text-white">{alertModal.title}</h3>
-                <p className="text-gray-300 mb-6">{alertModal.message}</p>
-
+              <div className="p-4 bg-black/20 border-t border-white/5">
                 <motion.button
-                  className="action-btn secondary"
+                  className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition-all ${alertModal.type === 'error'
+                    ? 'bg-red-600 hover:bg-red-500 shadow-red-900/30'
+                    : 'bg-yellow-600 hover:bg-yellow-500 shadow-yellow-900/30'
+                    }`}
                   onClick={() => setAlertModal({ ...alertModal, show: false })}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  style={{ width: '100%', justifyContent: 'center' }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  OK, I Understand
+                  Message Received
                 </motion.button>
               </div>
             </motion.div>

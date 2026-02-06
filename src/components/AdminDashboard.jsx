@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import apiClient from '../services/apiClient';
-import { ShieldAlert, CheckCircle2, XCircle, AlertTriangle, Loader2, Edit2, ShieldCheck, Mail, Save, X, Users, BarChart3, CheckSquare, Square, MapPin, Building } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, XCircle, AlertTriangle, Loader2, Edit2, ShieldCheck, Mail, Save, X, Users, BarChart3, CheckSquare, Square, MapPin, Building, FileText, Clock, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { hasPermission, canActOnIssue, getCurrentAdmin } from '../utils/permissions';
+import SkeletonLoader from './SkeletonLoader';
+import ReviewCard from './ReviewCard';
+import DashboardLayout from './DashboardLayout';
+import StatsCard, { StatsGrid } from './StatsCard';
+import VirtualizedList from './VirtualizedList';
+import DashboardAnalytics from './DashboardAnalytics';
 
 export default function AdminDashboard() {
   const [reviews, setReviews] = useState([]);
@@ -26,56 +32,119 @@ export default function AdminDashboard() {
   const [editFormData, setEditFormData] = useState({ issue_type: '', summary: '', confidence: 0 });
 
   // View Mode State
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'reviews'
   const [viewMode, setViewMode] = useState('all'); // 'all' or 'assigned'
+
+  // Notifications State
+  const [notificationList, setNotificationList] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const previousReviewsRef = React.useRef([]);
 
   // Bulk Selection State
   const [selectedIssues, setSelectedIssues] = useState(new Set());
 
-  const toggleIssueSelection = (id) => {
-    const newSet = new Set(selectedIssues);
-    if (newSet.has(id)) newSet.delete(id);
-    else newSet.add(id);
-    setSelectedIssues(newSet);
-  };
+  // Memoized toggle function to prevent re-renders
+  const toggleIssueSelection = useCallback((id) => {
+    setSelectedIssues(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      return newSet;
+    });
+  }, []);
 
-  const handleSelectAll = () => {
+  // Memoized virtualized items to prevent hook order error
+  const virtualizedItems = useMemo(() => {
+    const result = [];
+    // Group items into rows of 3 for the grid
+    for (let i = 0; i < reviews.length; i += 3) {
+      result.push(reviews.slice(i, i + 3));
+    }
+    return result;
+  }, [reviews]);
+
+  const handleSelectAll = useCallback(() => {
     if (selectedIssues.size === reviews.length && reviews.length > 0) {
       setSelectedIssues(new Set());
     } else {
       setSelectedIssues(new Set(reviews.map(r => r._id || r.issue_id)));
     }
+  }, [selectedIssues.size, reviews]);
+
+  // Urgent double-beep notification sound
+  const playNotificationSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+
+      // Tone 1: High alert sawtooth
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.connect(gain1); gain1.connect(audioCtx.destination);
+      osc1.type = 'sawtooth';
+      osc1.frequency.setValueAtTime(900, now);
+      gain1.gain.setValueAtTime(0.4, now);
+      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+      // Tone 2: Contrast beep
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.connect(gain2); gain2.connect(audioCtx.destination);
+      osc2.type = 'square';
+      osc2.frequency.setValueAtTime(1200, now + 0.25);
+      gain2.gain.setValueAtTime(0, now);
+      gain2.gain.setValueAtTime(0.3, now + 0.25);
+      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+      osc1.start(now); osc1.stop(now + 0.2);
+      osc2.start(now + 0.25); osc2.stop(now + 0.5);
+    } catch (e) { console.error("Audio fail", e); }
   };
 
   useEffect(() => {
-    // Basic auth check
     const token = localStorage.getItem('adminToken');
     if (!token) {
       navigate('/admin');
       return;
     }
     fetchReviews();
+    const interval = setInterval(fetchReviews, 30000); // 30s polling
+    return () => clearInterval(interval);
   }, [navigate]);
 
   const fetchReviews = async () => {
     try {
-      setLoading(true);
-      setReviews([]); // Clear data first
+      if (reviews.length === 0) setLoading(true);
       const data = await apiClient.getPendingReviews();
+
+      // Real-time notification logic
+      if (data && Array.isArray(data)) {
+        if (previousReviewsRef.current.length > 0) {
+          data.forEach(newReview => {
+            const isNew = !previousReviewsRef.current.some(old => (old._id || old.issue_id) === (newReview._id || newReview.issue_id));
+            if (isNew) {
+              playNotificationSound();
+              setNotificationList(prev => [{
+                id: Date.now() + Math.random(),
+                text: `New Report: ${newReview.issue_type || 'Unknown Issue'} detected at ${newReview.address}`,
+                time: 'Just now',
+                severity: newReview.severity?.toLowerCase()
+              }, ...prev].slice(0, 10)); // Keep last 10
+            }
+          });
+        }
+        previousReviewsRef.current = data;
+      }
+
       setReviews(data);
       setError(null);
     } catch (err) {
       console.error("Failed to fetch reviews", err);
-
-      // Handle authentication errors
-      if (err.message && (err.message.includes('401') || err.message.includes('403') || err.message.includes('Admin access required'))) {
-        console.warn('Authentication failed, clearing tokens and redirecting');
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminData');
-        navigate('/admin', { replace: true });
+      if (err.message && (err.message.includes('401') || err.message.includes('403'))) {
+        setError("Session expired. Please login again.");
         return;
       }
-
-      setError("Failed to load pending reviews: " + (err.message || 'Unknown error'));
+      setError("Failed to load pending reviews.");
     } finally {
       setLoading(false);
     }
@@ -296,348 +365,225 @@ export default function AdminDashboard() {
 
   if (loading && reviews.length === 0) {
     return (
-      <div className="min-h-screen bg-black text-white p-6 md:p-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between mb-10">
-            <div className="h-10 w-64 bg-gray-800 rounded animate-pulse"></div>
+      <DashboardLayout currentPage="reviews">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="h-8 w-48 bg-gray-800 rounded animate-pulse"></div>
             <div className="h-10 w-32 bg-gray-800 rounded animate-pulse"></div>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden h-96">
-                <div className="h-48 bg-gray-800 animate-pulse"></div>
-                <div className="p-5 space-y-4">
-                  <div className="h-6 w-3/4 bg-gray-800 rounded animate-pulse"></div>
-                  <div className="h-4 w-full bg-gray-800 rounded animate-pulse"></div>
-                  <div className="h-4 w-1/2 bg-gray-800 rounded animate-pulse"></div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <StatsGrid>
+            <StatsCard loading />
+            <StatsCard loading />
+            <StatsCard loading />
+            <StatsCard loading />
+          </StatsGrid>
+          <SkeletonLoader count={6} />
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-6 md:p-12 relative">
-      <div className="max-w-7xl mx-auto">
-        <header className="flex items-center justify-between mb-10">
+    <DashboardLayout currentPage="dashboard" notifications={reviews.length}>
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-blue-500">
-              Admin Dashboard
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+              Review Dashboard
             </h1>
-            <p className="text-gray-400 mt-2">Review flagged and low-confidence reports</p>
+            <p className="text-sm text-gray-500 mt-1">Manage and review flagged reports</p>
           </div>
-          <div className="flex gap-3">
-            {/* Show Manage Team button only for super_admin */}
-            {hasPermission('manage_team') && (
-              <button
-                onClick={() => navigate('/admin/team')}
-                className="px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg text-sm border border-purple-500/30 transition-all flex items-center gap-2"
-              >
-                <Users className="w-4 h-4" />
-                Manage Team
-              </button>
-            )}
-            {/* View Stats button for all roles */}
-            {hasPermission('view_stats') && (
-              <button
-                onClick={() => navigate('/admin/stats')}
-                className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg text-sm border border-blue-500/30 transition-all flex items-center gap-2"
-              >
-                <BarChart3 className="w-4 h-4" />
-                View Stats
-              </button>
-            )}
-            <button
-              onClick={() => navigate('/admin/mapping')}
-              className="px-4 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded-lg text-sm border border-orange-500/30 transition-all flex items-center gap-2"
-            >
-              <MapPin className="w-4 h-4" />
-              Mapping
-            </button>
-            <button
-              onClick={() => navigate('/admin/authorities')}
-              className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg text-sm border border-blue-500/30 transition-all flex items-center gap-2"
-            >
-              <MapPin className="w-4 h-4" />
-              Authorities
-            </button>
-            <button
-              onClick={() => navigate('/admin/security')}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm border border-gray-700 transition-all flex items-center gap-2"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              Security
-            </button>
-            <button
-              onClick={() => {
-                localStorage.removeItem('adminToken');
-                localStorage.removeItem('adminData');
-                navigate('/admin');
-              }}
-              className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-sm border border-red-500/30 transition-all"
-            >
-              Logout
-            </button>
-            <button
-              onClick={() => navigate('/admin/users')}
-              className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-sm border border-rose-500/30 transition-all flex items-center gap-2"
-            >
-              <Users className="w-4 h-4" /> Manage Users
-            </button>
-            <button
-              onClick={fetchReviews}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 hover:text-white text-gray-400 rounded-lg text-sm border border-gray-700 transition-all flex items-center gap-2"
-            >
-              <Loader2 className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              {loading ? 'Refreshing...' : 'Refresh'}
-            </button>
+          <button
+            onClick={fetchReviews}
+            className="px-4 py-2 bg-gray-800/50 hover:bg-gray-800 text-gray-300 rounded-lg text-sm border border-gray-700/50 transition-all flex items-center gap-2"
+          >
+            <Loader2 className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+
+
+
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-4 border-b border-gray-800">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'overview'
+              ? 'border-blue-500 text-blue-400'
+              : 'border-transparent text-gray-500 hover:text-gray-300'
+              }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('reviews')}
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'reviews'
+              ? 'border-blue-500 text-blue-400'
+              : 'border-transparent text-gray-500 hover:text-gray-300'
+              }`}
+          >
+            Reviews
+            <span className="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded-full text-xs">{reviews.length}</span>
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'overview' ? (
+          <div className="space-y-6">
+            <StatsGrid>
+              <StatsCard
+                title="Total Reviews"
+                value={reviews.length}
+                change="+12%"
+                trend="up"
+                icon={FileText}
+                color="blue"
+              />
+              <StatsCard
+                title="Pending"
+                value={reviews.filter(r => r.status === 'pending_review' || r.status === 'pending').length}
+                change="-5%"
+                trend="down"
+                icon={Clock}
+                color="orange"
+              />
+              <StatsCard
+                title="Approved Today"
+                value={reviews.filter(r => r.status === 'approved').length}
+                change="+8%"
+                trend="up"
+                icon={CheckCircle2}
+                color="green"
+              />
+              <StatsCard
+                title="High Confidence"
+                value={reviews.filter(r => {
+                  const report = r.report?.report || r.report || {};
+                  const aiData = report.unified_report || report.issue_overview || {};
+                  return (aiData.confidence_percent || 0) > 80;
+                }).length}
+                change="+15%"
+                trend="up"
+                icon={TrendingUp}
+                color="purple"
+              />
+            </StatsGrid>
+            <DashboardAnalytics reviews={reviews} />
           </div>
-        </header>
+        ) : (
+          /* Reviews List View */
+          <div className="animate-in fade-in slide-in-from-bottom-5 duration-300">
+            {/* Filter Tabs */}
+            {
+              hasPermission('view_assigned_issues') && (
+                <div className="flex gap-2 mb-6 bg-gray-900/50 p-1 rounded-lg w-fit">
+                  <button
+                    onClick={() => switchViewMode('all')}
+                    className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'all'
+                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                      : 'text-gray-400 hover:text-white'
+                      }`}
+                  >
+                    All Issues
+                  </button>
+                  <button
+                    onClick={() => switchViewMode('assigned')}
+                    className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'assigned'
+                      ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20'
+                      : 'text-gray-400 hover:text-white'
+                      }`}
+                  >
+                    Assigned to Me
+                  </button>
+                  <button
+                    onClick={() => switchViewMode('resolved')}
+                    className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'resolved'
+                      ? 'bg-green-600 text-white shadow-lg shadow-green-600/20'
+                      : 'text-gray-400 hover:text-white'
+                      }`}
+                  >
+                    Resolved History
+                  </button>
+                </div>
+              )
+            }
 
-        {/* View Mode Tabs */}
-        {
-          hasPermission('view_assigned_issues') && (
-            <div className="flex gap-2 mb-6 bg-gray-900/50 p-1 rounded-lg w-fit">
-              <button
-                onClick={() => switchViewMode('all')}
-                className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'all'
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-400 hover:text-white'
-                  }`}
-              >
-                Pending
-              </button>
-              <button
-                onClick={() => switchViewMode('assigned')}
-                className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'assigned'
-                  ? 'bg-purple-500 text-white'
-                  : 'text-gray-400 hover:text-white'
-                  }`}
-              >
-                Assigned
-              </button>
-              <button
-                onClick={() => switchViewMode('resolved')}
-                className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'resolved'
-                  ? 'bg-green-600 text-white'
-                  : 'text-gray-400 hover:text-white'
-                  }`}
-              >
-                Resolved History
-              </button>
-            </div>
-          )
-        }
+            {/* Bulk Actions Header */}
+            {
+              hasPermission('assign_issue') && (
+                <div className="flex items-center gap-4 mb-6">
+                  <button
+                    onClick={handleSelectAll}
+                    className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    {selectedIssues.size > 0 && selectedIssues.size === reviews.length ? <CheckSquare className="w-5 h-5 text-purple-500" /> : <Square className="w-5 h-5" />}
+                    Select All ({reviews.length})
+                  </button>
+                  {selectedIssues.size > 0 && (
+                    <span className="text-purple-400 font-semibold">{selectedIssues.size} selected</span>
+                  )}
+                </div>
+              )
+            }
 
+            {
+              error && (
+                <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-xl text-red-200 mb-8 flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5" />
+                  {error}
+                </div>
+              )
+            }
 
-        {/* Bulk Actions Header */}
-        {
-          hasPermission('assign_issue') && (
-            <div className="flex items-center gap-4 mb-6">
-              <button
-                onClick={handleSelectAll}
-                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-              >
-                {selectedIssues.size > 0 && selectedIssues.size === reviews.length ? <CheckSquare className="w-5 h-5 text-purple-500" /> : <Square className="w-5 h-5" />}
-                Select All ({reviews.length})
-              </button>
-              {selectedIssues.size > 0 && (
-                <span className="text-purple-400 font-semibold">{selectedIssues.size} selected</span>
-              )}
-            </div>
-          )
-        }
-
-        {
-          error && (
-            <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-xl text-red-200 mb-8 flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5" />
-              {error}
-            </div>
-          )
-        }
-
-        {
-          reviews.length === 0 && !error ? (
-            <div className="text-center py-20 bg-gray-900/50 rounded-2xl border border-gray-800">
-              <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/20">
-                <CheckCircle2 className="w-8 h-8 text-green-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">All Caught Up!</h3>
-              <p className="text-gray-400">No pending reports to review.</p>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {reviews.map((review) => {
-                const id = review._id || review.issue_id;
-
-                // Define status helper
-                const statusLower = (review.status || '').toLowerCase();
-                const isResolved = ['approved', 'rejected', 'declined', 'submitted', 'resolved'].includes(statusLower);
-
-                // Extract data safely
-                const report = review.report?.report || review.report || {};
-                const aiData = report.unified_report || report.issue_overview || {};
-                const issueType = aiData.issue_type || review.issue_type || 'Unknown';
-                const confidence = aiData.confidence_percent || 0;
-                // 🟢 Ticket 2: Prefer "User Friendly" summary, fall back to "Technical" or standard
-                const summary = aiData.user_feedback || aiData.summary_explanation || review.description || "No description";
-
-                // 🟢 Ticket 2: Admin Analysis for tooltip or extra info
-                const adminAnalysis = aiData.admin_analysis || "No technical analysis available";
-
-                // Correct Image URL Logic:
-                let imageUrl = null;
-                if (review.image_url) {
-                  imageUrl = `${apiClient.baseURL}${review.image_url}`;
-                } else if (review.image_id) {
-                  // Fallback: Use GridFS endpoint if specific URL lacks
-                  // If image_id exists, construct /api/issues/{id}/image
-                  imageUrl = `${apiClient.baseURL}/issues/${id}/image`;
-                }
-
-                return (
-                  <div key={id} onClick={() => !isResolved && openDetailModal(review)} className={`group bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-xl overflow-hidden flex flex-col hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-300 transform ${!isResolved ? 'cursor-pointer hover:-translate-y-1 hover:border-purple-500/50' : 'cursor-default opacity-80'}`}>
-                    {/* Image Header */}
-                    <div
-                      className={`relative h-48 bg-gray-800 group ${!isResolved ? 'cursor-pointer' : ''}`}
-                      onClick={(e) => {
-                        if (isResolved) {
-                          e.stopPropagation();
-                          return;
-                        }
-                        openReportModal(review);
-                      }}
-                    >
-                      {/* Selection Checkbox */}
-                      {hasPermission('assign_issue') && !isResolved && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); toggleIssueSelection(id); }}
-                          className="absolute top-3 left-3 z-10 p-1 rounded hover:scale-110 transition-transform bg-black/40 backdrop-blur-sm"
-                        >
-                          {selectedIssues.has(id) ? <CheckSquare className="w-5 h-5 text-purple-500 fill-purple-500/10" /> : <Square className="w-5 h-5 text-white/50 hover:text-white" />}
-                        </button>
-                      )}
-                      {imageUrl ? (
-                        <img src={imageUrl} alt="Evidence" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-500">
-                          No Image
-                        </div>
-                      )}
-                      <div className="absolute top-3 right-3 bg-black/70 backdrop-blur px-2 py-1 rounded text-xs font-mono text-white border border-gray-600">
-                        ID: {String(id).slice(-6)}
-                      </div>
-                      <div className={`absolute bottom-3 left-3 px-2 py-1 rounded text-xs font-bold ${confidence > 80 ? 'bg-green-500/90 text-black' :
-                        confidence < 50 ? 'bg-red-500/90 text-white' : 'bg-yellow-500/90 text-black'
-                        }`}>
-                        {confidence}% Confidence
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-5 flex-1 flex flex-col">
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-lg font-bold text-white capitalize">{issueType.replace(/_/g, ' ')}</h3>
-                        <span className="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded-full">
-                          {review.status}
-                        </span>
-                      </div>
-
-                      <p className="text-sm text-gray-400 mb-4 line-clamp-3 flex-1">
-                        {summary}
-                      </p>
-
-                      {/* Debug Info */}
-                      <details className="mb-2 text-xs text-gray-600">
-                        <summary>Raw Data</summary>
-                        <pre className="mt-2 p-2 bg-black rounded overflow-auto max-h-32 text-[10px]">
-                          {JSON.stringify(review, null, 2)}
-                        </pre>
-                      </details>
-
-                      <div className="text-xs text-gray-500 mb-4 space-y-1">
-                        <p>📍 {review.location?.address || review.address || 'Unknown Location'}</p>
-                        <p>🕒 {new Date(review.timestamp).toLocaleString()}</p>
-                        <p>👤 <span className="text-white font-medium">{review.user_reputation?.name || 'User'}</span> <span className="text-gray-500 text-xs">({review.reporter_email || review.user_email || 'No Email'})</span></p>
-
-                        {/* Show Resolver Info if available */}
-                        {review.admin_review && review.admin_review.admin_id && (
-                          <p className="text-green-400 font-semibold border-t border-gray-800 pt-1 mt-1">
-                            ✅ Resolved by: {review.admin_review.admin_id}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Assignment Section */}
-                      {hasPermission('assign_issue') && (
-                        <div className="mb-3">
-                          {review.assigned_to ? (
-                            <div className="text-xs text-purple-400 bg-purple-500/10 px-3 py-2 rounded-lg border border-purple-500/30">
-                              📌 Assigned to: {review.assigned_to}
-                            </div>
-                          ) : (
-                            !isResolved && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); openAssignmentModal(review); }}
-                                className="w-full py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg transition-all text-sm flex items-center justify-center gap-2"
-                              >
-                                <Users className="w-4 h-4" />
-                                Assign to Team Member
-                              </button>
-                            )
-                          )}
-                        </div>
-                      )}                      {/* Action Buttons - Hide if already resolved */}
-                      {isResolved ? (
-                        <div className="mt-4 p-2 bg-gray-800 rounded border border-gray-700 text-center text-sm text-gray-400">
-                          <CheckCircle2 className="w-4 h-4 inline mr-2 text-green-500" />
-                          Review Completed
-                        </div>
-                      ) : (
-                        /* Only show actions if admin can act AND issue is pending */
-                        <>
-                          {canActOnIssue(review) && (
-                            <div className="grid grid-cols-2 gap-3">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDecline(id); }}
-                                disabled={processingId === id}
-                                className="flex items-center justify-center gap-2 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg transition-colors disabled:opacity-50"
-                              >
-                                {processingId === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
-                                Decline
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); openApproveModal(review); }}
-                                disabled={processingId === id}
-                                className="flex items-center justify-center gap-2 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg transition-colors disabled:opacity-50"
-                              >
-                                {processingId === id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                                Review
-                              </button>
-                            </div>
-                          )}
-                        </>
-                      )}
-
-                      {/* Show message if user cannot act on this issue */}
-                      {!canActOnIssue(review) && !isResolved && (
-                        <div className="text-center py-3 text-gray-500 text-sm">
-                          <ShieldAlert className="w-4 h-4 inline mr-2" />
-                          Not assigned to you
-                        </div>
-                      )}
-                    </div>
+            {
+              reviews.length === 0 && !error ? (
+                <div className="text-center py-20 bg-gray-900/50 rounded-2xl border border-gray-800">
+                  <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/20">
+                    <CheckCircle2 className="w-8 h-8 text-green-500" />
                   </div>
-                );
-              })}
-            </div>
-          )
-        }
-      </div >
+                  <h3 className="text-xl font-bold text-white mb-2">All Caught Up!</h3>
+                  <p className="text-gray-400">No pending reports to review.</p>
+                </div>
+              ) : (
+                <div className="h-[calc(100vh-340px)] min-h-[500px]">
+                  <VirtualizedList
+                    items={virtualizedItems}
+                    itemHeight={550} // Increased from 480 to 550 to fix overlapping/sticking rows
+                    renderItem={(rowItems) => (
+                      <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 gap-8 pb-8 pr-4"> {/* Increased gap and padding */}
+                        {rowItems.map((review) => {
+                          const id = review._id || review.issue_id;
+                          const statusLower = (review.status || '').toLowerCase();
+                          const isResolved = ['approved', 'rejected', 'declined', 'submitted', 'resolved'].includes(statusLower);
+
+                          return (
+                            <ReviewCard
+                              key={id}
+                              review={review}
+                              isSelected={selectedIssues.has(id)}
+                              isProcessing={processingId === id}
+                              canSelect={hasPermission('assign_issue')}
+                              canAct={canActOnIssue(review)}
+                              isResolved={isResolved}
+                              onToggleSelect={toggleIssueSelection}
+                              onOpenDetail={openDetailModal}
+                              onOpenApprove={openApproveModal}
+                              onDecline={handleDecline}
+                              onOpenAssignment={openAssignmentModal}
+                              baseURL={apiClient.baseURL}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  />
+                </div>
+              )
+            }
+          </div>
+        )}
+      </div>
 
       {/* Bulk Action Bar - Sticky Bottom */}
       {
@@ -881,8 +827,14 @@ export default function AdminDashboard() {
                         {(() => {
                           const id = detailModal._id || detailModal.issue_id;
                           let img = detailModal.image_url;
-                          if (!img && detailModal.image_id) img = `${apiClient.baseURL}/issues/${id}/image`;
-                          else if (img && !img.startsWith('http')) img = `${apiClient.baseURL}${img}`;
+                          if (!img && detailModal.image_id) img = `${apiClient.baseURL}/api/issues/${id}/image`;
+                          else if (img && !img.startsWith('http')) {
+                            const prefix = img.startsWith('/') ? '' : '/';
+                            // If it doesn't already have /api/ but is a relative path, we might need to add it 
+                            // though usually images are at /uploads/ or /api/issues/.
+                            // Based on backend, it's either GridFS (/api/issues/:id/image) or static.
+                            img = `${apiClient.baseURL}${prefix}${img}`;
+                          }
 
                           return img ? (
                             <img src={img} alt="Evidence" className="w-full h-full object-contain" />
@@ -963,7 +915,6 @@ export default function AdminDashboard() {
 
                   {/* Right Column: Editable Details */}
                   <div className="space-y-6">
-
                     {/* Issue Type */}
                     <div>
                       <label className="text-sm font-semibold text-gray-400 mb-2 block">Issue Type</label>
@@ -1039,22 +990,18 @@ export default function AdminDashboard() {
                         <Save className="w-4 h-4" /> Save Changes
                       </button>
                     </div>
-
                   </div>
                 </div>
               </div>
 
               {/* Modal Footer Actions */}
               <div className="p-4 bg-gray-900 border-t border-gray-800 flex justify-between items-center gap-4">
-                {/* Left: Dismiss/Cancel */}
                 <button
                   onClick={closeDetailModal}
                   className="px-6 py-2 text-gray-500 hover:text-white transition-colors"
                 >
                   Close
                 </button>
-
-                {/* Status Dropdown */}
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-500">Set Status:</span>
                   <select
@@ -1069,8 +1016,6 @@ export default function AdminDashboard() {
                     <option value="duplicate">Duplicate</option>
                   </select>
                 </div>
-
-                {/* Right: Actions */}
                 <div className="flex gap-3">
                   <button
                     onClick={() => {
@@ -1087,7 +1032,6 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => {
                       openApproveModal(detailModal);
-                      // Hide detail modal when approving
                       closeDetailModal();
                     }}
                     className="px-6 py-2 bg-green-500 hover:bg-green-400 text-black font-bold rounded-lg shadow-lg shadow-green-900/20 flex items-center gap-2 transition-all"
@@ -1096,12 +1040,10 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               </div>
-
             </div>
           </div>
         )
       }
-
-    </div >
+    </DashboardLayout>
   );
 }

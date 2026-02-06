@@ -319,6 +319,14 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     else if (labelsText.includes('roadkill') || labelsText.includes('dead animal') || labelsText.includes('carcass') || labelsText.includes('animal')) issueType = 'dead_animal';
   }
 
+  // Prefer unified_report.confidence_percent when available
+  let confidence = pick(issue, [
+    'report.report.unified_report.confidence_percent',
+    'report.unified_report.confidence_percent',
+    'report.report.issue_overview.confidence',
+    'report.issue_overview.confidence',
+  ], null);
+
   // Is Manual Report Check
   const isManualReport = String(issueType) === 'Manual Report' || (confidence !== null && Number(confidence) === 0);
   const aiSeverity = pick(aiOverview, ['severity'], pick(issue, ['severity', 'priority'], ''));
@@ -336,15 +344,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const reportText = pick(aiReport, ['issue_overview.user_feedback', 'issue_overview.summary_explanation', 'additional_notes.summary', 'template_fields.formatted_text'], null);
   const descriptionText = analysisDescription || summaryExplanation || reportText || null;
   const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
-  const imageAnalysis = pick(aiReport, ['ai_evaluation.image_analysis'], null);
+  const imageAnalysis = pick(aiReport, ['ai_evaluation.image_analysis', 'ai_evaluation.rationale'], null);
   // recommendedAuthorities removed here as it was already declared above
-  // Prefer unified_report.confidence_percent when available
-  let confidence = pick(issue, [
-    'report.report.unified_report.confidence_percent',
-    'report.unified_report.confidence_percent',
-    'report.report.issue_overview.confidence',
-    'report.issue_overview.confidence',
-  ], null);
+
   if (confidence !== null) {
     try {
       const num = Number(confidence);
@@ -355,6 +357,16 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const lat = typeof latitude === 'number' ? latitude : Number(latitude);
   const lon = typeof longitude === 'number' ? longitude : Number(longitude);
   const mapsLink = lat && lon ? `https://www.google.com/maps?q=${lat},${lon}` : (address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : null);
+
+  // Show Loader on Submission
+  if (submitting) {
+    return (
+      <div className="flex flex-col items-center justify-center p-20 gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <p className="text-gray-400 font-medium animate-pulse">Submitting to authorities...</p>
+      </div>
+    );
+  }
 
   let city = '—';
   let state = '—';
@@ -369,7 +381,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const shortDesc = (typeof descriptionText === 'string' && descriptionText.length > 0)
     ? (descriptionText.split(/[.!?]/)[0] || descriptionText).slice(0, 160)
     : (Array.isArray(detectedProblems) && detectedProblems.length > 0 ? detectedProblems[0] : 'an incident');
-  const hazardWords = ['danger', 'fire', 'smoke', 'collapse', 'crack', 'flood', 'leak', 'exposed', 'broken', 'damaged'];
+  const hazardWords = ['danger', 'fire', 'smoke', 'collapse', 'crack', 'flood', 'leak', 'exposed', 'broken', 'damaged', 'accident', 'crash', 'collision', 'injury', 'emergency'];
   const baseWords = (String(descriptionText || '').toLowerCase() + ' ' + (Array.isArray(detectedProblems) ? detectedProblems.join(' ').toLowerCase() : ''));
   const hits = hazardWords.filter(w => baseWords.includes(w));
   const riskTags = hits.length > 0 ? hits.slice(0, 6).join(', ') : (Array.isArray(detectedProblems) ? detectedProblems.slice(0, 4).join(', ') : '');
@@ -389,11 +401,19 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     if (m) set.add(m);
     return Array.from(set);
   })();
-  let priorityLabel = String(aiSeverity || 'medium');
-  if (hits.length >= 3) priorityLabel = 'High'; else if (hits.length >= 1) priorityLabel = 'Medium'; else priorityLabel = 'Low';
+
+  // 🛠️ Priority mapping: Respect AI severity first, fallback to heuristic
+  let priorityLabel = 'Low';
+  if (aiSeverity && String(aiSeverity).length > 1) {
+    priorityLabel = String(aiSeverity).charAt(0).toUpperCase() + String(aiSeverity).slice(1).toLowerCase();
+  } else if (hits.length >= 3) {
+    priorityLabel = 'High';
+  } else if (hits.length >= 1) {
+    priorityLabel = 'Medium';
+  }
   const locCity = city && city !== '—' ? city : (address && address !== '—' ? address.split(',')[0] : 'Unknown');
   const locState = state && state !== '—' ? state : '—';
-  const templateSummary = `Our AI detected a ${String(issueType || 'Unknown')} in ${String(locCity)}, ${String(locState)} (ZIP ${String(zipCode || '—')}).\nThe image shows ${shortDesc}.\nBased on the location and context, this incident has been classified as ${String(priorityLabel)} due to ${riskTags || 'contextual risks'}.`;
+  const templateSummary = `Our AI detected a ${String(issueType || 'Unknown')} in ${String(locCity)}, ${String(locState)} (ZIP ${String(zipCode || '—')}).\nThe image shows ${shortDesc}.`;
 
   // Render a clean card with the report details
   return (
@@ -470,17 +490,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
           )}
         </div>
 
-        {confidence !== null && (
-          <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Confidence</p>
-            <p className="text-sm font-semibold">{String(confidence)}</p>
-          </div>
-        )}
-
-        {/* Severity Input (New) */}
-        {isEditing && (
-          <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Severity</p>
+        <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+          <p className="text-xs text-gray-400">Severity</p>
+          {isEditing ? (
             <select
               name="severity"
               value={editForm.severity}
@@ -492,6 +504,22 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               <option value="high">High</option>
               <option value="critical">Critical</option>
             </select>
+          ) : (
+            <span className={`text-sm font-semibold uppercase ${priorityLabel.toLowerCase() === 'high' || priorityLabel.toLowerCase() === 'critical'
+              ? 'text-red-400'
+              : priorityLabel.toLowerCase() === 'medium'
+                ? 'text-yellow-400'
+                : 'text-green-400'
+              }`}>
+              {priorityLabel}
+            </span>
+          )}
+        </div>
+
+        {confidence !== null && (
+          <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+            <p className="text-xs text-gray-400">Confidence</p>
+            <p className="text-sm font-semibold">{String(confidence)}%</p>
           </div>
         )}
       </div>
@@ -574,41 +602,14 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               {String(summaryExplanation)}
             </div>
           )}
-          {imageAnalysis && (
-            <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap mb-3">
-              {String(imageAnalysis)}
-            </div>
-          )}
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
-              <p className="text-xs text-gray-400 mb-2">Detected Problems</p>
-              <div className="flex flex-wrap gap-2">
-                {(Array.isArray(detectedProblems) && detectedProblems.length > 0 ? detectedProblems : derivedProblems).map((it, idx) => (
-                  <span key={idx} className="px-3 py-1 rounded-full text-xs bg-red-500/20 border border-red-500/40 text-red-300">
-                    {String(it)}
-                  </span>
-                ))}
-                {(!detectedProblems || detectedProblems.length === 0) && derivedProblems.length === 0 && (
-                  <span className="text-xs text-gray-400">No specific problems listed</span>
-                )}
+              <p className="text-xs text-gray-400 mb-2">AI Visual Analysis</p>
+              <div className="text-sm text-gray-200 leading-relaxed">
+                {imageAnalysis || "Detailed analysis not available for this report."}
               </div>
             </div>
 
-            <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
-              <p className="text-xs text-gray-400 mb-2">Recommended Actions</p>
-              {Array.isArray(recommendedActions) && recommendedActions.length > 0 ? (
-                <ul className="space-y-2 text-sm text-gray-200">
-                  {recommendedActions.map((act, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-400" />
-                      <span>{String(act)}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-xs text-gray-400">No recommendations provided</p>
-              )}
-            </div>
           </div>
         </div>
       )}

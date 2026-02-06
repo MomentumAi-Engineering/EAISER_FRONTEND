@@ -108,8 +108,10 @@ export default function Signup() {
     try {
       const data = await googleSignIn(response.credential);
 
-      localStorage.setItem('token', data.token);
+      localStorage.setItem('auth_token', data.access_token);
+      localStorage.setItem('token', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('userData', JSON.stringify(data.user));
 
       navigate('/');
 

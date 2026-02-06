@@ -21,7 +21,7 @@ class ApiClient {
       baseURL ||
       envApi ||
       (isDev
-        ? 'http://127.0.0.1:8000'
+        ? 'http://localhost:8000'
         : 'https://eaiser-backend-rf95.onrender.com')
     ).replace(/\/$/, '');
 
@@ -53,6 +53,11 @@ class ApiClient {
       throw new Error(typeof data === 'string' ? data : data?.detail || 'Request failed');
     }
     return data;
+  }
+
+  // Helper: generic GET
+  async get(path, headers = {}) {
+    return this.request(path, { method: 'GET', headers: { ...this.defaultHeaders, ...headers } });
   }
 
   // Issues: create a new issue with image upload and metadata

@@ -111,7 +111,7 @@ const AuthorityManagement = () => {
                     </div>
                     <div className="flex gap-3">
                         <button
-                            onClick={() => navigate('/admin')}
+                            onClick={() => navigate('/admin/dashboard')}
                             className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm border border-gray-700 transition-all"
                         >
                             Back to Dashboard
