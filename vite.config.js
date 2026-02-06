@@ -19,9 +19,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['framer-motion', 'lucide-react'],
-          map: ['leaflet', 'react-leaflet'], // Optimizes map loading
+          vendor: ['react', 'react-dom', 'react-router-dom', 'axios', 'jwt-decode'],
+          ui: ['framer-motion', 'lucide-react', 'react-hot-toast'],
+          charts: ['apexcharts', 'react-apexcharts', 'chart.js', 'react-chartjs-2', 'recharts'],
+          maps: ['@react-google-maps/api', 'leaflet', 'react-leaflet', 'geolib'],
+          media: ['browser-image-compression', 'heic2any', 'canvas-confetti'],
         }
       }
     }

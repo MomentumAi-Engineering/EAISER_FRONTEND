@@ -10,14 +10,57 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ReportReview from "../components/ReportReview";
-import { GoogleMap, Marker, LoadScript } from "@react-google-maps/api";
+import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 import Navbar from "../components/Navbar";
 import { useReportContext } from "../context/ReportContext";
+
+const LIBRARIES = ["places"];
 
 export default function SimpleReport() {
   const navigate = useNavigate();
   // Use Global Context
   const { generateReport, loading, error, reportResult, clearReport } = useReportContext();
+
+  const { isLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    libraries: LIBRARIES,
+  });
+
+  const [autocomplete, setAutocomplete] = useState(null);
+
+  const onAutocompleteLoad = (autocompleteInstance) => {
+    setAutocomplete(autocompleteInstance);
+  };
+
+  const onPlaceChanged = () => {
+    if (autocomplete !== null) {
+      const place = autocomplete.getPlace();
+      if (place.geometry) {
+        setCoords({
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+        });
+
+        // Parse address components
+        let zip = "";
+        if (place.address_components) {
+          const zipComponent = place.address_components.find((c) =>
+            c.types.includes("postal_code")
+          );
+          if (zipComponent) zip = zipComponent.long_name;
+        }
+
+        setFormData((prev) => ({
+          ...prev,
+          streetAddress: place.formatted_address || place.name,
+          zipCode: zip || prev.zipCode,
+        }));
+
+        setLocationPermission(false); // Because user typed manually/selected
+      }
+    }
+  };
 
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -370,14 +413,31 @@ export default function SimpleReport() {
               <label className="block text-xs font-semibold text-gray-400 mb-2">
                 Street Address
               </label>
-              <input
-                type="text"
-                name="streetAddress"
-                value={formData.streetAddress}
-                onChange={handleChange}
-                placeholder="123 Main Street"
-                className="w-full px-4 py-2 bg-white/5 border border-gray-700 rounded-xl text-sm"
-              />
+              {isLoaded ? (
+                <Autocomplete
+                  onLoad={onAutocompleteLoad}
+                  onPlaceChanged={onPlaceChanged}
+                >
+                  <input
+                    type="text"
+                    name="streetAddress"
+                    value={formData.streetAddress}
+                    onChange={handleChange}
+                    placeholder="123 Main Street"
+                    className="w-full px-4 py-2 bg-white/5 border border-gray-700 rounded-xl text-sm"
+                  />
+                </Autocomplete>
+              ) : (
+                <input
+                  type="text"
+                  name="streetAddress"
+                  value={formData.streetAddress}
+                  onChange={handleChange}
+                  placeholder="Loading Maps..."
+                  disabled
+                  className="w-full px-4 py-2 bg-white/5 border border-gray-700 rounded-xl text-sm opacity-50 cursor-wait"
+                />
+              )}
             </div>
 
             <div>
@@ -421,25 +481,23 @@ export default function SimpleReport() {
             )}
           </div>
 
-          {coords && (
+          {coords && isLoaded && (
             <div className="mt-4 h-64 rounded-xl overflow-hidden border border-gray-700">
-              <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
-                <GoogleMap
-                  center={coords}
-                  zoom={15}
-                  mapContainerStyle={{ width: "100%", height: "100%" }}
-                >
-                  <Marker
-                    position={coords}
-                    draggable={true}
-                    onDragEnd={(e) => {
-                      const lat = e.latLng.lat();
-                      const lng = e.latLng.lng();
-                      setCoords({ lat, lng });
-                    }}
-                  />
-                </GoogleMap>
-              </LoadScript>
+              <GoogleMap
+                center={coords}
+                zoom={15}
+                mapContainerStyle={{ width: "100%", height: "100%" }}
+              >
+                <Marker
+                  position={coords}
+                  draggable={true}
+                  onDragEnd={(e) => {
+                    const lat = e.latLng.lat();
+                    const lng = e.latLng.lng();
+                    setCoords({ lat, lng });
+                  }}
+                />
+              </GoogleMap>
             </div>
           )}
         </div>
@@ -459,6 +517,6 @@ export default function SimpleReport() {
           )}
         </button>
       </div>
-    </div>
+    </div >
   );
 }
