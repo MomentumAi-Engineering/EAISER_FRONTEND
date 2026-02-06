@@ -29,7 +29,7 @@ const options = {
 export default function LocationInput({ onLocationChange, initialCoordinates }) {
     // NOTE: You must provide a valid Google Maps API Key here or in .env
     // FALLBACK: Use provided key directly if env var is not loaded yet (avoids restart requirement)
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyAI6BuaiKI2b1kB_dagowPngUmFY4p8CJg";
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
     console.log("Initializing Maps with Key Length:", apiKey ? apiKey.length : 0);
 
