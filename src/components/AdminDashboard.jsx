@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import apiClient from '../services/apiClient';
+import { useDialog } from '../context/DialogContext';
 import { ShieldAlert, CheckCircle2, XCircle, AlertTriangle, Loader2, Edit2, ShieldCheck, Mail, Save, X, Users, BarChart3, CheckSquare, Square, MapPin, Building, FileText, Clock, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { hasPermission, canActOnIssue, getCurrentAdmin } from '../utils/permissions';
@@ -16,6 +17,7 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   const [processingId, setProcessingId] = useState(null);
   const navigate = useNavigate();
+  const { showAlert, showConfirm, showPrompt } = useDialog();
 
   // Approval Modal State
   const [approvalModal, setApprovalModal] = useState(null); // { issueId, currentAuth }
@@ -180,14 +182,19 @@ export default function AdminDashboard() {
       setReviews(prev => prev.filter(r => r._id !== issueId && r.issue_id !== issueId));
       closeApproveModal();
     } catch (err) {
-      alert("Failed to approve: " + err.message);
+      await showAlert("Failed to approve: " + err.message, { variant: 'error', title: 'Error' });
     } finally {
       setProcessingId(null);
     }
   };
 
   const handleDecline = async (issueId) => {
-    const reason = prompt("Enter reason for rejection:", "Fake report / Not a public issue");
+    const reason = await showPrompt("Enter reason for rejection:", {
+      placeholder: "Fake report / Not a public issue",
+      title: "Reject Issue",
+      confirmText: "Reject",
+      variant: 'warning'
+    });
     if (!reason) return;
 
     setProcessingId(issueId);
@@ -195,7 +202,7 @@ export default function AdminDashboard() {
       await apiClient.declineIssueAdmin(issueId, 'admin', reason);
       setReviews(prev => prev.filter(r => r._id !== issueId && r.issue_id !== issueId));
     } catch (err) {
-      alert("Failed to decline: " + err.message);
+      await showAlert("Failed to decline: " + err.message, { variant: 'error', title: 'Error' });
     } finally {
       setProcessingId(null);
     }
@@ -226,25 +233,25 @@ export default function AdminDashboard() {
   // Handle issue assignment (Supports Single and Bulk)
   const handleAssignIssue = async () => {
     if (!selectedAdmin) {
-      alert('Please select an admin to assign');
+      await showAlert('Please select an admin to assign', { variant: 'warning' });
       return;
     }
 
     try {
       if (assignmentModal.isBulk) {
         await apiClient.bulkAssignIssues(Array.from(selectedIssues), selectedAdmin);
-        alert(`Successfully assigned ${selectedIssues.size} issues!`);
+        await showAlert(`Successfully assigned ${selectedIssues.size} issues!`, { variant: 'success', title: 'Success' });
         setSelectedIssues(new Set());
       } else {
         const issueId = assignmentModal._id || assignmentModal.issue_id;
         await apiClient.assignIssue(issueId, selectedAdmin);
-        alert('Issue assigned successfully!');
+        await showAlert('Issue assigned successfully!', { variant: 'success', title: 'Success' });
       }
       setAssignmentModal(null);
       fetchReviews(); // Refresh list
     } catch (err) {
       console.error('Failed to assign issue:', err);
-      alert('Failed to assign issue: ' + err.message);
+      await showAlert('Failed to assign issue: ' + err.message, { variant: 'error', title: 'Assignment Failed' });
     }
   };
 
@@ -289,9 +296,9 @@ export default function AdminDashboard() {
         }
         return r;
       }));
-      alert("Changes saved!");
+      await showAlert("Changes saved!", { variant: 'success', title: 'Saved' });
     } catch (err) {
-      alert("Failed to save changes: " + err.message);
+      await showAlert("Failed to save changes: " + err.message, { variant: 'error', title: 'Error' });
     } finally {
       setProcessingId(null);
     }
@@ -304,37 +311,51 @@ export default function AdminDashboard() {
       setReviews(prev => prev.map(r =>
         (r._id === issueId || r.issue_id === issueId) ? { ...r, status: newStatus } : r
       ));
-      alert(`Status updated to ${newStatus}`);
+      await showAlert(`Status updated to ${newStatus}`, { variant: 'success' });
     } catch (err) {
-      alert("Failed to update status: " + err.message);
+      await showAlert("Failed to update status: " + err.message, { variant: 'error' });
     } finally {
       setProcessingId(null);
     }
   };
 
   const handleDeactivateUser = async (email, issueId) => {
-    if (!email) return alert("No reporter email found.");
-    const reason = prompt(`Deactivate user ${email}? Enter reason:`, "Spam / Fake Reports");
+    if (!email) return await showAlert("No reporter email found.", { variant: 'warning' });
+    const reason = await showPrompt(`Deactivate user ${email}? Enter reason:`, {
+      placeholder: "Spam / Fake Reports",
+      title: "Deactivate User",
+      confirmText: "Ban User",
+      variant: 'error'
+    });
     if (!reason) return;
 
-    if (!window.confirm(`Are you SURE you want to deactivate ${email}? This action prevents them from logging in.`)) return;
+    const confirmed = await showConfirm(`Are you SURE you want to deactivate ${email}? This action prevents them from logging in.`, {
+      title: "Confirm Deactivation",
+      confirmText: "Yes, Deactivate",
+      variant: 'error'
+    });
+    if (!confirmed) return;
 
     try {
       await apiClient.deactivateUser(email, reason, 'admin', issueId);
-      alert(`User ${email} deactivated.`);
+      await showAlert(`User ${email} deactivated.`, { variant: 'success' });
     } catch (err) {
       // Simple check for the warning message
       if (err.message && (err.message.includes("low AI confidence") || err.message.includes("Low confidence"))) {
-        if (window.confirm("⚠️ SYSTEM WARNING:\nThe AI confidence for this report is LOW. Banning this user implies they submitted a fake report, but the AI is not sure.\n\nDo you want to FORCE deactivate anyway?")) {
+        const force = await showConfirm(
+          "⚠️ SYSTEM WARNING:\n\nThe AI confidence for this report is LOW. Banning this user implies they submitted a fake report, but the AI is not sure.\n\nDo you want to FORCE deactivate anyway?",
+          { title: "Low Confidence Warning", confirmText: "Force Deactivate", variant: 'warning' }
+        );
+        if (force) {
           try {
             await apiClient.deactivateUser(email, reason, 'admin', issueId, true); // force_confirm=true
-            alert(`User ${email} deactivated (Forced).`);
+            await showAlert(`User ${email} deactivated (Forced).`, { variant: 'success' });
           } catch (e2) {
-            alert("Failed to deactivate: " + e2.message);
+            await showAlert("Failed to deactivate: " + e2.message, { variant: 'error' });
           }
         }
       } else {
-        alert("Failed to deactivate: " + err.message);
+        await showAlert("Failed to deactivate: " + err.message, { variant: 'error' });
       }
     }
   };

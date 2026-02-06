@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useDialog } from "../context/DialogContext";
 import { Menu, X } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 
@@ -8,6 +9,7 @@ export default function Navbar() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { showConfirm } = useDialog();
 
   // Check token on mount & route change
   useEffect(() => {
@@ -26,12 +28,22 @@ export default function Navbar() {
   }, []);
 
   // Logout
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setIsLoggedIn(false);
-    navigate("/");
-    setOpen(false);
+  // Logout
+  const handleLogout = async () => {
+    const confirmed = await showConfirm("Are you sure you want to logout?", {
+      title: "Logout Confirmation",
+      confirmText: "Yes, Logout",
+      cancelText: "Stay",
+      variant: "warning"
+    });
+
+    if (confirmed) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setIsLoggedIn(false);
+      navigate("/");
+      setOpen(false);
+    }
   };
 
   // Report Issue

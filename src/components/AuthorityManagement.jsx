@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/apiClient';
+import { useDialog } from '../context/DialogContext';
 import { Loader2, AlertTriangle, Search, Plus, Save, X, Building, Mail, Map } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,6 +10,7 @@ const AuthorityManagement = () => {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
+    const { showAlert, showPrompt } = useDialog();
 
     // Modal state for editing a Zip Code
     const [editingZip, setEditingZip] = useState(null); // String (zip code)
@@ -36,11 +38,11 @@ const AuthorityManagement = () => {
         setEditData(JSON.parse(JSON.stringify(authorities[zip] || {})));
     };
 
-    const handleCreateZip = () => {
-        const zip = prompt("Enter new Zip Code:");
+    const handleCreateZip = async () => {
+        const zip = await showPrompt("Enter new Zip Code:");
         if (!zip) return;
         if (authorities[zip]) {
-            alert("Zip code already exists!");
+            await showAlert("Zip code already exists!", { variant: 'error' });
             return;
         }
         setEditingZip(zip);
@@ -55,7 +57,7 @@ const AuthorityManagement = () => {
             setAuthorities(prev => ({ ...prev, [editingZip]: editData }));
             setEditingZip(null);
         } catch (err) {
-            alert("Failed to save: " + err.message);
+            await showAlert("Failed to save: " + err.message, { variant: 'error' });
         } finally {
             setSaving(false);
         }
