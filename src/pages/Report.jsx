@@ -14,6 +14,7 @@ import AILoader from "../components/AILoader";
 import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 import Navbar from "../components/Navbar";
 import { useReportContext } from "../context/ReportContext";
+import { useDialog } from "../context/DialogContext";
 
 const LIBRARIES = ["places"];
 
@@ -21,6 +22,7 @@ export default function SimpleReport() {
   const navigate = useNavigate();
   // Use Global Context
   const { generateReport, loading, error, reportResult, clearReport } = useReportContext();
+  const { showAlert, showConfirm } = useDialog();
 
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
@@ -69,7 +71,17 @@ export default function SimpleReport() {
   const [locationPermission, setLocationPermission] = useState(false);
   const [coords, setCoords] = useState(null);
   const [formData, setFormData] = useState({ streetAddress: "", zipCode: "" });
+  const [guestLimitReached, setGuestLimitReached] = useState(false);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    // Immediate check on mount
+    const count = parseInt(localStorage.getItem("guest_report_count") || "0", 10);
+    const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
+    if (!token && count >= 1) {
+      setGuestLimitReached(true);
+    }
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -90,9 +102,9 @@ export default function SimpleReport() {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           });
-          alert("Location access granted!");
+          showAlert("Location access granted!", { variant: 'success', title: 'Location' });
         },
-        () => alert("Location access denied")
+        () => showAlert("Location access denied", { variant: 'error', title: 'Location Error' })
       );
     }
   };
@@ -119,11 +131,11 @@ export default function SimpleReport() {
         });
         setLocationPermission(false); // Because user typed manually
       } else {
-        alert("Address not found");
+        await showAlert("Address not found", { variant: 'error' });
       }
     } catch (error) {
       console.error("Geocoding failed", error);
-      alert("Failed to get location from address");
+      await showAlert("Failed to get location from address", { variant: 'error' });
     }
   };
 
@@ -131,7 +143,7 @@ export default function SimpleReport() {
    * GUEST REPORT LIMIT LOGIC
    * -------------------------
    */
-  const GUEST_LIMIT = 3;
+  const GUEST_LIMIT = 1;
 
   const checkGuestLimit = () => {
     const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token"); // Example key
@@ -140,9 +152,11 @@ export default function SimpleReport() {
       return true; // Logged in users have no limit here
     }
 
+    // Check if key exists and is >= 1
     const currentCount = parseInt(localStorage.getItem("guest_report_count") || "0", 10);
 
-    if (currentCount >= GUEST_LIMIT) {
+    // Strict check: if count is 1 or more, block.
+    if (currentCount >= 1) {
       return false;
     }
     return true;
@@ -151,16 +165,17 @@ export default function SimpleReport() {
   const incrementGuestCount = () => {
     const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token");
     if (!authToken) {
-      const currentCount = parseInt(localStorage.getItem("guest_report_count") || "0", 10);
-      localStorage.setItem("guest_report_count", currentCount + 1);
+      // Force set to 1 immediately after first successful report
+      localStorage.setItem("guest_report_count", "1");
     }
   };
 
   const handleGenerateReport = async () => {
     // 1. Check Guest Limit
     if (!checkGuestLimit()) {
-      const confirmLogin = window.confirm(
-        "You have reached the limit of 3 free reports as a guest.\n\nPlease login to your account to view the dashboard, track status, and submit unlimited reports."
+      const confirmLogin = await showConfirm(
+        "You have already submitted a free guest report.\n\nTo submit more reports and access your personal dashboard, you must Register or Login.",
+        { title: "Authentication Required", confirmText: "Login / Register", cancelText: "Cancel", variant: "warning" }
       );
       if (confirmLogin) {
         navigate("/login"); // Redirect to login page
@@ -169,7 +184,7 @@ export default function SimpleReport() {
     }
 
     if (!selectedFile && !isManualMode) {
-      alert("Please upload an image first.");
+      await showAlert("Please upload an image first.", { variant: 'warning' });
       return;
     }
 
@@ -207,7 +222,11 @@ export default function SimpleReport() {
     if (!authToken) {
       const newCount = parseInt(localStorage.getItem("guest_report_count") || "0", 10);
       if (newCount >= GUEST_LIMIT) {
-        alert("You have used your 3 free guest reports. To view the dashboard or report status, please login.");
+        await showAlert("You have used your free guest report. To track this issue and submit more, please Login or Register.", {
+          title: "Guest Limit Reached",
+          variant: "info",
+          confirmText: "Understand"
+        });
       }
     }
   };
@@ -523,13 +542,16 @@ export default function SimpleReport() {
         {/* Generate Report Button */}
         <button
           onClick={handleGenerateReport}
-          disabled={loading}
-          className="w-full mt-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={loading || guestLimitReached}
+          className={`w-full mt-6 py-3 font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 
+            ${loading || guestLimitReached ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-400 text-black'}`}
         >
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" /> Generating...
             </>
+          ) : guestLimitReached ? (
+            "Guest Limit Reached - Login Required"
           ) : (
             "Generate Report"
           )}

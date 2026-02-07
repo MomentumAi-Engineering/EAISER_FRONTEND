@@ -20,6 +20,7 @@ const ReviewCard = memo(({
     canSelect,
     canAct,
     isResolved,
+    viewMode,
     onToggleSelect,
     onOpenDetail,
     onOpenApprove,
@@ -159,9 +160,16 @@ const ReviewCard = memo(({
 
                 {/* Action Buttons */}
                 {isResolved ? (
-                    <div className="mt-2 p-2 bg-gray-800/50 rounded border border-gray-800 text-center text-sm text-gray-500">
-                        <CheckCircle2 className="w-4 h-4 inline mr-2 text-emerald-500" />
-                        Review Completed
+                    <div className="mt-2 p-3 bg-gray-800/50 rounded border border-gray-800 text-center text-sm text-gray-400 flex flex-col items-center">
+                        <div className="flex items-center gap-2 mb-1">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <span className="font-semibold text-gray-300">Resolved</span>
+                        </div>
+                        {review.admin_review?.resolver_name && (
+                            <span className="text-xs text-emerald-400">
+                                by {review.admin_review.resolver_name}
+                            </span>
+                        )}
                     </div>
                 ) : canAct ? (
                     <div className="grid grid-cols-2 gap-3">

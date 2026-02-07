@@ -297,7 +297,7 @@ class ApiClient {
   }
 
   async getResolvedReviews() {
-    return this.request('/api/admin/review/resolved', {
+    return this.request('/api/admin/review/resolved-strict', {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('adminToken')}`
       }

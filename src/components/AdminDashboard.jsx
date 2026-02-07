@@ -170,13 +170,15 @@ export default function AdminDashboard() {
   const confirmApprove = async () => {
     if (!approvalModal) return;
     const issueId = approvalModal.issueId;
+    const currentAdmin = getCurrentAdmin();
+    const adminId = currentAdmin ? (currentAdmin.id || currentAdmin._id || 'admin') : 'admin';
 
     setProcessingId(issueId);
     try {
       if (editAuthority) {
-        await apiClient.approveIssueAdmin(issueId, 'admin', 'Approved with updated authority', newAuthData.email, newAuthData.name);
+        await apiClient.approveIssueAdmin(issueId, adminId, 'Approved with updated authority', newAuthData.email, newAuthData.name);
       } else {
-        await apiClient.approveIssueAdmin(issueId, 'admin', 'Approved via Dashboard');
+        await apiClient.approveIssueAdmin(issueId, adminId, 'Approved via Dashboard');
       }
       // Remove from list
       setReviews(prev => prev.filter(r => r._id !== issueId && r.issue_id !== issueId));
@@ -197,9 +199,12 @@ export default function AdminDashboard() {
     });
     if (!reason) return;
 
+    const currentAdmin = getCurrentAdmin();
+    const adminId = currentAdmin ? (currentAdmin.id || currentAdmin._id || 'admin') : 'admin';
+
     setProcessingId(issueId);
     try {
-      await apiClient.declineIssueAdmin(issueId, 'admin', reason);
+      await apiClient.declineIssueAdmin(issueId, adminId, reason);
       setReviews(prev => prev.filter(r => r._id !== issueId && r.issue_id !== issueId));
     } catch (err) {
       await showAlert("Failed to decline: " + err.message, { variant: 'error', title: 'Error' });
@@ -364,6 +369,7 @@ export default function AdminDashboard() {
   const switchViewMode = async (mode) => {
     setViewMode(mode);
     setLoading(true);
+    setError(null); // Clear previous errors
     setReviews([]); // Clear data while loading to prevent stale renders
 
     try {
@@ -530,9 +536,9 @@ export default function AdminDashboard() {
               )
             }
 
-            {/* Bulk Actions Header */}
+            {/* Bulk Actions Header - Hide in Resolved Mode */}
             {
-              hasPermission('assign_issue') && (
+              hasPermission('assign_issue') && viewMode !== 'resolved' && (
                 <div className="flex items-center gap-4 mb-6">
                   <button
                     onClick={handleSelectAll}
@@ -584,9 +590,10 @@ export default function AdminDashboard() {
                               review={review}
                               isSelected={selectedIssues.has(id)}
                               isProcessing={processingId === id}
-                              canSelect={hasPermission('assign_issue')}
-                              canAct={canActOnIssue(review)}
-                              isResolved={isResolved}
+                              canSelect={hasPermission('assign_issue') && viewMode !== 'resolved'}
+                              canAct={canActOnIssue(review) && viewMode !== 'resolved'}
+                              isResolved={isResolved || viewMode === 'resolved'}
+                              viewMode={viewMode}
                               onToggleSelect={toggleIssueSelection}
                               onOpenDetail={openDetailModal}
                               onOpenApprove={openApproveModal}
