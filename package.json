@@ -17,6 +17,7 @@
     "browser-image-compression": "^2.0.2",
     "canvas-confetti": "^1.9.4",
     "chart.js": "^4.5.1",
+    "exif-js": "^2.3.0",
     "framer-motion": "^12.23.26",
     "geolib": "^3.3.4",
     "heic2any": "^0.0.4",
