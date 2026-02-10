@@ -50,7 +50,10 @@ class ApiClient {
     const data = isJson ? await res.json() : await res.text();
     if (!res.ok) {
       // Throw structured error for callers to handle
-      throw new Error(typeof data === 'string' ? data : data?.detail || 'Request failed');
+      const message = typeof data === 'string' ? data : data?.detail || 'Request failed';
+      const error = new Error(message);
+      error.status = res.status;
+      throw error;
     }
     return data;
   }

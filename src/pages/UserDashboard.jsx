@@ -91,9 +91,11 @@ export default function UserDashboard() {
     }
   };
 
-  const fetchIssues = async () => {
-    setLoading(true);
-    setError(null);
+  const fetchIssues = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    // Don't clear error immediately on background refresh to avoid flickering if it persists
+    if (!isBackground) setError(null);
+
     setIsRefreshing(true);
     try {
       const token = localStorage.getItem('token');
@@ -103,8 +105,9 @@ export default function UserDashboard() {
         return;
       }
 
-      console.log("Fetching issues for dashboard...");
+      console.log(`Fetching issues for dashboard... (Background: ${isBackground})`);
       const data = await apiClient.getMyIssues();
+
       if (Array.isArray(data)) {
         // Show all statuses including submitted/pending
         const validData = data;
@@ -113,7 +116,7 @@ export default function UserDashboard() {
         if (previousIssuesRef.current.length > 0) {
           validData.forEach(newIssue => {
             const oldIssue = previousIssuesRef.current.find(i => (i._id || i.id) === (newIssue._id || newIssue.id));
-            if (oldIssue && oldIssue.status !== newIssue.status) {
+            if (oldIssue && oldIssue.status?.toLowerCase() !== newIssue.status?.toLowerCase()) {
               // Status changed!
               playNotificationSound();
               // Add to notification list
@@ -135,13 +138,17 @@ export default function UserDashboard() {
         // Calculate Stats based on validData
         const total = validData.length;
 
-        // Include 'rejected' and 'declined' in resolved/closed count
-        const resolved = validData.filter(i => ['resolved', 'completed', 'accepted', 'rejected', 'declined'].includes(i.status?.toLowerCase())).length;
+        // Resolved/Closed: Final states where no further action is expected from admin/user
+        const resolved = validData.filter(i =>
+          ['resolved', 'completed', 'accepted', 'rejected', 'declined'].includes(i.status?.toLowerCase())
+        ).length;
 
-        // Pending = issues waiting for Admin action or just submitted
-        const pending = validData.filter(i => ['needs_review', 'under_review', 'under_admin_review', 'pending', 'submitted'].includes(i.status?.toLowerCase())).length;
+        // Pending: Active states where processing is ongoing
+        const pending = validData.filter(i =>
+          ['needs_review', 'waiting_review', 'under_review', 'under_admin_review', 'pending', 'submitted', 'approved', 'pending_ai'].includes(i.status?.toLowerCase())
+        ).length;
 
-        const denominator = resolved + pending;
+        const denominator = total; // Use total as denominator for accuracy
         const rate = denominator > 0 ? Math.round((resolved / denominator) * 100) : 0;
 
         setStats({
@@ -150,10 +157,23 @@ export default function UserDashboard() {
           pending: pending,
           activeRate: rate
         });
+
+        // Clear error if success
+        setError(null);
       }
     } catch (err) {
       console.error("Dashboard error:", err);
-      setError(`Failed to load reports: ${err.message || 'Unknown error'}`);
+      if (err.status === 401 || err.message === "Could not validate credentials") {
+        console.warn("Session expired or invalid, redirecting to login...");
+        localStorage.removeItem('token');
+        navigate('/login');
+        return;
+      }
+      // On background error, don't replace screen, maybe just log or small toast?
+      // For now we set error only if we don't have data, or if it was a manual refresh
+      if (!isBackground || issues.length === 0) {
+        setError(`Failed to load reports: ${err.message || 'Unknown error'}`);
+      }
     } finally {
       setLoading(false);
       setTimeout(() => setIsRefreshing(false), 500);
@@ -161,13 +181,13 @@ export default function UserDashboard() {
   };
 
   useEffect(() => {
-    fetchIssues();
-    const interval = setInterval(fetchIssues, 30000); // Poll every 30s
+    fetchIssues(false); // Initial load
+    const interval = setInterval(() => fetchIssues(true), 30000); // Background poll every 30s
     return () => clearInterval(interval);
   }, []);
 
   const handleRefresh = () => {
-    fetchIssues();
+    fetchIssues(false);
   };
 
   const StatCard = ({ icon: Icon, label, value, color, delay }) => (
