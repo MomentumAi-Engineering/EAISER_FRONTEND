@@ -175,26 +175,26 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
           <ShieldAlert className="w-8 h-8 text-red-500" />
         </div>
 
-        <h2 className="text-2xl font-bold text-white mb-4">Report Flagged for Review</h2>
+        <h2 className="text-2xl font-bold text-white mb-4">Pending Manual Audit</h2>
 
         <p className="text-gray-300 mb-6 text-lg">
-          Our automated system has flagged this report for manual verification.
+          Our specialized verification team is conducting a manual audit of this report to ensure high-quality data integrity.
         </p>
 
         <div className="bg-white/5 border border-gray-700 rounded-xl p-6 text-left mb-8">
-          <p className="text-sm text-gray-400 mb-2 font-semibold uppercase tracking-wider">What happens next?</p>
+          <p className="text-sm text-gray-400 mb-2 font-semibold uppercase tracking-wider">Audit Process</p>
           <ul className="space-y-3 text-sm text-gray-300">
             <li className="flex gap-3">
               <CheckCircle2 className="w-5 h-5 text-yellow-500 shrink-0" />
-              <span>This report will be briefly sent to our team for manual inspection.</span>
+              <span>Report is forwarded to our internal Quality Assurance team.</span>
             </li>
             <li className="flex gap-3">
               <CheckCircle2 className="w-5 h-5 text-yellow-500 shrink-0" />
-              <span>If verified as a valid public issue, we will submit it to the authorities immediately.</span>
+              <span>Evidence is cross-referenced with local municipal records.</span>
             </li>
             <li className="flex gap-3">
               <CheckCircle2 className="w-5 h-5 text-yellow-500 shrink-0" />
-              <span>You will be notified once the status changes.</span>
+              <span>Upon verification, the report is dispatched to the relevant authorities.</span>
             </li>
           </ul>
         </div>
@@ -218,27 +218,27 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
             <Clock className="w-8 h-8 text-yellow-500" />
           </div>
 
-          <h2 className="text-2xl font-bold text-white mb-4">Under Quality Review</h2>
+          <h2 className="text-2xl font-bold text-white mb-4">Verification in Progress</h2>
 
           <p className="text-gray-300 mb-6 text-lg">
-            {successMessage || "Your report has been submitted to the EAiSER AI team for review."}
+            {successMessage || "Your report has been submitted to EAiSER AI for professional verification."}
           </p>
 
           <div className="bg-white/5 border border-gray-700 rounded-xl p-6 text-left mb-8">
-            <p className="text-sm text-gray-400 mb-2 font-semibold uppercase tracking-wider">Reason for Review</p>
+            <p className="text-sm text-gray-400 mb-2 font-semibold uppercase tracking-wider">Verification Rationale</p>
             <p className="text-sm text-gray-300 mb-4">
-              To ensure accuracy and prevent false reports, this issue has been flagged for manual verification by our specialized team.
+              To maintain elite data standards and prevent erroneous reporting, this submission is undergoing a brief manual validation by our civic engineers.
             </p>
 
-            <p className="text-sm text-gray-400 mb-2 font-semibold uppercase tracking-wider">Proccess</p>
+            <p className="text-sm text-gray-400 mb-2 font-semibold uppercase tracking-wider">Next Steps</p>
             <ul className="space-y-3 text-sm text-gray-300">
               <li className="flex gap-3">
                 <CheckCircle2 className="w-5 h-5 text-blue-500 shrink-0" />
-                <span>Our team verifies the details.</span>
+                <span>Engineers confirm the incident details and visual evidence.</span>
               </li>
               <li className="flex gap-3">
                 <CheckCircle2 className="w-5 h-5 text-blue-500 shrink-0" />
-                <span>Once approved, it is automatically forwarded to the authorities.</span>
+                <span>Authorized dispatch occurs immediately upon approval.</span>
               </li>
             </ul>
           </div>
@@ -317,6 +317,8 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     else if (labelsText.includes('flood') || labelsText.includes('waterlogging')) issueType = 'flood';
     else if (labelsText.includes('fire') || labelsText.includes('smoke')) issueType = 'fire';
     else if (labelsText.includes('roadkill') || labelsText.includes('dead animal') || labelsText.includes('carcass') || labelsText.includes('animal')) issueType = 'dead_animal';
+    else if (labelsText.includes('accident') || labelsText.includes('crash') || labelsText.includes('collision')) issueType = 'car_accident';
+    else if (labelsText.includes('abandoned') || (labelsText.includes('vehicle') && labelsText.includes('dust'))) issueType = 'abandoned_vehicle';
   }
 
   // Prefer unified_report.confidence_percent when available
@@ -418,6 +420,22 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   // Render a clean card with the report details
   return (
     <div className="mt-8 bg-gradient-to-br from-gray-900/60 to-black/60 backdrop-blur-xl rounded-2xl border border-gray-800 p-6">
+      {/* Alert for AI Generated / Cartoon / No Issue images */}
+      {(confidence < 25 || (summaryExplanation && summaryExplanation.includes("Please provide the correct image"))) && (
+        <div className="mb-6 bg-red-500/10 border border-red-500/50 rounded-xl p-5 flex items-start gap-4">
+          <ShieldAlert className="w-6 h-6 text-red-500 flex-shrink-0 mt-1" />
+          <div className="flex-1">
+            <h3 className="text-red-500 font-bold text-lg leading-tight mb-1">Authenticity Warning</h3>
+            <p className="text-gray-200 text-sm font-medium">
+              {summaryExplanation || "Please provide the correct image. No issue, animated, or fake image detected."}
+            </p>
+            <div className="mt-2 text-xs text-gray-400 font-normal">
+              Note: Our AI system automatically rejects cartoons, illustrations, and images that do not show clear public infrastructure issues.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top header and progress */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
@@ -483,6 +501,8 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               <option value="water_leakage">Water Leakage</option>
               <option value="fire">Fire Hazard</option>
               <option value="dead_animal">Dead Animal</option>
+              <option value="car_accident">Car Accident</option>
+              <option value="abandoned_vehicle">Abandoned Vehicle</option>
               <option value="other">Other</option>
             </select>
           ) : (
@@ -676,24 +696,26 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       )}
 
       {/* Action Buttons */}
-      <div className="flex gap-3">
-        <button
-          onClick={handleSubmit}
-          disabled={submitting || (selectedAuths.length === 0 && editForm.issue_type !== 'Manual Report' && confidence !== 0)}
-          className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${submitting || (selectedAuths.length === 0 && editForm.issue_type !== 'Manual Report' && confidence !== 0)
-            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-            : 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-lg hover:shadow-yellow-500/20'
-            }`}
-        >
-          {submitting ? (
-            'Submitting...'
-          ) : (
-            <>
-              <Send className="w-4 h-4" /> Submit Report
-            </>
-          )}
-        </button>
-      </div>
+      {!summaryExplanation?.includes("Please provide the correct image") && (
+        <div className="flex gap-3">
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || (selectedAuths.length === 0 && editForm.issue_type !== 'Manual Report' && confidence !== 0)}
+            className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${submitting || (selectedAuths.length === 0 && editForm.issue_type !== 'Manual Report' && confidence !== 0)
+              ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+              : 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-lg hover:shadow-yellow-500/20'
+              }`}
+          >
+            {submitting ? (
+              'Submitting...'
+            ) : (
+              <>
+                <Send className="w-4 h-4" /> Submit Report
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Raw debug removed */}
     </div>

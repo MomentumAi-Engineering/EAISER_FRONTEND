@@ -461,7 +461,7 @@ export default function SimpleReport() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white">
       <Navbar />
-      <div className="max-w-3xl mx-auto space-y-8 p-6 pt-24">
+      <div className="max-w-3xl mx-auto space-y-8 p-4 md:p-6 pt-20 md:pt-24">
         <h1 className="text-3xl font-black text-white flex items-center gap-3">
           Report an Issue
         </h1>
@@ -957,21 +957,23 @@ export default function SimpleReport() {
                 <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Real-time Satellite View</p>
                 <span className="text-[10px] font-bold text-gray-500 italic">Drag marker to refine exact spot</span>
               </div>
-              <div className="h-72 rounded-3xl overflow-hidden border border-gray-800 shadow-2xl relative">
+              <div className="h-96 rounded-3xl overflow-hidden border border-gray-800 shadow-2xl relative">
                 <GoogleMap
                   center={coords}
-                  zoom={18}
+                  zoom={20}
                   mapContainerStyle={{ width: "100%", height: "100%" }}
                   mapTypeId="hybrid"
                   options={{
                     streetViewControl: true,
-                    mapTypeControl: true, // Enabled for all modes
+                    mapTypeControl: true,
+                    mapTypeControlOptions: {
+                      style: 1, // HORIZONTAL_BAR
+                      position: 3, // TOP_RIGHT
+                      mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain']
+                    },
                     fullscreenControl: true,
                     rotateControl: true,
                     tilt: 45, // Enable 45-degree imagery
-                    mapTypeControlOptions: {
-                      position: 2, // TOP_RIGHT
-                    },
                     styles: [
                       { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
                       { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },

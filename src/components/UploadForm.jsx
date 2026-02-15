@@ -308,6 +308,25 @@ function UploadForm({ setStatus, fetchIssues }) {
 
       const result = await response.json();
 
+      // 🛡️ BLOCK REPORT GENERATION IF REJECTED
+      const summaryText = result.report?.issue_overview?.summary_explanation || "";
+      const isRejected = summaryText.includes("Please provide the correct image");
+      const aiDetectedNoIssue = result.report?.ai_evaluation?.issue_detected === false;
+
+      // Always block if explicitly rejected as Fake/Cartoon/No-Issue
+      if (isRejected || (aiDetectedNoIssue && !isManualMode)) {
+        setStatus('Analysis Failed');
+        setAlertModal({
+          show: true,
+          title: '⚠️ Validation Error',
+          message: isRejected ? summaryText : "No civic issue detected in this image. Please provide a clear photo of an infrastructure problem.",
+          type: 'warning'
+        });
+        setIsLoading(false);
+        setActiveStep(0); // Reset to upload step
+        return; // STOP: Do not proceed to report review
+      }
+
       setStatus('Report generated! Please review.');
       setReportPreview(result.report);
       setEditedReport(result.report.report);
@@ -335,7 +354,7 @@ function UploadForm({ setStatus, fetchIssues }) {
 
       if (errorMsg.includes('fake') || errorMsg.includes('ai-generated') || errorMsg.includes('manipulated')) {
         alertTitle = '⚠️ Fake Image Detected';
-        setStatus('Analysis failed: This image appears to be AI-generated or manipulated.');
+        setStatus('Analysis failed: Please provide the correct image. No issue, animated, or fake image detected.');
       } else if (errorMsg.includes('blurry') || errorMsg.includes('unclear')) {
         alertTitle = '📸 Image Too Blurry';
         alertType = 'warning';
@@ -1066,7 +1085,9 @@ function UploadForm({ setStatus, fetchIssues }) {
                   <p className="text-yellow-200/70 text-xs leading-relaxed max-w-2xl">
                     {isManualMode
                       ? "System operating in manual mode. User input required for accurate classification and routing."
-                      : "AI analysis returned low confidence scores. Please manually verify all data points before submission."}
+                      : (editedReport?.issue_overview?.summary_explanation?.includes("Please provide the correct image")
+                        ? "Please provide the correct image. No civic issue, animated, or fake image detected."
+                        : "AI analysis returned low confidence scores. Please manually verify all data points before submission.")}
                   </p>
                 </div>
               </motion.div>

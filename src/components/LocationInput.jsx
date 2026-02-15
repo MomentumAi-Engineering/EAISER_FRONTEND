@@ -13,17 +13,22 @@ const defaultCenter = {
 
 const mapContainerStyle = {
     width: '100%',
-    height: '300px',
-    borderRadius: '0.75rem',
+    height: '400px',
+    borderRadius: '1.25rem',
 };
 
 const options = {
     disableDefaultUI: false,
     zoomControl: true,
-    streetViewControl: false,
-    mapTypeControl: true, // Enable map type control
-    mapTypeId: 'hybrid',  // Default to satellite/hybrid view
+    streetViewControl: true,
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+        style: 1, // HORIZONTAL_BAR
+        position: 3, // TOP_RIGHT
+    },
+    mapTypeId: 'hybrid',
     fullscreenControl: true,
+    tilt: 45, // Enable 45-degree imagery for 3D buildings
 };
 
 export default function LocationInput({ onLocationChange, initialCoordinates }) {
@@ -227,7 +232,7 @@ export default function LocationInput({ onLocationChange, initialCoordinates }) 
                     };
                     setMarkerPosition(pos);
                     map.panTo(pos);
-                    map.setZoom(17);
+                    map.setZoom(20);
                     reverseGeocode(pos.lat, pos.lng);
                 },
                 () => {
@@ -268,8 +273,8 @@ export default function LocationInput({ onLocationChange, initialCoordinates }) 
                 {/* Address Input with Autocomplete */}
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-purple-400" />
-                        Search Location / Address
+                        <MapPin className="w-4 h-4 text-blue-400" />
+                        Precise Incident Location Search
                     </label>
                     <div className="relative">
                         <Autocomplete
@@ -296,7 +301,7 @@ export default function LocationInput({ onLocationChange, initialCoordinates }) 
                 <div className="relative rounded-xl overflow-hidden border border-gray-700 shadow-2xl">
                     <GoogleMap
                         mapContainerStyle={mapContainerStyle}
-                        zoom={15}
+                        zoom={20}
                         center={markerPosition}
                         onLoad={onLoad}
                         onUnmount={onUnmount}

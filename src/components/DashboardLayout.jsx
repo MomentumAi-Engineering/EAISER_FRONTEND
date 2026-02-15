@@ -177,8 +177,8 @@ export default function DashboardLayout({ children, currentPage = 'dashboard' })
                 className={`fixed left-0 top-0 h-full bg-gray-900/80 backdrop-blur-xl border-r border-gray-800/50 transition-all duration-300 z-40 flex flex-col ${sidebarCollapsed ? 'w-20' : 'w-64'
                     } ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
             >
-                {/* Logo */}
-                <div className="h-16 flex items-center justify-between px-4 border-b border-gray-800/50 flex-shrink-0">
+                {/* Sidebar Header */}
+                <div className="h-16 flex items-center justify-between px-4 border-b border-gray-800/50 flex-shrink-0 bg-black/20">
                     {!sidebarCollapsed && (
                         <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -189,17 +189,21 @@ export default function DashboardLayout({ children, currentPage = 'dashboard' })
                             </span>
                         </div>
                     )}
+
+                    {/* Toggle Button for Desktop */}
                     <button
                         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                         className="p-2 hover:bg-gray-800/50 text-gray-400 hover:text-white rounded-lg transition-colors hidden md:block ml-auto"
                     >
                         {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                     </button>
+
+                    {/* Close Button for Mobile */}
                     <button
                         onClick={() => setMobileMenuOpen(false)}
-                        className="p-2 hover:bg-gray-800/50 rounded-lg transition-colors md:hidden ml-auto"
+                        className="p-2 hover:bg-gray-800/50 rounded-lg transition-colors md:hidden ml-auto text-gray-400 hover:text-white"
                     >
-                        <X className="w-5 h-5" />
+                        <X className="w-6 h-6" />
                     </button>
                 </div>
 

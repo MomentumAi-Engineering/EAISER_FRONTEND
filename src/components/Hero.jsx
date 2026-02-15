@@ -90,7 +90,7 @@ export default function EaiserAIHero() {
               <span className="text-sm font-bold text-yellow-400 tracking-wide">NEXT-GEN AI TECHNOLOGY</span>
             </motion.div>
 
-            <h1 className="text-7xl lg:text-8xl font-black leading-none">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-none">
               <span className="block text-white mb-2">Eaiser AI</span>
               <span className="block bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 bg-clip-text text-transparent">
                 is here...
@@ -140,24 +140,24 @@ export default function EaiserAIHero() {
 
             {/* Live Stats */}
             <motion.div
-              className="flex gap-8 pt-8"
+              className="flex flex-wrap gap-6 md:gap-8 pt-8"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
             >
               <div>
-                <div className="text-3xl font-black text-yellow-400">12+</div>
-                <div className="text-sm text-gray-400">Issues Resolved</div>
+                <div className="text-2xl md:text-3xl font-black text-yellow-400">12+</div>
+                <div className="text-xs md:text-sm text-gray-400">Issues Resolved</div>
               </div>
-              <div className="w-px bg-gray-800" />
+              <div className="hidden sm:block w-px bg-gray-800" />
               <div>
-                <div className="text-3xl font-black text-yellow-400">18h</div>
-                <div className="text-sm text-gray-400">Avg Resolution</div>
+                <div className="text-2xl md:text-3xl font-black text-yellow-400">18h</div>
+                <div className="text-xs md:text-sm text-gray-400">Avg Resolution</div>
               </div>
-              <div className="w-px bg-gray-800" />
+              <div className="hidden sm:block w-px bg-gray-800" />
               <div>
-                <div className="text-3xl font-black text-yellow-400">95%</div>
-                <div className="text-sm text-gray-400">Satisfaction</div>
+                <div className="text-2xl md:text-3xl font-black text-yellow-400">95%</div>
+                <div className="text-xs md:text-sm text-gray-400">Satisfaction</div>
               </div>
             </motion.div>
           </motion.div>
@@ -312,15 +312,15 @@ export default function EaiserAIHero() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(234,179,8,0.1),transparent_50%)]" />
 
           <div className="relative z-10">
-            <Rocket className="w-16 h-16 text-yellow-400 mx-auto mb-6" />
-            <h2 className="text-5xl font-black mb-4">Ready to Transform Your Community?</h2>
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+            <Rocket className="w-12 h-12 md:w-16 md:h-16 text-yellow-400 mx-auto mb-6" />
+            <h2 className="text-3xl md:text-5xl font-black mb-4 px-4">Ready to Transform Your Community?</h2>
+            <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl mx-auto px-4">
               Join the future of intelligent issue reporting and resolution
             </p>
 
             <button
               onClick={() => navigate('/report')}
-              className="px-12 py-5 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl font-bold text-xl text-black hover:shadow-2xl hover:shadow-yellow-500/50 transition-all hover:scale-105"
+              className="px-8 md:px-12 py-4 md:py-5 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl font-bold text-lg md:text-xl text-black hover:shadow-2xl hover:shadow-yellow-500/50 transition-all hover:scale-105"
             >
               Get Started Now
             </button>
@@ -331,10 +331,10 @@ export default function EaiserAIHero() {
       {/* Video overlay (50vw x 50vh) */}
       {showVideo && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) { setShowVideo(false); videoRef.current?.pause(); } }}
         >
-          <div className="relative w-[50vw] h-[50vh] bg-black rounded-lg overflow-hidden shadow-2xl">
+          <div className="relative w-full md:w-[70vw] lg:w-[50vw] h-auto aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
             <button
               aria-label="Close video"
               className="absolute top-3 right-3 z-20 p-2 rounded bg-white/10 hover:bg-white/20"
