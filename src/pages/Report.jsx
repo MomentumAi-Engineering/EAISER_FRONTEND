@@ -36,6 +36,16 @@ export default function SimpleReport() {
   const { generateReport, loading, error, reportResult, clearReport } = useReportContext();
   const { showAlert, showConfirm } = useDialog();
 
+  useEffect(() => {
+    return () => {
+      // Clean up camera stream on unmount
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+      }
+    };
+  }, []);
+
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,

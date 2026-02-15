@@ -1,10 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Activity, CheckCircle, Clock, AlertCircle, TrendingUp, BarChart3, Filter, Calendar, Download, RefreshCw, Bell, Search, Home, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 import Navbar from '../components/Navbar';
 import apiClient from '../services/apiClient';
+
+// Memoized StatCard moved outside to prevent re-creation
+const StatCard = memo(({ icon: Icon, label, value, color, delay }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4, delay: delay }}
+    className="relative overflow-hidden rounded-xl bg-gradient-to-br from-zinc-900 to-zinc-800 border border-yellow-500/10 p-4 cursor-pointer group will-change-transform"
+  >
+    <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-500/5 rounded-full blur-2xl group-hover:bg-yellow-500/10 transition-colors pointer-events-none"></div>
+
+    <div className="relative z-10 flex items-center gap-3">
+      <div className={`p-2 rounded-lg ${color}`}>
+        <Icon className="w-5 h-5 text-yellow-400" />
+      </div>
+
+      <div>
+        <p className="text-gray-400 text-[10px] md:text-xs font-medium uppercase tracking-wider">{label}</p>
+        <p className="text-xl md:text-2xl font-bold text-white">{value}</p>
+      </div>
+    </div>
+  </motion.div>
+));
 
 export default function UserDashboard() {
   const [stats, setStats] = useState({
@@ -14,58 +37,36 @@ export default function UserDashboard() {
     activeRate: 0
   });
 
-  /* Restoring missing state variables */
   const [filter, setFilter] = useState('all');
   const [notifications, setNotifications] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [issues, setIssues] = useState([]);
-
-  /* New states for enhanced features */
   const [notificationList, setNotificationList] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
 
   const previousIssuesRef = React.useRef([]);
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate();
 
-  // Simple notification sound (short beep/ding)
+  // Simple notification sound
   const playNotificationSound = () => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
-
       oscillator.connect(gainNode);
       gainNode.connect(audioCtx.destination);
-
-      // Pattern: High-pitched urgent double beep
       const now = audioCtx.currentTime;
-
-      // First Beep
-      oscillator.type = 'sawtooth';
-      oscillator.frequency.setValueAtTime(880, now); // A5
-      gainNode.gain.setValueAtTime(0.3, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-
-      // Second Beep (slightly higher)
-      const osc2 = audioCtx.createOscillator();
-      const gain2 = audioCtx.createGain();
-      osc2.connect(gain2);
-      gain2.connect(audioCtx.destination);
-      osc2.type = 'sawtooth';
-      osc2.frequency.setValueAtTime(1046.50, now + 0.2); // C6
-      gain2.gain.setValueAtTime(0, now);
-      gain2.gain.setValueAtTime(0.3, now + 0.2);
-      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, now);
+      gainNode.gain.setValueAtTime(0.1, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
       oscillator.start(now);
-      oscillator.stop(now + 0.2);
-      osc2.start(now + 0.2);
-      osc2.stop(now + 0.4);
+      oscillator.stop(now + 0.3);
     } catch (e) {
-      console.error("Audio play failed", e);
+      console.warn("Audio Context blocked or failed", e);
     }
   };
 
@@ -76,53 +77,36 @@ export default function UserDashboard() {
       const seconds = Math.floor((new Date() - date) / 1000);
       if (seconds < 30) return 'Just now';
       let interval = seconds / 31536000;
-      if (interval > 1) return Math.floor(interval) + " years ago";
+      if (interval > 1) return Math.floor(interval) + "y ago";
       interval = seconds / 2592000;
-      if (interval > 1) return Math.floor(interval) + " months ago";
+      if (interval > 1) return Math.floor(interval) + "mo ago";
       interval = seconds / 86400;
-      if (interval > 1) return Math.floor(interval) + " days ago";
+      if (interval > 1) return Math.floor(interval) + "d ago";
       interval = seconds / 3600;
-      if (interval > 1) return Math.floor(interval) + " hours ago";
+      if (interval > 1) return Math.floor(interval) + "h ago";
       interval = seconds / 60;
-      if (interval > 1) return Math.floor(interval) + " mins ago";
-      return Math.floor(seconds) + " seconds ago";
-    } catch (e) {
-      return dateStr;
-    }
+      if (interval > 1) return Math.floor(interval) + "m ago";
+      return Math.floor(seconds) + "s ago";
+    } catch (e) { return dateStr; }
   };
 
   const fetchIssues = async (isBackground = false) => {
     if (!isBackground) setLoading(true);
-    // Don't clear error immediately on background refresh to avoid flickering if it persists
     if (!isBackground) setError(null);
-
     setIsRefreshing(true);
     try {
       const token = localStorage.getItem('token');
-      if (!token || token === 'undefined' || token === 'null') {
-        console.warn("Invalid token found, redirecting to login");
-        navigate('/login');
-        return;
-      }
-
-      console.log(`Fetching issues for dashboard... (Background: ${isBackground})`);
+      if (!token) { navigate('/login'); return; }
       const data = await apiClient.getMyIssues();
-
       if (Array.isArray(data)) {
-        // Show all statuses including submitted/pending
-        const validData = data;
-
-        // Check for status changes to trigger notification
         if (previousIssuesRef.current.length > 0) {
-          validData.forEach(newIssue => {
+          data.forEach(newIssue => {
             const oldIssue = previousIssuesRef.current.find(i => (i._id || i.id) === (newIssue._id || newIssue.id));
             if (oldIssue && oldIssue.status?.toLowerCase() !== newIssue.status?.toLowerCase()) {
-              // Status changed!
               playNotificationSound();
-              // Add to notification list
               const note = {
                 id: Date.now() + Math.random(),
-                text: `Update: Status for "${newIssue.issue_type || 'Issue'}" changed to ${newIssue.status}`,
+                text: `Update: ${newIssue.issue_type || 'Issue'} is now ${newIssue.status}`,
                 time: 'Just now',
                 read: false
               };
@@ -131,49 +115,19 @@ export default function UserDashboard() {
             }
           });
         }
-        previousIssuesRef.current = validData; // Update ref for next compare
-
-        setIssues(validData);
-
-        // Calculate Stats based on validData
-        const total = validData.length;
-
-        // Resolved/Closed: Final states where no further action is expected from admin/user
-        const resolved = validData.filter(i =>
-          ['resolved', 'completed', 'accepted', 'rejected', 'declined'].includes(i.status?.toLowerCase())
-        ).length;
-
-        // Pending: Active states where processing is ongoing
-        const pending = validData.filter(i =>
-          ['needs_review', 'waiting_review', 'under_review', 'under_admin_review', 'pending', 'submitted', 'approved', 'pending_ai'].includes(i.status?.toLowerCase())
-        ).length;
-
-        const denominator = total; // Use total as denominator for accuracy
-        const rate = denominator > 0 ? Math.round((resolved / denominator) * 100) : 0;
-
-        setStats({
-          totalReported: total,
-          resolved: resolved,
-          pending: pending,
-          activeRate: rate
-        });
-
-        // Clear error if success
+        previousIssuesRef.current = data;
+        setIssues(data);
+        const total = data.length;
+        const resolved = data.filter(i => ['resolved', 'completed', 'accepted', 'rejected', 'declined'].includes(i.status?.toLowerCase())).length;
+        const pending = data.filter(i => ['needs_review', 'under_review', 'pending', 'submitted', 'approved'].includes(i.status?.toLowerCase())).length;
+        const rate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+        setStats({ totalReported: total, resolved, pending, activeRate: rate });
         setError(null);
       }
     } catch (err) {
-      console.error("Dashboard error:", err);
-      if (err.status === 401 || err.message === "Could not validate credentials") {
-        console.warn("Session expired or invalid, redirecting to login...");
-        localStorage.removeItem('token');
-        navigate('/login');
-        return;
-      }
-      // On background error, don't replace screen, maybe just log or small toast?
-      // For now we set error only if we don't have data, or if it was a manual refresh
-      if (!isBackground || issues.length === 0) {
-        setError(`Failed to load reports: ${err.message || 'Unknown error'}`);
-      }
+      console.error(err);
+      if (err.status === 401) { navigate('/login'); return; }
+      if (!isBackground || issues.length === 0) setError(`Failed to load reports.`);
     } finally {
       setLoading(false);
       setTimeout(() => setIsRefreshing(false), 500);
@@ -181,448 +135,169 @@ export default function UserDashboard() {
   };
 
   useEffect(() => {
-    fetchIssues(false); // Initial load
-    const interval = setInterval(() => fetchIssues(true), 30000); // Background poll every 30s
+    fetchIssues(false);
+    const interval = setInterval(() => fetchIssues(true), 60000); // 60s is plenty
     return () => clearInterval(interval);
   }, []);
 
-  const handleRefresh = () => {
-    fetchIssues(false);
-  };
-
-  const StatCard = ({ icon: Icon, label, value, color, delay }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: delay }}
-      whileHover={{ scale: 1.02 }}
-      className="relative overflow-hidden rounded-xl bg-gradient-to-br from-zinc-900 to-zinc-800 border border-yellow-500/20 p-4 cursor-pointer group"
-    >
-      <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-500/5 rounded-full blur-2xl group-hover:bg-yellow-500/10 transition-colors"></div>
-
-      <div className="relative z-10 flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${color}`}>
-          <Icon className="w-5 h-5 text-yellow-400" />
-        </div>
-
-        <div>
-          <p className="text-gray-400 text-xs font-medium">{label}</p>
-          <p className="text-2xl font-bold text-white">{value}</p>
-        </div>
-      </div>
-    </motion.div>
-  );
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-zinc-900 to-black relative font-sans">
+    <div className="min-h-screen bg-black relative font-sans">
       <Navbar />
-      <style>
-        {`
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 5px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(234, 179, 8, 0.2);
-            border-radius: 20px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(234, 179, 8, 0.4);
-          }
-        `}
-      </style>
-      <div className="max-w-7xl mx-auto p-4 md:p-6 pt-20 md:pt-24">
-        {/* Header with Actions */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-24 pb-12 relative z-10">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
+              Impact <span className="text-yellow-400">Hub</span>
+            </h1>
+            <p className="text-gray-500 mt-1 text-sm">Tracking your community contributions</p>
+          </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-yellow-500 flex items-center justify-center">
-              <Activity className="w-6 h-6 text-black" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-              <p className="text-gray-400 text-sm">
-                Welcome back, {(() => {
-                  try {
-                    const user = JSON.parse(localStorage.getItem('userData') || localStorage.getItem('user') || '{}');
-                    return user.name || 'User';
-                  } catch { return 'User'; }
-                })()}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            {/* Search */}
-            <div className="relative flex-1 md:flex-initial">
-              <input
-                type="text"
-                placeholder="Search issues..."
-                className="bg-zinc-800 border border-yellow-500/20 rounded-lg pl-10 pr-4 py-2 text-white text-sm focus:outline-none focus:border-yellow-500/40 transition-colors w-full md:w-48"
-              />
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            </div>
-
-            {/* Notifications */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowNotifications(!showNotifications);
-                  if (!showNotifications) setNotifications(0); // clear badge on open
-                }}
-                className="relative p-2 bg-zinc-800 border border-yellow-500/20 rounded-lg hover:border-yellow-500/40 transition-colors"
-              >
-                <Bell className="w-5 h-5 text-gray-400" />
-                {notifications > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-black text-xs font-bold rounded-full flex items-center justify-center"
-                  >
-                    {notifications}
-                  </motion.span>
-                )}
-              </button>
-
-              {/* Notification Dropdown with Animation */}
-              <AnimatePresence>
-                {showNotifications && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                    className="absolute right-0 mt-3 w-80 bg-zinc-900 border border-yellow-500/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 overflow-hidden backdrop-blur-xl"
-                  >
-                    <div className="p-4 border-b border-white/10 bg-gradient-to-r from-yellow-500/10 to-transparent flex justify-between items-center">
-                      <h4 className="text-white font-bold text-sm tracking-tight">Recent Alerts</h4>
-                      <button
-                        onClick={() => setNotificationList([])}
-                        className="text-[10px] text-gray-500 hover:text-yellow-500 transition-colors uppercase font-bold tracking-widest"
-                      >
-                        Clear All
-                      </button>
-                    </div>
-                    <div className="max-h-80 overflow-y-auto custom-scrollbar">
-                      {notificationList.length === 0 ? (
-                        <div className="p-10 text-center">
-                          <Bell className="w-8 h-8 text-zinc-700 mx-auto mb-2 opacity-20" />
-                          <p className="text-zinc-600 text-[11px] uppercase tracking-widest font-medium">All cleared</p>
-                        </div>
-                      ) : (
-                        notificationList.map((note) => (
-                          <div key={note.id} className="p-4 border-b border-white/5 hover:bg-white/5 transition-all cursor-pointer group">
-                            <div className="flex gap-3">
-                              <div className="w-2 h-2 rounded-full bg-yellow-500 mt-1.5 shrink-0 shadow-[0_0_8px_#eab308]"></div>
-                              <div>
-                                <p className="text-xs text-gray-200 leading-relaxed font-medium group-hover:text-yellow-400 transition-colors">{note.text}</p>
-                                <p className="text-[10px] text-zinc-500 mt-2 font-bold tracking-tight">{note.time}</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                    <div className="p-3 bg-zinc-800/50 border-t border-white/5 text-center">
-                      <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Real-time status tracking active</p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Refresh */}
-            <button
-              onClick={handleRefresh}
-              className="p-2 bg-zinc-800 border border-yellow-500/20 rounded-lg hover:border-yellow-500/40 transition-colors"
-            >
-              <RefreshCw className={`w-5 h-5 text-gray-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <button onClick={() => fetchIssues(false)} className="p-2 bg-zinc-900 rounded-lg text-yellow-400 hover:bg-zinc-800 transition-all border border-yellow-500/20">
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
-
-            {/* Download Report */}
-            <button className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black font-semibold rounded-lg hover:bg-yellow-400 transition-colors">
-              <Download className="w-4 h-4" />
-              Export
+            <button onClick={() => navigate('/report')} className="px-5 py-2.5 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition-all flex items-center gap-2 text-sm shadow-lg shadow-yellow-500/10">
+              <Activity className="w-4 h-4" /> Report New
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Stats Grid - Compact */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          <StatCard
-            icon={AlertCircle}
-            label="Total Reported"
-            value={stats.totalReported}
-            color="bg-yellow-500/10"
-            delay={0.1}
-          />
-
-          <StatCard
-            icon={CheckCircle}
-            label="Resolved"
-            value={stats.resolved}
-            color="bg-green-500/10"
-            delay={0.2}
-          />
-
-          <StatCard
-            icon={Clock}
-            label="Pending"
-            value={stats.pending}
-            color="bg-orange-500/10"
-            delay={0.3}
-          />
-        </div>
-
-        {/* Main Content Area */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-400">Loading your reports...</p>
+            <div className="w-12 h-12 border-4 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin mb-4" />
+            <p className="text-gray-500 font-medium animate-pulse">Syncing satellite data...</p>
           </div>
         ) : error ? (
-          <div className="text-center py-20">
-            <p className="text-red-400 mb-4">{error}</p>
-            <button
-              onClick={fetchIssues}
-              className="px-6 py-2 bg-yellow-500 text-black rounded-lg font-bold hover:bg-yellow-400 transition-all"
-            >
-              Retry
-            </button>
+          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-8 text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <p className="text-white font-bold">{error}</p>
+            <button onClick={() => fetchIssues(false)} className="mt-4 px-6 py-2 bg-zinc-900 rounded-xl text-white">Retry Connection</button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Recent Issues List */}
-            <div className="lg:col-span-2 bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-xl border border-yellow-500/20 p-4 md:p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">Recent Issues</h2>
-                <div className="flex items-center gap-2">
-                  {['all', 'pending', 'resolved'].map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setFilter(t)}
-                      className={`px-3 py-1 rounded-lg text-xs md:text-sm transition-colors capitalize ${filter === t ? 'bg-yellow-500 text-black' : 'bg-zinc-800 text-gray-400'}`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
+          <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <StatCard icon={Activity} label="Total Posts" value={stats.totalReported} color="bg-blue-500/10" delay={0.1} />
+                <StatCard icon={Clock} label="Pending Review" value={stats.pending} color="bg-orange-500/10" delay={0.2} />
+                <StatCard icon={CheckCircle} label="Success Rate" value={`${stats.activeRate}%`} color="bg-green-500/10" delay={0.3} />
               </div>
 
-              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                {issues.length === 0 ? (
-                  <div className="text-gray-500 text-center py-8">
-                    No issues reported yet.
+              <div className="bg-zinc-900/40 p-5 rounded-2xl border border-white/5 backdrop-blur-md">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-yellow-400" /> Recent Issues
+                  </h2>
+                  <div className="flex gap-2">
+                    {['all', 'pending', 'resolved'].map((t) => (
+                      <button key={t} onClick={() => setFilter(t)} className={`px-3 py-1.5 rounded-lg text-xs transition-all capitalize font-bold ${filter === t ? 'bg-yellow-400 text-black shadow-lg shadow-yellow-500/10' : 'bg-zinc-800 text-gray-500 hover:text-white'}`}>
+                        {t}
+                      </button>
+                    ))}
                   </div>
-                ) : (
-                  issues
-                    .filter(issue => filter === 'all' ||
-                      (filter === 'resolved' && ['resolved', 'completed', 'accepted', 'rejected', 'declined'].includes(issue.status?.toLowerCase())) ||
-                      (filter === 'pending' && ['needs_review', 'under_review', 'under_admin_review', 'pending', 'submitted'].includes(issue.status?.toLowerCase()))
-                    )
-                    .map((issue, index) => (
-                      <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index % 10 * 0.05 }}
-                        key={issue._id || issue.id || index}
-                        onClick={() => setSelectedIssue(issue)}
-                        className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4 hover:border-yellow-500/30 transition-all cursor-pointer group hover:bg-zinc-800/80 backdrop-blur-sm"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="text-white font-medium group-hover:text-yellow-400 transition-colors capitalize">
-                              {issue.unified_report?.issue_type || issue.issue_type?.replace(/_/g, ' ') || 'Issue'}
-                            </h3>
-                            <p className="text-gray-400 text-xs mt-1 line-clamp-1 group-hover:text-gray-300 transition-colors">
-                              {
-                                issue.unified_report?.summary_text ||
-                                issue.report?.issue_overview?.summary_explanation ||
-                                issue.report?.summary ||
-                                issue.description ||
-                                "No summary available"
-                              }
-                            </p>
-                            <div className="flex items-center gap-3 mt-2">
-                              <span className={`px-2 py-1 rounded text-xs font-semibold capitalize ${(() => {
-                                const s = issue.status?.toLowerCase();
-                                if (['rejected', 'declined'].includes(s)) return 'bg-red-500/20 text-red-400';
-                                if (['resolved', 'completed', 'accepted', 'approved', 'submitted'].includes(s)) return 'bg-green-500/20 text-green-400';
-                                return 'bg-orange-500/20 text-orange-400';
-                              })()
-                                }`}>
-                                {issue.status}
-                              </span>
-                              <span className="text-gray-500 text-xs">{issue.category || 'Public'}</span>
-                              <span className="text-gray-500 text-xs">{timeAgo(issue.timestamp)}</span>
+                </div>
+
+                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                  {issues.length === 0 ? (
+                    <div className="text-gray-600 text-center py-12 text-sm italic">Satellite link ready. Waiting for first report...</div>
+                  ) : (
+                    issues
+                      .filter(i => filter === 'all' || (filter === 'resolved' && ['resolved', 'completed', 'accepted', 'rejected', 'declined'].includes(i.status?.toLowerCase())) || (filter === 'pending' && !['resolved', 'completed', 'accepted', 'rejected', 'declined'].includes(i.status?.toLowerCase())))
+                      .map((issue, idx) => (
+                        <motion.div
+                          key={issue._id || idx}
+                          onClick={() => setSelectedIssue(issue)}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx < 10 ? idx * 0.05 : 0 }}
+                          className="bg-zinc-800/30 border border-white/5 rounded-xl p-4 hover:border-yellow-500/40 transition-all cursor-pointer group will-change-transform"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="text-white font-bold text-sm tracking-wide group-hover:text-yellow-400 transition-colors uppercase">
+                                {issue.issue_type?.replace(/_/g, ' ') || 'Civic Issue'}
+                              </h3>
+                              <p className="text-gray-500 text-xs mt-1 line-clamp-1">{issue.address || 'Location analyzing...'}</p>
+                              <div className="flex items-center gap-3 mt-3">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${['resolved', 'completed', 'accepted'].includes(issue.status?.toLowerCase()) ? 'bg-green-500/10 text-green-400' : 'bg-orange-500/10 text-orange-400'}`}>
+                                  {issue.status}
+                                </span>
+                                <span className="text-[10px] text-zinc-600 font-bold">{timeAgo(issue.timestamp)}</span>
+                              </div>
                             </div>
+                            <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-yellow-500 transition-all group-hover:translate-x-1" />
                           </div>
-                          <TrendingUp className="w-4 h-4 text-gray-400" />
-                        </div>
-                      </motion.div>
-                    ))
-                )}
+                        </motion.div>
+                      ))
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Side Panel */}
             <div className="space-y-6">
-              {/* Progress Card */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.4 }}
-                className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-xl border border-yellow-500/20 p-5"
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <BarChart3 className="w-5 h-5 text-yellow-400" />
-                  <h3 className="text-white font-bold">Resolution Rate</h3>
-                </div>
-
-                <div className="text-center mb-4">
-                  <p className="text-4xl font-bold text-yellow-400">{stats.activeRate}%</p>
-                  <p className="text-gray-400 text-sm mt-1">Success Rate</p>
-                </div>
-
-                <div className="w-full h-3 bg-zinc-700 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${stats.activeRate}%` }}
-                    transition={{ duration: 1, delay: 0.5 }}
-                    className="h-full bg-gradient-to-r from-yellow-500 to-yellow-400 rounded-full"
-                  />
-                </div>
-              </motion.div>
-
-              {/* Activity Card */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 }}
-                className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-xl border border-yellow-500/20 p-5"
-              >
-                <h3 className="text-white font-bold mb-4">Activity Summary</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Issues Reported</span>
-                    <span className="text-white font-semibold">{stats.totalReported}</span>
+              <div className="bg-gradient-to-br from-zinc-900 to-black p-6 rounded-2xl border border-yellow-500/10">
+                <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-yellow-400" /> Stats Alpha
+                </h3>
+                <div className="space-y-4">
+                  <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${stats.activeRate}%` }} className="h-full bg-yellow-400 shadow-[0_0_10px_#fbbf24]" />
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Pending Action</span>
-                    <span className="text-white font-semibold">{stats.pending}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Resolved</span>
-                    <span className="text-white font-semibold">{stats.resolved}</span>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-500 font-bold">CLEARANCE RATE</span>
+                    <span className="text-yellow-400 font-black">{stats.activeRate}%</span>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Selected Issue Modal */}
         <AnimatePresence>
           {selectedIssue && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+              onClick={() => setSelectedIssue(null)}
             >
               <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-zinc-900 border border-yellow-500/20 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl relative flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh] m-2"
+                initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+                className="bg-zinc-900 border border-yellow-500/20 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl relative flex flex-col md:flex-row max-h-[90vh]"
+                onClick={e => e.stopPropagation()}
               >
-                {/* Close Button */}
-                <button
-                  onClick={() => setSelectedIssue(null)}
-                  className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors z-20"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-
-                {/* Left: Image */}
-                <div className="h-64 md:h-auto md:w-1/2 bg-black relative shrink-0">
-                  <img
-                    src={
-                      selectedIssue.image_url ||
-                      selectedIssue.imageUrl ||
-                      (selectedIssue.id ? `${apiClient.baseURL}/api/issues/image/${selectedIssue.id}` : "") ||
-                      (selectedIssue._id ? `${apiClient.baseURL}/api/issues/image/${selectedIssue._id}` : "") ||
-                      "https://placehold.co/600x800/18181b/FFF?text=No+Image"
-                    }
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = "https://placehold.co/600x800/18181b/FFF?text=No+Image";
-                    }}
-                    alt="Issue"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex items-end p-6">
-                    <div>
-                      <h2 className="text-2xl font-bold text-white capitalize drop-shadow-md">
-                        {
-                          selectedIssue.unified_report?.issue_type ||
-                          selectedIssue.issue_type?.replace(/_/g, ' ') ||
-                          'Issue Report'
-                        }
-                      </h2>
-                      <p className="text-gray-300 text-sm mt-1 drop-shadow-md">{timeAgo(selectedIssue.timestamp)}</p>
-                    </div>
+                <div className="h-60 md:h-auto md:w-1/2 bg-black relative">
+                  <img src={selectedIssue.image_url || `https://placehold.co/600x800/18181b/FFF?text=Digital+Evidence`} className="w-full h-full object-cover opacity-80" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                  <div className="absolute bottom-4 left-4">
+                    <h2 className="text-xl font-black text-white uppercase tracking-tight">{selectedIssue.issue_type?.replace(/_/g, ' ')}</h2>
+                    <p className="text-yellow-400/80 text-[10px] font-bold uppercase tracking-widest">{selectedIssue.category || 'Environmental'}</p>
                   </div>
                 </div>
-
-                {/* Right: Details */}
-                <div className="p-6 md:p-8 space-y-6 overflow-y-auto md:w-1/2 custom-scrollbar">
-                  <div>
-                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Current Status</h3>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold capitalize ${['resolved', 'completed', 'accepted'].includes(selectedIssue.status?.toLowerCase())
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/20'
-                      : selectedIssue.status?.toLowerCase() === 'rejected'
-                        ? 'bg-red-500/20 text-red-400 border border-red-500/20'
-                        : 'bg-orange-500/20 text-orange-400 border border-orange-500/20'
-                      }`}>
-                      {selectedIssue.status}
-                    </span>
+                <div className="p-6 md:w-1/2 overflow-y-auto custom-scrollbar bg-zinc-900/50">
+                  <div className="mb-6">
+                    <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Status Report</h3>
+                    <span className="text-sm font-black text-white uppercase bg-zinc-800 px-3 py-1 rounded-lg border border-white/5">{selectedIssue.status}</span>
                   </div>
-
-                  <div>
-                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Description</h3>
-                    <p className="text-gray-300 text-sm leading-relaxed border-l-2 border-yellow-500/20 pl-3">
-                      {
-                        selectedIssue.report?.issue_overview?.summary_explanation ||
-                        selectedIssue.report?.unified_report?.summary_text ||
-                        selectedIssue.report?.summary_explanation ||
-                        selectedIssue.summary ||
-                        selectedIssue.description ||
-                        "No detailed description provided."
-                      }
-                    </p>
+                  <div className="mb-6">
+                    <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Intel Summary</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed italic">"{selectedIssue.report?.summary || selectedIssue.description || "Synthesizing report metadata..."}"</p>
                   </div>
-
-                  <div>
-                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Location</h3>
-                    <div className="flex items-start gap-2 text-gray-400 text-sm bg-zinc-800/50 p-3 rounded-lg border border-white/5">
-                      <div className="mt-1 min-w-4"><div className="w-4 h-4 rounded-full bg-yellow-500/20 border border-yellow-500 animate-pulse" /></div>
-                      <p>{selectedIssue.address || "Location data not available"}</p>
-                    </div>
-                  </div>
-
                   {selectedIssue.admin_note && (
-                    <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-4">
-                      <h3 className="text-xs font-bold text-yellow-500 uppercase tracking-wider mb-1">Admin Note</h3>
-                      <p className="text-gray-300 text-sm italic">"{selectedIssue.admin_note}"</p>
+                    <div className="p-3 bg-yellow-500/5 border border-yellow-500/10 rounded-xl">
+                      <h3 className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-1">Admin Feedback</h3>
+                      <p className="text-gray-400 text-xs leading-relaxed">{selectedIssue.admin_note}</p>
                     </div>
                   )}
+                  <button onClick={() => setSelectedIssue(null)} className="w-full mt-8 py-3 bg-white/5 hover:bg-white/10 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all border border-white/5">Close File</button>
                 </div>
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </div >
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #fbbf24; border-radius: 10px; }
+      `}</style>
+    </div>
   );
 }

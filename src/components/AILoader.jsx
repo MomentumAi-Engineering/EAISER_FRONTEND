@@ -132,9 +132,9 @@ const AILoader = ({
                     {[0, 1, 2].map((i) => (
                         <div
                             key={i}
-                            className="w-2 h-2 rounded-full bg-yellow-500/40"
+                            className="w-2 h-2 rounded-full bg-yellow-500/40 will-change-transform"
                             style={{
-                                animation: `pulse-node 1.5s infinite ${i * 0.2}s cubic-bezier(0.4, 0, 0.6, 1)`
+                                animation: `pulse-node 2s infinite ${i * 0.3}s cubic-bezier(0.4, 0, 0.6, 1)`
                             }}
                         ></div>
                     ))}
@@ -189,13 +189,13 @@ const AILoader = ({
           to { transform: rotate(360deg); }
         }
 
-        .animate-scan { animation: scan 4s linear infinite; }
-        .animate-float { animation: float 5s ease-in-out infinite; }
-        .animate-pulse-slow { animation: pulse-slow 3s ease-in-out infinite; }
-        .animate-blink { animation: blink 4s infinite; }
-        .animate-mouth-think { animation: mouth-think 2s ease-in-out infinite; }
-        .animate-cursor-blink { animation: cursor-blink 0.8s infinite; }
-        .animate-spin-slow { animation: spin-slow 10s linear infinite; }
+        .animate-scan { animation: scan 8s linear infinite; will-change: transform; }
+        .animate-float { animation: float 6s ease-in-out infinite; will-change: transform; }
+        .animate-pulse-slow { animation: pulse-slow 4s ease-in-out infinite; will-change: transform, opacity; }
+        .animate-blink { animation: blink 5s infinite; }
+        .animate-mouth-think { animation: mouth-think 3s ease-in-out infinite; }
+        .animate-cursor-blink { animation: cursor-blink 1s infinite; }
+        .animate-spin-slow { animation: spin-slow 15s linear infinite; will-change: transform; }
       `}</style>
         </div>
     );

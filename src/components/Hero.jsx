@@ -10,19 +10,29 @@ export default function EaiserAIHero() {
   const heroRef = useRef(null);
   const navigate = useNavigate();
   const [showVideo, setShowVideo] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const videoRef = useRef(null);
 
   useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    checkMobile();
+
     const handleMouseMove = (e) => {
+      // Performance: Skip state updates on mobile/tablet
+      if (window.innerWidth < 1024) return;
       setMousePosition({ x: e.clientX, y: e.clientY });
     };
 
     const handleScroll = () => {
+      // Periodic check or just use scrollY for simple effects
       setScrollY(window.scrollY);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', checkMobile);
 
     // close video on Escape
     const onKey = (e) => {
@@ -39,6 +49,7 @@ export default function EaiserAIHero() {
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', checkMobile);
       window.removeEventListener('keydown', onKey);
     };
   }, []);
@@ -46,15 +57,17 @@ export default function EaiserAIHero() {
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden relative pt-20">
       {/* Dynamic Mouse-Following Gradient */}
-      <div
-        className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300"
-        style={{
-          background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(234, 179, 8, 0.15), transparent 80%)`
-        }}
-      />
+      {!isMobile && (
+        <div
+          className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300 will-change-[background]"
+          style={{
+            background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(234, 179, 8, 0.15), transparent 80%)`
+          }}
+        />
+      )}
 
-      {/* Animated Mesh Background */}
-      <div className="absolute inset-0 opacity-30">
+      {/* Animated Mesh Background - Static on mobile for performance */}
+      <div className="absolute inset-0 opacity-30 pointer-events-none">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
@@ -65,10 +78,12 @@ export default function EaiserAIHero() {
         </svg>
       </div>
 
-      {/* Floating Orbs */}
-      <div className="absolute top-20 left-10 w-64 h-64 bg-yellow-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob" />
-      <div className="absolute top-40 right-20 w-72 h-72 bg-amber-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
-      <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-yellow-400 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
+      {/* Floating Orbs - Fewer on mobile */}
+      <div className="absolute top-20 left-10 w-64 h-64 bg-yellow-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob pointer-events-none" />
+      <div className="absolute top-40 right-20 w-72 h-72 bg-amber-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob animation-delay-2000 pointer-events-none" />
+      {!isMobile && (
+        <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-yellow-400 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob animation-delay-4000 pointer-events-none" />
+      )}
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-20" ref={heroRef}>
         {/* Hero Section - Asymmetric Layout */}
@@ -162,65 +177,28 @@ export default function EaiserAIHero() {
             </motion.div>
           </motion.div>
 
-          {/* Right Visual Element - 3D Card Stack */}
-          <div className="relative h-[600px] hidden lg:block">
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center"
-              style={{ transform: `translateY(${scrollY * 0.1}px)` }}
-              initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={{ duration: 1, ease: "easeOut" }}
-            >
-              {/* Card 1 - Background */}
+          {/* Right Visual Element - Hidden on Mobile */}
+          {!isMobile && (
+            <div className="relative h-[600px] hidden lg:block">
               <motion.div
-                className="absolute top-0 right-0 w-80 h-96 bg-gradient-to-br from-gray-900 to-black rounded-3xl border border-yellow-500/20 transform rotate-6 shadow-2xl"
-                animate={{ rotate: [6, 8, 6] }}
-                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              />
-
-              {/* Card 2 - Middle */}
-              <motion.div
-                className="absolute top-10 right-10 w-80 h-96 bg-gradient-to-br from-gray-900 to-black rounded-3xl border border-yellow-500/40 transform rotate-3 shadow-2xl"
-                animate={{ rotate: [3, 1, 3] }}
-                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 1, ease: "easeOut" }}
               >
-                <div className="p-8 h-full flex flex-col justify-between">
+                {/* 3D Card Elements */}
+                <div className="relative w-80 h-96 bg-gradient-to-br from-yellow-500/20 to-amber-500/20 backdrop-blur-xl rounded-3xl border-2 border-yellow-500 shadow-2xl p-8 flex flex-col justify-between">
+                  {/* Simplest version for performance */}
                   <Brain className="w-16 h-16 text-yellow-400" />
                   <div>
-                    <h3 className="text-2xl font-bold mb-2">AI-Powered</h3>
-                    <p className="text-gray-400">Smart classification with 95% accuracy</p>
+                    <div className="text-5xl font-black mb-2">Real-Time</div>
+                    <div className="text-xl text-gray-300">Detection</div>
                   </div>
+                  <Sparkles className="w-8 h-8 text-yellow-500" />
                 </div>
               </motion.div>
-
-              {/* Card 3 - Front */}
-              <motion.div
-                className="relative w-80 h-96 bg-gradient-to-br from-yellow-500/20 to-amber-500/20 backdrop-blur-xl rounded-3xl border-2 border-yellow-500 shadow-2xl shadow-yellow-500/30 p-8 flex flex-col justify-between"
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-yellow-400 rounded-2xl flex items-center justify-center">
-                    <Zap className="w-6 h-6 text-black" />
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-400">STATUS</div>
-                    <div className="font-bold text-yellow-400">ACTIVE</div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="text-5xl font-black mb-2">Real-Time</div>
-                  <div className="text-xl text-gray-300">Issue Detection</div>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <div className="text-gray-400">Powered by Momntum Ai</div>
-                  <Sparkles className="w-5 h-5 text-yellow-400" />
-                </div>
-              </motion.div>
-            </motion.div>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Features Section - Bento Grid Style */}
@@ -233,94 +211,35 @@ export default function EaiserAIHero() {
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6">
-            {/* Feature 1 - Large */}
+            {/* Feature Cards */}
             <div className="lg:col-span-2 group relative bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-xl rounded-3xl border border-gray-800 hover:border-yellow-500/50 p-10 overflow-hidden transition-all hover:-translate-y-2">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/20 transition-all" />
-
               <div className="relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center mb-6 transform group-hover:rotate-12 transition-transform">
+                <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center mb-6">
                   <Zap className="w-8 h-8 text-black" />
                 </div>
-
-                <h3 className="text-3xl font-black mb-4 text-white group-hover:text-yellow-400 transition-colors">
-                  Smart AI Analysis
-                </h3>
-
-                <p className="text-lg text-gray-400 mb-6 leading-relaxed">
-                  Our EAiSER Ai instantly classify issues as public or business-related with 95% accuracy.
-                </p>
-
-                <div className="inline-flex items-center gap-2 text-yellow-400 font-semibold group-hover:gap-4 transition-all">
-                  Learn More <ArrowRight className="w-4 h-4" />
-                </div>
+                <h3 className="text-3xl font-black mb-4 text-white">Smart AI Analysis</h3>
+                <p className="text-lg text-gray-400 leading-relaxed">Our EAiSER Ai instantly classify issues as public or business-related.</p>
               </div>
             </div>
 
-            {/* Feature 2 - Small */}
             <div className="group relative bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-xl rounded-3xl border border-gray-800 hover:border-yellow-500/50 p-10 overflow-hidden transition-all hover:-translate-y-2">
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-all" />
-
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-2xl flex items-center justify-center mb-6 transform group-hover:rotate-12 transition-transform">
-                  <MapPin className="w-8 h-8 text-black" />
-                </div>
-
-                <h3 className="text-3xl font-black mb-4 text-white group-hover:text-yellow-400 transition-colors">
-                  Precision Location
-                </h3>
-
-                <p className="text-lg text-gray-400 leading-relaxed">
-                  GPS and visual data pinpoint exact locations for faster response times.
-                </p>
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-2xl flex items-center justify-center mb-6">
+                <MapPin className="w-8 h-8 text-black" />
               </div>
-            </div>
-
-            {/* Feature 3 - Small */}
-            <div className="group relative bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-xl rounded-3xl border border-gray-800 hover:border-yellow-500/50 p-10 overflow-hidden transition-all hover:-translate-y-2">
-              <div className="absolute top-0 left-0 w-48 h-48 bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/20 transition-all" />
-
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-amber-400 rounded-2xl flex items-center justify-center mb-6 transform group-hover:rotate-12 transition-transform">
-                  <FileText className="w-8 h-8 text-black" />
-                </div>
-
-                <h3 className="text-3xl font-black mb-4 text-white group-hover:text-yellow-400 transition-colors">
-                  Automated Reporting
-                </h3>
-
-                <p className="text-lg text-gray-400 leading-relaxed">
-                  Generate professional reports automatically sent to appropriate authorities.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 4 - Large CTA */}
-            <div className="lg:col-span-2 group relative bg-gradient-to-br from-yellow-500/20 to-amber-500/20 backdrop-blur-xl rounded-3xl border-2 border-yellow-500/50 p-10 overflow-hidden hover:border-yellow-400 transition-all">
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-amber-500/0 group-hover:from-yellow-500/10 group-hover:to-amber-500/10 transition-all" />
-
-              <div className="relative z-10">
-                <div className="text-sm font-bold text-yellow-400 mb-2">SUCCESS STORIES</div>
-                <h3 className="text-4xl font-black mb-4">Making a Measurable Difference</h3>
-                <p className="text-xl text-gray-300">See how communities are transforming with AI</p>
-              </div>
+              <h3 className="text-3xl font-black mb-4 text-white">Precision Location</h3>
+              <p className="text-lg text-gray-400">GPS and visual data pinpoint exact locations.</p>
             </div>
           </div>
         </div>
 
         {/* Final CTA Section */}
         <div className="relative bg-gradient-to-br from-yellow-500/10 to-amber-500/10 backdrop-blur-xl rounded-3xl border border-yellow-500/30 p-16 text-center overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(234,179,8,0.1),transparent_50%)]" />
-
           <div className="relative z-10">
             <Rocket className="w-12 h-12 md:w-16 md:h-16 text-yellow-400 mx-auto mb-6" />
             <h2 className="text-3xl md:text-5xl font-black mb-4 px-4">Ready to Transform Your Community?</h2>
-            <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl mx-auto px-4">
-              Join the future of intelligent issue reporting and resolution
-            </p>
-
             <button
               onClick={() => navigate('/report')}
-              className="px-8 md:px-12 py-4 md:py-5 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl font-bold text-lg md:text-xl text-black hover:shadow-2xl hover:shadow-yellow-500/50 transition-all hover:scale-105"
+              className="px-8 md:px-12 py-4 md:py-5 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl font-bold text-lg md:text-xl text-black"
             >
               Get Started Now
             </button>
@@ -328,7 +247,7 @@ export default function EaiserAIHero() {
         </div>
       </div>
 
-      {/* Video overlay (50vw x 50vh) */}
+      {/* Video overlay */}
       {showVideo && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
@@ -336,25 +255,12 @@ export default function EaiserAIHero() {
         >
           <div className="relative w-full md:w-[70vw] lg:w-[50vw] h-auto aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
             <button
-              aria-label="Close video"
-              className="absolute top-3 right-3 z-20 p-2 rounded bg-white/10 hover:bg-white/20"
-              onClick={() => {
-                setShowVideo(false);
-                if (videoRef.current) {
-                  videoRef.current.pause();
-                  videoRef.current.currentTime = 0;
-                }
-              }}
+              className="absolute top-3 right-3 z-20 p-2 rounded bg-white/10 text-white"
+              onClick={() => { setShowVideo(false); videoRef.current?.pause(); }}
             >
-              <X className="w-4 h-4 text-white" />
+              <X className="w-4 h-4" />
             </button>
-            <video
-              ref={videoRef}
-              src={VideoDEmo}
-              controls
-              autoPlay
-              className="w-full h-full object-cover"
-            />
+            <video ref={videoRef} src={VideoDEmo} controls autoPlay className="w-full h-full object-cover" />
           </div>
         </div>
       )}
@@ -362,19 +268,13 @@ export default function EaiserAIHero() {
       <style>{`
         @keyframes blob {
           0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
+          33% { transform: translate(20px, -30px) scale(1.05); }
+          66% { transform: translate(-10px, 10px) scale(0.95); }
           100% { transform: translate(0px, 0px) scale(1); }
         }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
+        .animate-blob { animation: blob 10s infinite; will-change: transform; }
+        .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
       `}</style>
     </div>
   );

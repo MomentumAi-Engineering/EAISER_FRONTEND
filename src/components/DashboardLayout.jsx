@@ -174,7 +174,7 @@ export default function DashboardLayout({ children, currentPage = 'dashboard' })
 
             {/* Sidebar */}
             <aside
-                className={`fixed left-0 top-0 h-full bg-gray-900/80 backdrop-blur-xl border-r border-gray-800/50 transition-all duration-300 z-40 flex flex-col ${sidebarCollapsed ? 'w-20' : 'w-64'
+                className={`fixed left-0 top-0 h-full bg-gray-900/95 md:bg-gray-900/80 backdrop-blur-md md:backdrop-blur-xl border-r border-gray-800/50 transition-all duration-300 z-40 flex flex-col ${sidebarCollapsed ? 'w-20' : 'w-64'
                     } ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
             >
                 {/* Sidebar Header */}
@@ -269,7 +269,7 @@ export default function DashboardLayout({ children, currentPage = 'dashboard' })
             {/* Main Content */}
             <div className={`flex-1 flex flex-col h-screen transition-all duration-300 ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
                 {/* Top Header */}
-                <header className="h-16 bg-gray-900/50 backdrop-blur-xl border-b border-gray-800/50 flex items-center justify-between px-6 sticky top-0 z-30">
+                <header className="h-16 bg-gray-900/50 backdrop-blur-md md:backdrop-blur-xl border-b border-gray-800/50 flex items-center justify-between px-6 sticky top-0 z-30">
                     {/* Mobile Menu Button */}
                     <button
                         onClick={() => setMobileMenuOpen(true)}
