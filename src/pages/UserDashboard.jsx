@@ -151,7 +151,50 @@ export default function UserDashboard() {
             </h1>
             <p className="text-gray-500 mt-1 text-sm">Tracking your community contributions</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 relative">
+            {/* Notification Bell */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="p-2 bg-zinc-900 rounded-lg text-yellow-400 hover:bg-zinc-800 transition-all border border-yellow-500/20 relative"
+              >
+                <Bell className="w-5 h-5" />
+                {notifications > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold animate-pulse">
+                    {notifications}
+                  </span>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 top-full mt-2 w-80 bg-zinc-900 border border-yellow-500/20 rounded-xl shadow-2xl z-50 overflow-hidden"
+                  >
+                    <div className="p-3 border-b border-white/5 flex justify-between items-center">
+                      <h3 className="text-sm font-bold text-white">Notifications</h3>
+                      <button onClick={() => { setNotifications(0); setNotificationList([]); }} className="text-xs text-gray-500 hover:text-white">Clear all</button>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                      {notificationList.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500 text-xs">No new alerts</div>
+                      ) : (
+                        notificationList.map((note) => (
+                          <div key={note.id} className="p-3 hover:bg-white/5 border-b border-white/5 last:border-0 transition-colors">
+                            <p className="text-xs text-gray-300">{note.text}</p>
+                            <span className="text-[10px] text-gray-600 mt-1 block">{note.time}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <button onClick={() => fetchIssues(false)} className="p-2 bg-zinc-900 rounded-lg text-yellow-400 hover:bg-zinc-800 transition-all border border-yellow-500/20">
               <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
