@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Autocomplete } from '@react-google-maps/api';
 import { MapPin, Loader, Navigation, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -17,23 +17,23 @@ const mapContainerStyle = {
     borderRadius: '1.25rem',
 };
 
-const options = {
-    disableDefaultUI: false,
-    zoomControl: true,
-    streetViewControl: true,
-    mapTypeControl: true,
-    mapTypeControlOptions: {
-        style: 1, // HORIZONTAL_BAR
-        position: 3, // TOP_RIGHT
-    },
-    mapTypeId: 'hybrid',
-    fullscreenControl: true,
-    tilt: 45, // Enable 45-degree imagery for 3D buildings
-};
+// Options moved inside component for better HMR/React lifecycle handling
 
 export default function LocationInput({ onLocationChange, initialCoordinates }) {
     // NOTE: You must provide a valid Google Maps API Key here or in .env
     // FALLBACK: Use provided key directly if env var is not loaded yet (avoids restart requirement)
+    // Memoized Map Options - FORCED LIGHT THEME (Overrides System Dark Mode)
+    const defaultMapOptions = useMemo(() => ({
+        mapTypeId: 'terrain',
+        // Removed custom styles to show default Google Maps details (routes, buildings)
+        disableDefaultUI: false,
+        zoomControl: true,
+        streetViewControl: true,
+        mapTypeControl: true,
+        fullscreenControl: true,
+        tilt: 45, // Enable 45-degree imagery where available
+    }), []);
+
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
     console.log("Initializing Maps with Key Length:", apiKey ? apiKey.length : 0);
@@ -77,12 +77,17 @@ export default function LocationInput({ onLocationChange, initialCoordinates }) 
     // Update marker if initialCoordinates change
     useEffect(() => {
         if (initialCoordinates) {
-            setMarkerPosition({
+            const newPos = {
                 lat: parseFloat(initialCoordinates.latitude),
                 lng: parseFloat(initialCoordinates.longitude)
-            });
+            };
+            setMarkerPosition(newPos);
+            if (map) {
+                map.panTo(newPos);
+                map.setZoom(16); // Auto-Zoom as requested
+            }
         }
-    }, [initialCoordinates]);
+    }, [initialCoordinates, map]);
 
 
     const onLoad = useCallback((map) => {
@@ -132,7 +137,7 @@ export default function LocationInput({ onLocationChange, initialCoordinates }) 
 
             setMarkerPosition(newPos);
             map.panTo(newPos);
-            map.setZoom(17);
+            map.setZoom(15); // Auto-Zoom adjusted for better Terrain visibility
 
             let extracted = { address: place.formatted_address, zipCode: '' };
 
@@ -300,12 +305,14 @@ export default function LocationInput({ onLocationChange, initialCoordinates }) 
                 {/* Map */}
                 <div className="relative rounded-xl overflow-hidden border border-gray-700 shadow-2xl">
                     <GoogleMap
+                        id="google-map-input"
+                        key="standard-white-map" // Force re-mount to clear old instances
                         mapContainerStyle={mapContainerStyle}
-                        zoom={20}
+                        zoom={15}
                         center={markerPosition}
                         onLoad={onLoad}
                         onUnmount={onUnmount}
-                        options={options}
+                        options={defaultMapOptions}
                     >
                         <Marker
                             position={markerPosition}

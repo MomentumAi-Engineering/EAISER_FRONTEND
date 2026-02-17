@@ -970,25 +970,20 @@ export default function SimpleReport() {
               <div className="h-96 rounded-3xl overflow-hidden border border-gray-800 shadow-2xl relative">
                 <GoogleMap
                   center={coords}
-                  zoom={20}
+                  zoom={15}
                   mapContainerStyle={{ width: "100%", height: "100%" }}
-                  mapTypeId="hybrid"
+                  mapTypeId="terrain"
                   options={{
                     streetViewControl: true,
                     mapTypeControl: true,
                     mapTypeControlOptions: {
                       style: 1, // HORIZONTAL_BAR
                       position: 3, // TOP_RIGHT
-                      mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain']
+                      mapTypeIds: ['terrain', 'roadmap', 'satellite', 'hybrid']
                     },
                     fullscreenControl: true,
                     rotateControl: true,
                     tilt: 45, // Enable 45-degree imagery
-                    styles: [
-                      { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                      { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-                      { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-                    ]
                   }}
                 >
                   <Marker
