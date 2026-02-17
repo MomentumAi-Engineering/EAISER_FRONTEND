@@ -30,26 +30,31 @@ const StatCard = memo(({ icon: Icon, label, value, color, delay }) => (
 ));
 
 export default function UserDashboard() {
-  const [stats, setStats] = useState({
-    totalReported: 0,
-    resolved: 0,
-    pending: 0,
-    activeRate: 0
+  const [stats, setStats] = useState(() => {
+    const cached = localStorage.getItem('dashboard_stats');
+    return cached ? JSON.parse(cached) : { totalReported: 0, resolved: 0, pending: 0, activeRate: 0 };
   });
 
   const [filter, setFilter] = useState('all');
   const [notifications, setNotifications] = useState(0);
-  const [loading, setLoading] = useState(true);
+  // Only show full page loader if we have NO data
+  const [loading, setLoading] = useState(() => !localStorage.getItem('dashboard_issues'));
   const [error, setError] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [issues, setIssues] = useState([]);
+
+  const [issues, setIssues] = useState(() => {
+    const cached = localStorage.getItem('dashboard_issues');
+    return cached ? JSON.parse(cached) : [];
+  });
+
   const [notificationList, setNotificationList] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
 
-  const previousIssuesRef = React.useRef([]);
+  const previousIssuesRef = React.useRef(issues);
   const navigate = useNavigate();
 
+  // ... (Sound and TimeAgo functions remain the same) ...
   // Simple notification sound
   const playNotificationSound = () => {
     try {
@@ -91,14 +96,21 @@ export default function UserDashboard() {
   };
 
   const fetchIssues = async (isBackground = false) => {
-    if (!isBackground) setLoading(true);
-    if (!isBackground) setError(null);
+    // Only show full loader if we have NO data (cached or otherwise)
+    if (!isBackground && issues.length === 0) setLoading(true);
+
+    // Always show refreshing indicator for transparency
     setIsRefreshing(true);
+
+    if (!isBackground) setError(null);
+
     try {
       const token = localStorage.getItem('token');
       if (!token) { navigate('/login'); return; }
       const data = await apiClient.getMyIssues();
+
       if (Array.isArray(data)) {
+        // Notification Logic
         if (previousIssuesRef.current.length > 0) {
           data.forEach(newIssue => {
             const oldIssue = previousIssuesRef.current.find(i => (i._id || i.id) === (newIssue._id || newIssue.id));
@@ -115,19 +127,29 @@ export default function UserDashboard() {
             }
           });
         }
+
         previousIssuesRef.current = data;
         setIssues(data);
+
+        // Cache Statistics & Data for Instant Load next time
         const total = data.length;
         const resolved = data.filter(i => ['resolved', 'completed', 'accepted', 'rejected', 'declined'].includes(i.status?.toLowerCase())).length;
         const pending = data.filter(i => ['needs_review', 'under_review', 'pending', 'submitted', 'approved'].includes(i.status?.toLowerCase())).length;
         const rate = total > 0 ? Math.round((resolved / total) * 100) : 0;
-        setStats({ totalReported: total, resolved, pending, activeRate: rate });
+
+        const newStats = { totalReported: total, resolved, pending, activeRate: rate };
+        setStats(newStats);
+
+        // Update LocalStorage Cache
+        localStorage.setItem('dashboard_issues', JSON.stringify(data));
+        localStorage.setItem('dashboard_stats', JSON.stringify(newStats));
+
         setError(null);
       }
     } catch (err) {
       console.error(err);
       if (err.status === 401) { navigate('/login'); return; }
-      if (!isBackground || issues.length === 0) setError(`Failed to load reports.`);
+      if (!isBackground && issues.length === 0) setError(`Failed to load reports.`);
     } finally {
       setLoading(false);
       setTimeout(() => setIsRefreshing(false), 500);
@@ -135,7 +157,11 @@ export default function UserDashboard() {
   };
 
   useEffect(() => {
-    fetchIssues(false);
+    // If we have cached data, do a background fetch (silent update)
+    // If no cache, do a full foreground fetch
+    const hasCache = issues.length > 0;
+    fetchIssues(hasCache);
+
     const interval = setInterval(() => fetchIssues(true), 60000); // 60s is plenty
     return () => clearInterval(interval);
   }, []);
