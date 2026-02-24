@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../services/apiClient';
 import { Loader2, AlertTriangle, CheckCircle2, MapPin, Save, ArrowRight, List, Edit2, Search, X, BarChart3, Activity, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { adminPath } from '../utils/adminPaths';
 
 const MappingReview = () => {
     const [entries, setEntries] = useState([]);
@@ -132,7 +133,7 @@ const MappingReview = () => {
                     </div>
                     <div className="flex gap-3">
                         <button
-                            onClick={() => navigate('/admin/dashboard')}
+                            onClick={() => navigate(adminPath('/dashboard'))}
                             className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm border border-gray-700 transition-all"
                         >
                             Back to Dashboard

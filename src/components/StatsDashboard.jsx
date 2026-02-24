@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { ArrowLeft, RefreshCw, AlertTriangle, FileText, CheckCircle2, TrendingUp, Users, AlertCircle, Clock, Calendar, BarChart3, Brain, Zap, Cpu, Loader2, XCircle } from 'lucide-react';
 import { hasPermission, getCurrentAdmin } from '../utils/permissions';
+import { adminPath } from '../utils/adminPaths';
 
 const CountUp = ({ end, duration = 2000, decimals = 0, separator = ',' }) => {
     const [count, setCount] = useState(0);
@@ -45,7 +46,7 @@ export default function StatsDashboard() {
 
     useEffect(() => {
         if (!hasPermission('view_stats')) {
-            navigate('/admin/dashboard', { replace: true });
+            navigate(adminPath('/dashboard'), { replace: true });
             return;
         }
         fetchStats();
@@ -89,7 +90,7 @@ export default function StatsDashboard() {
                         <p className="text-gray-400 mt-2">Overview of system performance and metrics</p>
                     </div>
                     <button
-                        onClick={() => navigate('/admin/dashboard')}
+                        onClick={() => navigate(adminPath('/dashboard'))}
                         className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all"
                     >
                         ← Back

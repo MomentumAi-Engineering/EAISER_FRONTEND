@@ -4,6 +4,7 @@ import { useDialog } from '../context/DialogContext';
 import { ShieldAlert, CheckCircle2, XCircle, AlertTriangle, Loader2, Edit2, ShieldCheck, Mail, Save, X, Users, BarChart3, CheckSquare, Square, MapPin, Building, FileText, Clock, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { hasPermission, canActOnIssue, getCurrentAdmin } from '../utils/permissions';
+import { adminPath } from '../utils/adminPaths';
 import SkeletonLoader from './SkeletonLoader';
 import ReviewCard from './ReviewCard';
 import DashboardLayout from './DashboardLayout';
@@ -106,7 +107,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
     if (!token) {
-      navigate('/admin');
+      navigate(adminPath('/auth/login'));
       return;
     }
     fetchReviews();

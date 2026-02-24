@@ -29,54 +29,146 @@ const AuditLog = lazy(() => import('./components/AuditLog'));
 const UserDash = lazy(() => import('./pages/UserDashboard'));
 const ProfilePage = lazy(() => import('./pages/Profile'));
 
+/**
+ * Detect if running on the admin subdomain.
+ * Production: admin.eaiser.ai
+ * Dev:        admin.localhost or localhost with /admin prefix
+ */
+function isAdminSubdomain() {
+  const hostname = window.location.hostname;
+  return (
+    hostname.startsWith('admin.') ||       // admin.eaiser.ai or admin.localhost
+    hostname === 'admin.eaiser.ai'
+  );
+}
+
+/**
+ * Returns the full URL for the admin subdomain equivalent of a path.
+ */
+function getAdminSubdomainUrl(path = "") {
+  const { protocol, host, hostname } = window.location;
+
+  // Clean up the path (ensure it starts with / and doesn't have /admin prefix if provided)
+  let cleanPath = path.startsWith('/') ? path : `/${path}`;
+  if (cleanPath.startsWith('/admin/')) cleanPath = cleanPath.replace('/admin/', '/');
+  if (cleanPath === '/admin') cleanPath = '/auth/login';
+
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//admin.${host}${cleanPath}`;
+  }
+
+  // For production eaiser.ai -> admin.eaiser.ai
+  const parts = hostname.split('.');
+  if (parts.length >= 2) {
+    const baseDomain = parts.slice(-2).join('.');
+    return `${protocol}//admin.${baseDomain}${cleanPath}`;
+  }
+
+  return `${protocol}//admin.${hostname}${cleanPath}`;
+}
+
+/**
+ * Component to handle cross-subdomain redirection for legacy routes.
+ */
+function AdminRedirect({ to = "" }) {
+  React.useEffect(() => {
+    window.location.replace(getAdminSubdomainUrl(to));
+  }, [to]);
+  return <PageLoader />;
+}
+
+/**
+ * Admin-only app shell — rendered when on admin.eaiser.ai
+ * Routes: /auth/login, /dashboard, /team, /settings, etc.
+ */
+function AdminApp() {
+  return (
+    <Routes>
+      {/* Admin Auth */}
+      <Route path="/auth/login" element={<AdminLogin />} />
+
+      {/* Admin Pages — clean paths without /admin prefix */}
+      <Route path="/dashboard" element={<AdminDashboard />} />
+      <Route path="/team" element={<TeamManagement />} />
+      <Route path="/settings" element={<AdminSettings />} />
+      <Route path="/stats" element={<StatsDashboard />} />
+      <Route path="/change-password" element={<ChangePassword />} />
+      <Route path="/security" element={<SecuritySettings />} />
+      <Route path="/mapping" element={<MappingReview />} />
+      <Route path="/authorities" element={<AuthorityManagement />} />
+      <Route path="/users" element={<UserManagement />} />
+      <Route path="/warroom" element={<WarRoom />} />
+      <Route path="/audit" element={<AuditLog />} />
+
+      {/* Root of admin subdomain → login */}
+      <Route path="/" element={<Navigate to="/auth/login" replace />} />
+
+      {/* Legacy /admin routes → redirect to clean paths */}
+      <Route path="/admin" element={<Navigate to="/auth/login" replace />} />
+      <Route path="/admin/dashboard" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/admin/team" element={<Navigate to="/team" replace />} />
+      <Route path="/admin/settings" element={<Navigate to="/settings" replace />} />
+      <Route path="/admin/stats" element={<Navigate to="/stats" replace />} />
+      <Route path="/admin/change-password" element={<Navigate to="/change-password" replace />} />
+      <Route path="/admin/security" element={<Navigate to="/security" replace />} />
+      <Route path="/admin/mapping" element={<Navigate to="/mapping" replace />} />
+      <Route path="/admin/authorities" element={<Navigate to="/authorities" replace />} />
+      <Route path="/admin/users" element={<Navigate to="/users" replace />} />
+      <Route path="/admin/warroom" element={<Navigate to="/warroom" replace />} />
+      <Route path="/admin/audit" element={<Navigate to="/audit" replace />} />
+
+      {/* Catch-all → login */}
+      <Route path="*" element={<Navigate to="/auth/login" replace />} />
+    </Routes>
+  );
+}
+
+/**
+ * Public-facing app shell — rendered on eaiser.ai / localhost:5173
+ */
+function PublicApp() {
+  return (
+    <Routes>
+      {/* public home with navbar */}
+      <Route
+        path="/"
+        element={
+          <>
+            <Navbar />
+            <Hero />
+          </>
+        }
+      />
+
+      {/* other app pages */}
+      <Route path="/report" element={<Report />} />
+      <Route path="/authority-action" element={<AuthorityAction />} />
+
+      {/* user dashboard */}
+      <Route path="/dashboard" element={<UserDash />} />
+      <Route path="/profile" element={<ProfilePage />} />
+
+      {/* auth pages (no navbar) */}
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/login" element={<Login />} />
+
+      {/* catch-all -> redirect to home */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
 export default function App() {
+  const isAdmin = isAdminSubdomain();
+
   return (
     <ReportProvider>
       <Router>
         <Suspense fallback={<PageLoader />}>
-          <Routes>
-            {/* public home with navbar */}
-            <Route
-              path="/"
-              element={
-                <>
-                  <Navbar />
-                  <Hero />
-                </>
-              }
-            />
-
-            {/* other app pages */}
-            <Route path="/report" element={<Report />} />
-            <Route path="/authority-action" element={<AuthorityAction />} />
-
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/team" element={<TeamManagement />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/stats" element={<StatsDashboard />} />
-            <Route path="/admin/change-password" element={<ChangePassword />} />
-            <Route path="/admin/security" element={<SecuritySettings />} />
-            <Route path="/admin/mapping" element={<MappingReview />} />
-            <Route path="/admin/authorities" element={<AuthorityManagement />} />
-            <Route path="/admin/users" element={<UserManagement />} />
-            <Route path="/admin/warroom" element={<WarRoom />} />
-            <Route path="/admin/audit" element={<AuditLog />} />
-
-            {/* user dashboard*/}
-            <Route path="/dashboard" element={<UserDash />} />
-            <Route path="/profile" element={<ProfilePage />} />
-
-            {/* auth pages (no navbar) */}
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/login" element={<Login />} />
-
-            {/* catch-all -> redirect to home */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          {isAdmin ? <AdminApp /> : <PublicApp />}
         </Suspense>
       </Router>
     </ReportProvider>
   );
 }
+

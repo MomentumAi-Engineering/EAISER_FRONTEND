@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
+import { adminPath } from '../utils/adminPaths';
 import { Shield, Lock, Smartphone, ArrowLeft, Check, Copy, Loader2, AlertTriangle } from 'lucide-react';
 
 export default function SecuritySettings() {
@@ -112,7 +113,7 @@ export default function SecuritySettings() {
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-8">
                     <button
-                        onClick={() => navigate('/admin/dashboard')}
+                        onClick={() => navigate(adminPath('/dashboard'))}
                         className="p-2 hover:bg-white/10 rounded-full transition-colors"
                     >
                         <ArrowLeft className="w-6 h-6" />
@@ -135,7 +136,7 @@ export default function SecuritySettings() {
                                 <p className="text-gray-400 text-sm">Update your password regularly</p>
                             </div>
                             <button
-                                onClick={() => navigate('/admin/change-password')}
+                                onClick={() => navigate(adminPath('/change-password'))}
                                 className="ml-auto px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors border border-gray-700"
                             >
                                 Change Password

@@ -63,6 +63,24 @@ class ApiClient {
     return this.request(path, { method: 'GET', headers: { ...this.defaultHeaders, ...headers } });
   }
 
+  // Helper: generic POST
+  async post(path, data, headers = {}) {
+    return this.request(path, {
+      method: 'POST',
+      headers: { ...this.defaultHeaders, 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Helper: generic PUT
+  async put(path, data, headers = {}) {
+    return this.request(path, {
+      method: 'PUT',
+      headers: { ...this.defaultHeaders, 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(data),
+    });
+  }
+
   // Issues: create a new issue with image upload and metadata
   async createIssue({
     imageFile, // File (required)

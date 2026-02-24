@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
+import { adminPath } from '../utils/adminPaths';
 import { Lock, Shield, Check, X, AlertCircle } from 'lucide-react';
 
 export default function ChangePassword() {
@@ -48,7 +49,7 @@ export default function ChangePassword() {
         try {
             await apiClient.changePassword(formData.currentPassword, formData.newPassword);
             setSuccess('Password changed successfully! Redirecting...');
-            setTimeout(() => navigate('/admin/dashboard'), 2000);
+            setTimeout(() => navigate(adminPath('/dashboard')), 2000);
         } catch (err) {
             setError(err.message || 'Failed to change password');
         } finally {
@@ -145,7 +146,7 @@ export default function ChangePassword() {
                         <div className="flex gap-4">
                             <button
                                 type="button"
-                                onClick={() => navigate('/admin/dashboard')}
+                                onClick={() => navigate(adminPath('/dashboard'))}
                                 className="flex-1 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg font-semibold transition-all"
                             >
                                 Cancel

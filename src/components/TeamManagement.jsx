@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import DashboardLayout from './DashboardLayout';
+import { adminPath } from '../utils/adminPaths';
 import { Shield, Plus, MoreVertical, Search, Lock, User, Trash2, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function TeamManagement() {
@@ -25,7 +26,7 @@ export default function TeamManagement() {
         // Check if user is logged in
         const token = localStorage.getItem('adminToken');
         if (!token) {
-            navigate('/admin', { replace: true });
+            navigate(adminPath('/auth/login'), { replace: true });
             return;
         }
 

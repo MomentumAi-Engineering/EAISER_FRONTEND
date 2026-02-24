@@ -3,6 +3,7 @@ import apiClient from '../services/apiClient';
 import { useDialog } from '../context/DialogContext';
 import { Loader2, AlertTriangle, Search, Plus, Save, X, Building, Mail, Map } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { adminPath } from '../utils/adminPaths';
 
 const AuthorityManagement = () => {
     const [authorities, setAuthorities] = useState({});
@@ -113,7 +114,7 @@ const AuthorityManagement = () => {
                     </div>
                     <div className="flex gap-3">
                         <button
-                            onClick={() => navigate('/admin/dashboard')}
+                            onClick={() => navigate(adminPath('/dashboard'))}
                             className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm border border-gray-700 transition-all"
                         >
                             Back to Dashboard

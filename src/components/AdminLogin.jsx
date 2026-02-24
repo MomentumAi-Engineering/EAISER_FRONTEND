@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
+import { adminPath } from '../utils/adminPaths';
 import { Lock, Mail, AlertCircle, Loader2, Shield, Clock } from 'lucide-react';
 
 export default function AdminLogin() {
@@ -40,9 +41,9 @@ export default function AdminLogin() {
 
       // Check if password change required
       if (res.admin?.require_password_change) {
-        navigate('/admin/change-password');
+        navigate(adminPath('/change-password'));
       } else {
-        navigate('/admin/dashboard');
+        navigate(adminPath('/dashboard'));
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -171,10 +172,10 @@ export default function AdminLogin() {
 
             {error && (
               <div className={`p-4 rounded-lg border flex items-start gap-3 ${lockoutInfo
-                  ? 'bg-red-500/10 border-red-500/50 text-red-200'
-                  : rateLimited
-                    ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-200'
-                    : 'bg-red-500/10 border-red-500/50 text-red-200'
+                ? 'bg-red-500/10 border-red-500/50 text-red-200'
+                : rateLimited
+                  ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-200'
+                  : 'bg-red-500/10 border-red-500/50 text-red-200'
                 }`}>
                 {lockoutInfo ? (
                   <Clock className="w-5 h-5 mt-0.5 flex-shrink-0" />

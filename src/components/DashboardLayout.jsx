@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
+import { adminPath } from '../utils/adminPaths';
 
 /**
  * DashboardLayout Component
@@ -47,18 +48,18 @@ export default function DashboardLayout({ children, currentPage = 'dashboard' })
     const adminName = adminData.name || 'Admin';
     const adminRole = adminData.role || 'admin';
 
-    // Navigation items
+    // Navigation items — use adminPath() for subdomain-aware routing
     const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
-        { id: 'warroom', label: 'Live War Room', icon: Globe, path: '/admin/warroom', badge: 'LIVE' },
-        { id: 'reviews', label: 'Reviews', icon: FileText, path: '/admin/dashboard', badge: notifications > 99 ? '99+' : (notifications > 0 ? notifications : null) },
-        { id: 'users', label: 'Users', icon: Users, path: '/admin/users' },
-        { id: 'team', label: 'Team', icon: Shield, path: '/admin/team' },
-        { id: 'stats', label: 'Analytics', icon: BarChart3, path: '/admin/stats' }, // Added Team here
-        { id: 'audit', label: 'Audit Log', icon: History, path: '/admin/audit' },
-        { id: 'mapping', label: 'Mapping', icon: MapPin, path: '/admin/mapping' },
-        { id: 'authorities', label: 'Authorities', icon: Building2, path: '/admin/authorities' },
-        { id: 'settings', label: 'Settings', icon: Settings, path: '/admin/settings' },
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: adminPath('/dashboard') },
+        { id: 'warroom', label: 'Live War Room', icon: Globe, path: adminPath('/warroom'), badge: 'LIVE' },
+        { id: 'reviews', label: 'Reviews', icon: FileText, path: adminPath('/dashboard'), badge: notifications > 99 ? '99+' : (notifications > 0 ? notifications : null) },
+        { id: 'users', label: 'Users', icon: Users, path: adminPath('/users') },
+        { id: 'team', label: 'Team', icon: Shield, path: adminPath('/team') },
+        { id: 'stats', label: 'Analytics', icon: BarChart3, path: adminPath('/stats') },
+        { id: 'audit', label: 'Audit Log', icon: History, path: adminPath('/audit') },
+        { id: 'mapping', label: 'Mapping', icon: MapPin, path: adminPath('/mapping') },
+        { id: 'authorities', label: 'Authorities', icon: Building2, path: adminPath('/authorities') },
+        { id: 'settings', label: 'Settings', icon: Settings, path: adminPath('/settings') },
     ];
 
     // Sound helper
@@ -144,11 +145,11 @@ export default function DashboardLayout({ children, currentPage = 'dashboard' })
     const confirmLogout = () => {
         localStorage.removeItem('adminToken');
         localStorage.removeItem('adminData');
-        navigate('/admin');
+        navigate(adminPath('/auth/login'));
     };
 
     const handleProfileClick = () => {
-        navigate('/admin/settings');
+        navigate(adminPath('/settings'));
     };
 
     return (
@@ -330,7 +331,7 @@ export default function DashboardLayout({ children, currentPage = 'dashboard' })
                                                 <div
                                                     key={item.id + idx}
                                                     className={`p-4 border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors cursor-pointer group`}
-                                                    onClick={() => navigate('/admin/dashboard')}
+                                                    onClick={() => navigate(adminPath('/dashboard'))}
                                                 >
                                                     <div className="flex gap-3">
                                                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${item.type === 'critical' ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'}`}>
@@ -347,7 +348,7 @@ export default function DashboardLayout({ children, currentPage = 'dashboard' })
                                         )}
                                     </div>
                                     <button
-                                        onClick={() => navigate('/admin/dashboard')}
+                                        onClick={() => navigate(adminPath('/dashboard'))}
                                         className="w-full py-3 text-center text-[11px] text-gray-500 hover:text-white hover:bg-gray-800/50 font-bold uppercase tracking-tighter"
                                     >
                                         View All Reports

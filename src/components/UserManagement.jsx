@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
+import { adminPath } from '../utils/adminPaths';
 import {
     Users, Search, ShieldAlert, CheckCircle2,
     XCircle, Ban, AlertTriangle, Loader2
@@ -30,7 +31,7 @@ export default function UserManagement() {
         } catch (err) {
             console.error("Failed to fetch users:", err);
             if (err.message && err.message.includes('403')) {
-                navigate('/admin');
+                navigate(adminPath('/auth/login'));
             }
         } finally {
             setLoading(false);
@@ -94,7 +95,7 @@ export default function UserManagement() {
                     </div>
 
                     <button
-                        onClick={() => navigate('/admin/dashboard')}
+                        onClick={() => navigate(adminPath('/dashboard'))}
                         className="px-4 py-2 bg-gray-800 text-gray-300 rounded hover:bg-gray-700 transition"
                     >
                         Back to Dashboard
@@ -168,9 +169,9 @@ export default function UserManagement() {
                                                 </span>
                                                 {/* Risk Badge */}
                                                 <span className={`px-2 py-0.5 rounded text-xs font-bold border ${user.risk_score === 'Critical' ? 'bg-red-900/40 text-red-500 border-red-900' :
-                                                        user.risk_score === 'High' ? 'bg-orange-900/40 text-orange-500 border-orange-900' :
-                                                            user.risk_score === 'Medium' ? 'bg-yellow-900/40 text-yellow-500 border-yellow-900' :
-                                                                'bg-green-900/40 text-green-500 border-green-900'
+                                                    user.risk_score === 'High' ? 'bg-orange-900/40 text-orange-500 border-orange-900' :
+                                                        user.risk_score === 'Medium' ? 'bg-yellow-900/40 text-yellow-500 border-yellow-900' :
+                                                            'bg-green-900/40 text-green-500 border-green-900'
                                                     }`}>
                                                     {user.risk_score} Risk Level
                                                 </span>
@@ -195,8 +196,8 @@ export default function UserManagement() {
                                                     onClick={() => handleToggleStatus(user)}
                                                     disabled={processingId === user.id}
                                                     className={`px-3 py-1.5 rounded text-xs font-medium transition flex items-center gap-2 ${user.is_active
-                                                            ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30'
-                                                            : 'bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30'
+                                                        ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30'
+                                                        : 'bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30'
                                                         }`}
                                                 >
                                                     {user.is_active ? (
