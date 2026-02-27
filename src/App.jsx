@@ -8,8 +8,11 @@ import PageLoader from "./components/PageLoader";
 const Hero = lazy(() => import("./components/Hero"));
 const Signup = lazy(() => import("./Auth/Signup"));
 const Login = lazy(() => import('./Auth/Login'));
+const ForgotPassword = lazy(() => import('./Auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./Auth/ResetPassword'));
 const Report = lazy(() => import('./pages/Report'));
 const AuthorityAction = lazy(() => import('./pages/AuthorityAction'));
+const VerifyEmail = lazy(() => import('./Auth/VerifyEmail'));
 
 // Admin Components
 const AdminLogin = lazy(() => import('./components/AdminLogin'));
@@ -151,6 +154,9 @@ function PublicApp() {
       {/* auth pages (no navbar) */}
       <Route path="/signup" element={<Signup />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
 
       {/* catch-all -> redirect to home */}
       <Route path="*" element={<Navigate to="/" replace />} />

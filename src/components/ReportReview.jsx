@@ -41,6 +41,15 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const status = pick(issue, ['report.status', 'status'], 'pending');
   const dispatchDecision = pick(issue, ['report.dispatch_decision', 'dispatch_decision'], null);
 
+  const formatIssueType = (type) => {
+    if (!type || String(type).toLowerCase() === 'manual report') return type || 'Unknown';
+    return String(type)
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [error, setError] = useState(null);
@@ -82,6 +91,13 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
   const [successMessage, setSuccessMessage] = useState("");
   const [isReview, setIsReview] = useState(false);
+
+  // Safe computation of Guest Status
+  const isAuthenticated = !!(localStorage.getItem("token") || localStorage.getItem("auth_token"));
+  const API_IsGuest = pick(issue, ['is_guest', 'data.is_guest'], null);
+
+  // If they have a token NOW, unlock the wall. Otherwise trust API or fallback to true.
+  const isGuest = isAuthenticated ? false : (API_IsGuest !== null ? !!API_IsGuest : true);
 
   // EDIT MODE STATE
   const [isEditing, setIsEditing] = useState(false);
@@ -343,10 +359,16 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const longitude = (typeof userLon === 'number' && !Number.isNaN(userLon)) ? userLon : longitudeBase;
   const authorities = pick(issue, ['authorities', 'available_authorities', 'report.available_authorities'], []);
 
-  const reportText = pick(aiReport, ['issue_overview.user_feedback', 'issue_overview.summary_explanation', 'additional_notes.summary', 'template_fields.formatted_text'], null);
-  const descriptionText = analysisDescription || summaryExplanation || reportText || null;
-  const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
   const imageAnalysis = pick(aiReport, ['ai_evaluation.image_analysis', 'ai_evaluation.rationale'], null);
+
+  // Merge AI summary and analysis for a unified description
+  const combinedAIAnalysis = [summaryExplanation, imageAnalysis]
+    .filter(Boolean)
+    .join('\n\n');
+
+  const reportText = pick(aiReport, ['issue_overview.user_feedback', 'issue_overview.summary_explanation', 'additional_notes.summary', 'template_fields.formatted_text'], null);
+  const descriptionText = analysisDescription || combinedAIAnalysis || reportText || null;
+  const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
   // recommendedAuthorities removed here as it was already declared above
 
   if (confidence !== null) {
@@ -475,247 +497,247 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         </div>
       </div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">Report Review</h2>
-        <span className="text-xs text-gray-400">Issue ID: {issueId}</span>
-      </div>
-
-      {/* Responsible Authorities (moved to bottom) */}
-      {/* Meta grid */}
-      <div className="grid md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
-          <p className="text-xs text-gray-400">Issue Type</p>
-          {isEditing ? (
-            <select
-              name="issue_type"
-              value={editForm.issue_type}
-              onChange={handleEditChange}
-              className="w-full bg-black/20 border border-gray-600 rounded px-2 py-1 text-sm mt-1 focus:border-yellow-500 outline-none"
-            >
-              <option value="Manual Report">Manual Report</option>
-              <option value="pothole">Pothole</option>
-              <option value="road_damage">Road Damage</option>
-              <option value="broken_streetlight">Broken Streetlight</option>
-              <option value="garbage">Garbage / Trash</option>
-              <option value="flood">Flooding</option>
-              <option value="water_leakage">Water Leakage</option>
-              <option value="fire">Fire Hazard</option>
-              <option value="dead_animal">Dead Animal</option>
-              <option value="car_accident">Car Accident</option>
-              <option value="abandoned_vehicle">Abandoned Vehicle</option>
-              <option value="other">Other</option>
-            </select>
-          ) : (
-            <p className="text-sm font-semibold">{String(issueType)}</p>
-          )}
-        </div>
-
-        <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
-          <p className="text-xs text-gray-400">Severity</p>
-          {isEditing ? (
-            <select
-              name="severity"
-              value={editForm.severity}
-              onChange={handleEditChange}
-              className="w-full bg-black/20 border border-gray-600 rounded px-2 py-1 text-sm mt-1 focus:border-yellow-500 outline-none"
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
-          ) : (
-            <span className={`text-sm font-semibold uppercase ${priorityLabel.toLowerCase() === 'high' || priorityLabel.toLowerCase() === 'critical'
-              ? 'text-red-400'
-              : priorityLabel.toLowerCase() === 'medium'
-                ? 'text-yellow-400'
-                : 'text-green-400'
-              }`}>
-              {priorityLabel}
-            </span>
-          )}
-        </div>
-
-        {confidence !== null && (
-          <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
-            <p className="text-xs text-gray-400">Confidence</p>
-            <p className="text-sm font-semibold">{String(confidence)}%</p>
-          </div>
-        )}
-      </div>
-
-      {/* Location */}
-      <div className="grid md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
-          <p className="text-xs text-gray-400">Address</p>
-          <p className="text-sm font-semibold">{String(address || '—')}</p>
-        </div>
-        <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
-          <p className="text-xs text-gray-400">ZIP / Coordinates</p>
-          <p className="text-sm font-semibold">{String(zipCode || '—')} • {String(latitude || '—')}, {String(longitude || '—')}</p>
-        </div>
-      </div>
-
-      {/* Suggested Authorities removed as requested earlier */}
-
-      {/* Issue Overview summary text */}
-      <div className="mb-6">
-        <p className="text-sm font-bold mb-2">Description / Summary</p>
-
-        {isEditing ? (
-          <textarea
-            name="summary"
-            value={editForm.summary}
-            onChange={handleEditChange}
-            rows={4}
-            className="w-full bg-white/5 border border-gray-700 rounded-xl p-4 text-sm text-gray-200 focus:border-yellow-500 outline-none"
-            placeholder="Describe the issue in detail..."
-          />
-        ) : (
-          templateSummary ? (
-            <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap">
-              {String(templateSummary)}
-            </div>
-          ) : (
-            <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs text-gray-400">No summary provided.</div>
-          )
-        )}
-        {confidence !== null && (
-          <div className="mt-3">
-            <p className="text-xs text-gray-400 mb-1">Confidence</p>
-            <div className="h-2 rounded-full overflow-hidden"
-              style={{
-                background: (() => {
-                  const val = Math.max(0, Math.min(100, Number(confidence) || 0));
-                  let color = '#ef4444'; // red-500
-                  if (val >= 80) color = '#4ade80'; // green-400
-                  else if (val >= 50) color = '#facc15'; // yellow-400
-                  return `linear-gradient(to right, ${color} 0%, ${color} ${val}%, #374151 ${val}%, #374151 100%)`;
-                })()
-              }}
-            />
-            <p className="text-xs mt-1" style={{
-              color: (() => {
-                const val = Math.max(0, Math.min(100, Number(confidence) || 0));
-                if (val >= 80) return '#4ade80';
-                if (val >= 50) return '#facc15';
-                return '#ef4444';
-              })()
-            }}>
-              {Math.max(0, Math.min(100, Number(confidence) || 0))}%
-            </p>
-          </div>
-        )}
-      </div>
-      {mapsLink && (
-        <div className="mb-6">
-          <a href={mapsLink} target="_blank" rel="noreferrer" className="text-xs text-purple-300 hover:text-purple-200">View on Map</a>
-        </div>
-      )}
-
-      {/* AI Generated Items - Hidden for Manual Reports */}
-      {!isManualReport && (
-        <div className="mb-6">
-          <p className="text-sm font-bold mb-2">AI Generated Items</p>
-          {summaryExplanation && (
-            <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap mb-3">
-              {String(summaryExplanation)}
-            </div>
-          )}
-          <div className="grid grid-cols-1 gap-4">
-            <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
-              <p className="text-xs text-gray-400 mb-2">AI Visual Analysis</p>
-              <div className="text-sm text-gray-200 leading-relaxed">
-                {imageAnalysis || "Detailed analysis not available for this report."}
+      <div className={isGuest ? "relative" : ""}>
+        {isGuest && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md rounded-2xl p-8 text-center border border-gray-700">
+            <div className="max-w-md space-y-6">
+              <div className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto border border-blue-500/30">
+                <ShieldAlert className="w-10 h-10 text-blue-400" />
+              </div>
+              <h4 className="text-3xl font-extrabold text-white">Report Locked</h4>
+              <p className="text-gray-300">Your report has been generated successfully! 🚀 <br />To unlock the full AI analysis and submit this issue, please create an account or login.</p>
+              <div className="flex flex-col gap-3 pt-4">
+                <button onClick={() => navigate('/signup', { state: { returnTo: window.location.pathname } })} className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg transition-all">Create My Account</button>
+                <button onClick={() => navigate('/login', { state: { returnTo: window.location.pathname } })} className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl font-bold transition-all">Login to Account</button>
               </div>
             </div>
-
           </div>
-        </div>
-      )}
-
-      {/* Image Preview if available */}
-      {imagePreview && (
-        <div className="mb-6">
-          <p className="text-sm font-bold mb-2">Submitted Image</p>
-          <div className="relative">
-            <img src={imagePreview} alt="Submitted" className="w-full h-64 object-cover rounded-xl border border-gray-700" />
-            {imageName && (
-              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-3 py-2 rounded-b-xl">
-                {imageName}
-              </div>
-            )}
+        )}
+        <div className={isGuest ? "filter blur-xl pointer-events-none select-none grayscale opacity-30" : ""}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Report Review</h2>
+            <span className="text-xs text-gray-400">Issue ID: {issueId}</span>
           </div>
-        </div>
-      )}
 
-      {/* Responsible Authorities (bottom) */}
-      <div className="mb-6">
-        <p className="text-sm font-bold mb-2 flex items-center justify-between">
-          <span>Responsible Authorities</span>
-          <span className="text-xs font-normal text-gray-400">Tap to select/deselect</span>
-        </p>
-
-        {allAuthorities.length > 0 ? (
-          <div className="grid md:grid-cols-2 gap-2">
-            {allAuthorities.map((auth, idx) => {
-              const isSelected = selectedAuths.some(a => a.email === auth.email);
-              return (
-                <div
-                  key={`${auth.email || idx}`}
-                  onClick={() => toggleAuthority(auth)}
-                  className={`border rounded-xl p-3 cursor-pointer transition-all ${isSelected
-                    ? 'bg-blue-500/20 border-blue-500/50 ring-1 ring-blue-500/50'
-                    : 'bg-white/5 border-gray-700 hover:bg-white/10'
-                    }`}
+          {/* Responsible Authorities (moved to bottom) */}
+          {/* Meta grid */}
+          <div className="grid md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+              <p className="text-xs text-gray-400">Issue Type</p>
+              {isEditing ? (
+                <select
+                  name="issue_type"
+                  value={editForm.issue_type}
+                  onChange={handleEditChange}
+                  className="w-full bg-black/20 border border-gray-600 rounded px-2 py-1 text-sm mt-1 focus:border-yellow-500 outline-none"
                 >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm font-semibold">{String(auth.name || 'Authority')}</p>
-                      <p className="text-xs text-gray-400">{String(auth.type || '—')}</p>
-                      <p className="text-xs text-gray-400">{String(auth.email || '—')}</p>
-                    </div>
-                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-500'
-                      }`}>
-                      {isSelected && <Check className="w-3 h-3 text-white" />}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-xs text-gray-400">No authorities found.</p>
-        )}
-      </div>
+                  <option value="Manual Report">Manual Report</option>
+                  <option value="pothole">Pothole</option>
+                  <option value="road_damage">Road Damage</option>
+                  <option value="broken_streetlight">Broken Streetlight</option>
+                  <option value="garbage">Garbage / Trash</option>
+                  <option value="flood">Flooding</option>
+                  <option value="water_leakage">Water Leakage</option>
+                  <option value="fire">Fire Hazard</option>
+                  <option value="dead_animal">Dead Animal</option>
+                  <option value="car_accident">Car Accident</option>
+                  <option value="abandoned_vehicle">Abandoned Vehicle</option>
+                  <option value="other">Other</option>
+                </select>
+              ) : (
+                <p className="text-sm font-semibold">{formatIssueType(issueType)}</p>
+              )}
+            </div>
 
-      {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-xl text-red-200 text-sm">
-          {error}
-        </div>
-      )}
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+              <p className="text-xs text-gray-400">Severity</p>
+              {isEditing ? (
+                <select
+                  name="severity"
+                  value={editForm.severity}
+                  onChange={handleEditChange}
+                  className="w-full bg-black/20 border border-gray-600 rounded px-2 py-1 text-sm mt-1 focus:border-yellow-500 outline-none"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              ) : (
+                <span className={`text-sm font-semibold uppercase ${priorityLabel.toLowerCase() === 'high' || priorityLabel.toLowerCase() === 'critical'
+                  ? 'text-red-400'
+                  : priorityLabel.toLowerCase() === 'medium'
+                    ? 'text-yellow-400'
+                    : 'text-green-400'
+                  }`}>
+                  {priorityLabel}
+                </span>
+              )}
+            </div>
 
-      {/* Action Buttons */}
-      {!summaryExplanation?.includes("Please provide the correct image") && (
-        <div className="flex gap-3">
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || (selectedAuths.length === 0 && editForm.issue_type !== 'Manual Report' && confidence !== 0)}
-            className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${submitting || (selectedAuths.length === 0 && editForm.issue_type !== 'Manual Report' && confidence !== 0)
-              ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-              : 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-lg hover:shadow-yellow-500/20'
-              }`}
-          >
-            {submitting ? (
-              'Submitting...'
-            ) : (
-              <>
-                <Send className="w-4 h-4" /> Submit Report
-              </>
+            {confidence !== null && (
+              <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+                <p className="text-xs text-gray-400">Confidence</p>
+                <p className="text-sm font-semibold">{String(confidence)}%</p>
+              </div>
             )}
-          </button>
-        </div>
-      )}
+          </div>
+
+          {/* Location */}
+          <div className="grid md:grid-cols-2 gap-4 mb-6">
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
+              <p className="text-xs text-gray-400">Address</p>
+              <p className="text-sm font-semibold">{String(address || '—')}</p>
+            </div>
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
+              <p className="text-xs text-gray-400">ZIP / Coordinates</p>
+              <p className="text-sm font-semibold">{String(zipCode || '—')} • {String(latitude || '—')}, {String(longitude || '—')}</p>
+            </div>
+          </div>
+
+          {/* Suggested Authorities removed as requested earlier */}
+
+          {/* Issue Overview summary text */}
+          <div className="mb-6">
+            <p className="text-sm font-bold mb-2">Description / Summary</p>
+
+            {isEditing ? (
+              <textarea
+                name="summary"
+                value={editForm.summary}
+                onChange={handleEditChange}
+                rows={4}
+                className="w-full bg-white/5 border border-gray-700 rounded-xl p-4 text-sm text-gray-200 focus:border-yellow-500 outline-none"
+                placeholder="Describe the issue in detail..."
+              />
+            ) : (
+              descriptionText ? (
+                <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap text-gray-200 leading-relaxed">
+                  {String(descriptionText)}
+                </div>
+              ) : (
+                <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs text-gray-400">No summary provided.</div>
+              )
+            )}
+            {confidence !== null && (
+              <div className="mt-3">
+                <p className="text-xs text-gray-400 mb-1">Confidence</p>
+                <div className="h-2 rounded-full overflow-hidden"
+                  style={{
+                    background: (() => {
+                      const val = Math.max(0, Math.min(100, Number(confidence) || 0));
+                      let color = '#ef4444'; // red-500
+                      if (val >= 80) color = '#4ade80'; // green-400
+                      else if (val >= 50) color = '#facc15'; // yellow-400
+                      return `linear-gradient(to right, ${color} 0%, ${color} ${val}%, #374151 ${val}%, #374151 100%)`;
+                    })()
+                  }}
+                />
+                <p className="text-xs mt-1" style={{
+                  color: (() => {
+                    const val = Math.max(0, Math.min(100, Number(confidence) || 0));
+                    if (val >= 80) return '#4ade80';
+                    if (val >= 50) return '#facc15';
+                    return '#ef4444';
+                  })()
+                }}>
+                  {Math.max(0, Math.min(100, Number(confidence) || 0))}%
+                </p>
+              </div>
+            )}
+          </div>
+          {mapsLink && (
+            <div className="mb-6">
+              <a href={mapsLink} target="_blank" rel="noreferrer" className="text-xs text-purple-300 hover:text-purple-200">View on Map</a>
+            </div>
+          )}
+
+          {/* AI Generated Items merged into Description above as requested */}
+
+          {/* Image Preview if available */}
+          {imagePreview && (
+            <div className="mb-6">
+              <p className="text-sm font-bold mb-2">Submitted Image</p>
+              <div className="relative">
+                <img src={imagePreview} alt="Submitted" className="w-full h-64 object-cover rounded-xl border border-gray-700" />
+                {imageName && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-3 py-2 rounded-b-xl">
+                    {imageName}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Responsible Authorities (bottom) */}
+          <div className="mb-6">
+            <p className="text-sm font-bold mb-2 flex items-center justify-between">
+              <span>Responsible Authorities</span>
+              <span className="text-xs font-normal text-gray-400">Tap to select/deselect</span>
+            </p>
+
+            {allAuthorities.length > 0 ? (
+              <div className="grid md:grid-cols-2 gap-2">
+                {allAuthorities.map((auth, idx) => {
+                  const isSelected = selectedAuths.some(a => a.email === auth.email);
+                  return (
+                    <div
+                      key={`${auth.email || idx}`}
+                      onClick={() => toggleAuthority(auth)}
+                      className={`border rounded-xl p-3 cursor-pointer transition-all ${isSelected
+                        ? 'bg-blue-500/20 border-blue-500/50 ring-1 ring-blue-500/50'
+                        : 'bg-white/5 border-gray-700 hover:bg-white/10'
+                        }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-sm font-semibold">{String(auth.name || 'Authority')}</p>
+                          <p className="text-xs text-gray-400">{String(auth.type || '—')}</p>
+                          <p className="text-xs text-gray-400">{String(auth.email || '—')}</p>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-500'
+                          }`}>
+                          {isSelected && <Check className="w-3 h-3 text-white" />}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">No authorities found.</p>
+            )}
+          </div>
+
+          {error && !isGuest && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-xl text-red-200 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          {!isGuest && !summaryExplanation?.includes("Please provide the correct image") && (
+            <div className="flex gap-3">
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || (selectedAuths.length === 0 && editForm.issue_type !== 'Manual Report' && confidence !== 0)}
+                className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${submitting || (selectedAuths.length === 0 && editForm.issue_type !== 'Manual Report' && confidence !== 0)
+                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                  : 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-lg hover:shadow-yellow-500/20'
+                  }`}
+              >
+                {submitting ? (
+                  'Submitting...'
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" /> Submit Report
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div> {/* Explicitly close the isGuest wrapper */}
+      </div>
 
       {/* Raw debug removed */}
     </div>

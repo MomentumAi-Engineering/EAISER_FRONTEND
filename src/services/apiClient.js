@@ -39,9 +39,18 @@ class ApiClient {
 
   // Helper: generic request wrapper with error handling
   async request(path, { method = 'GET', headers = {}, body = undefined } = {}) {
+    // Automatically attach auth token if present
+    let authHeader = {};
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+      if (token) {
+        authHeader = { Authorization: `Bearer ${token}` };
+      }
+    }
+
     const res = await fetch(this.url(path), {
       method,
-      headers: { ...this.defaultHeaders, ...headers },
+      headers: { ...this.defaultHeaders, ...authHeader, ...headers },
       body,
       credentials: 'include', // allow cookies/session if backend uses them
     });
@@ -304,6 +313,46 @@ class ApiClient {
   async getMyIssues() {
     return this.request('/api/issues/my-issues', {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+  }
+
+  // --- Profile / User Account ---
+  async getMe() {
+    return this.request('/api/auth/me', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+  }
+
+  async updateProfile(data) {
+    return this.request('/api/auth/profile', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(data),
+    });
+  }
+
+  async changeUserPassword(currentPassword, newPassword) {
+    return this.request('/api/auth/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  async updateNotifications(data) {
+    return this.request('/api/auth/notifications', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(data),
     });
   }
 

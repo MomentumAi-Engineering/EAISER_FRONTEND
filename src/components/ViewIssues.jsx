@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Container, 
-  Typography, 
-  Paper, 
+import {
+  Container,
+  Typography,
+  Paper,
   CircularProgress,
   TextField,
   InputAdornment,
@@ -32,11 +32,11 @@ import {
   TableRow,
   TableSortLabel
 } from '@mui/material';
-import { 
-  Search, 
-  FilterList, 
-  Refresh, 
-  Download, 
+import {
+  Search,
+  FilterList,
+  Refresh,
+  Download,
   MoreVert,
   Visibility,
   Edit,
@@ -102,30 +102,30 @@ const ViewIssues = () => {
   // Apply filters and sorting
   useEffect(() => {
     let result = [...issues];
-    
+
     // Apply search filter
     if (searchTerm) {
       const query = searchTerm.toLowerCase();
-      result = result.filter(issue => 
+      result = result.filter(issue =>
         issue.report_id?.toString().toLowerCase().includes(query) ||
         issue.issue_type?.toLowerCase().includes(query) ||
         issue.status?.toLowerCase().includes(query)
       );
     }
-    
+
     // Apply status filter
     if (statusFilter !== 'all') {
       result = result.filter(issue => issue.status === statusFilter);
     }
-    
+
     // Apply sorting
     result.sort((a, b) => {
       if (sortBy === 'id') {
-        return sortOrder === 'asc' 
-          ? a.report_id - b.report_id 
+        return sortOrder === 'asc'
+          ? a.report_id - b.report_id
           : b.report_id - a.report_id;
       } else if (sortBy === 'timestamp') {
-        return sortOrder === 'asc' 
+        return sortOrder === 'asc'
           ? new Date(a.timestamp) - new Date(b.timestamp)
           : new Date(b.timestamp) - new Date(a.timestamp);
       } else if (sortBy === 'status') {
@@ -135,7 +135,7 @@ const ViewIssues = () => {
       }
       return 0;
     });
-    
+
     setFilteredIssues(result);
   }, [issues, searchTerm, statusFilter, sortBy, sortOrder]);
 
@@ -207,6 +207,15 @@ const ViewIssues = () => {
     }
   };
 
+  const formatIssueType = (type) => {
+    if (!type || String(type).toLowerCase() === 'manual report') return type || 'Civic Issue';
+    return String(type)
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   // Calculate pagination
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - filteredIssues.length) : 0;
   const paginatedIssues = filteredIssues.slice(
@@ -233,7 +242,7 @@ const ViewIssues = () => {
     >
       <Container maxWidth="lg" className="container">
         {/* Header Section */}
-        <motion.div 
+        <motion.div
           className="header-section"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -243,11 +252,11 @@ const ViewIssues = () => {
             <Info className="title-icon" />
             Issue Management
           </Typography>
-          
+
           <div className="header-actions">
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button 
-                variant="outlined" 
+              <Button
+                variant="outlined"
                 startIcon={<Refresh />}
                 onClick={() => window.location.reload()}
                 className="action-button"
@@ -255,23 +264,23 @@ const ViewIssues = () => {
                 Refresh
               </Button>
             </motion.div>
-            
+
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button 
-                variant="outlined" 
+              <Button
+                variant="outlined"
                 startIcon={<Download />}
                 className="action-button"
               >
                 Export
               </Button>
             </motion.div>
-            
+
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <IconButton onClick={handleMenuClick} className="menu-button">
                 <MoreVert />
               </IconButton>
             </motion.div>
-            
+
             <Menu
               anchorEl={anchorEl}
               open={open}
@@ -289,9 +298,9 @@ const ViewIssues = () => {
             </Menu>
           </div>
         </motion.div>
-        
+
         {/* Stats Cards */}
-        <motion.div 
+        <motion.div
           className="stats-container"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -303,7 +312,7 @@ const ViewIssues = () => {
               <Typography variant="body2" className="stat-label">Total Issues</Typography>
             </CardContent>
           </Card>
-          
+
           <Card className="stat-card">
             <CardContent className="stat-content">
               <Typography variant="h4" className="stat-value">
@@ -312,7 +321,7 @@ const ViewIssues = () => {
               <Typography variant="body2" className="stat-label">Pending</Typography>
             </CardContent>
           </Card>
-          
+
           <Card className="stat-card">
             <CardContent className="stat-content">
               <Typography variant="h4" className="stat-value">
@@ -321,7 +330,7 @@ const ViewIssues = () => {
               <Typography variant="body2" className="stat-label">In Progress</Typography>
             </CardContent>
           </Card>
-          
+
           <Card className="stat-card">
             <CardContent className="stat-content">
               <Typography variant="h4" className="stat-value">
@@ -331,9 +340,9 @@ const ViewIssues = () => {
             </CardContent>
           </Card>
         </motion.div>
-        
+
         {/* Filters Section */}
-        <motion.div 
+        <motion.div
           className="filters-section"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -357,7 +366,7 @@ const ViewIssues = () => {
                   className="search-field"
                 />
               </Grid>
-              
+
               <Grid item xs={12} md={3}>
                 <FormControl fullWidth>
                   <InputLabel>Status</InputLabel>
@@ -373,10 +382,10 @@ const ViewIssues = () => {
                   >
                     {statusOptions.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
-                        <Chip 
-                          label={option.label} 
-                          color={option.color} 
-                          size="small" 
+                        <Chip
+                          label={option.label}
+                          color={option.color}
+                          size="small"
                           className="status-chip"
                         />
                       </MenuItem>
@@ -384,7 +393,7 @@ const ViewIssues = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              
+
               <Grid item xs={12} md={3}>
                 <Typography variant="body2" className="results-count">
                   Showing {filteredIssues.length} of {issues.length} issues
@@ -393,9 +402,9 @@ const ViewIssues = () => {
             </Grid>
           </Paper>
         </motion.div>
-        
+
         {/* Table Section */}
-        <motion.div 
+        <motion.div
           className="table-section"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -476,7 +485,7 @@ const ViewIssues = () => {
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2" className="issue-type">
-                                  {issue.issue_type}
+                                  {formatIssueType(issue.issue_type)}
                                 </Typography>
                               </TableCell>
                               <TableCell>
@@ -495,8 +504,8 @@ const ViewIssues = () => {
                               </TableCell>
                               <TableCell align="right">
                                 <Tooltip title="View Details">
-                                  <IconButton 
-                                    size="small" 
+                                  <IconButton
+                                    size="small"
                                     onClick={() => handleViewIssue(issue)}
                                     className="action-icon"
                                   >
@@ -504,8 +513,8 @@ const ViewIssues = () => {
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Edit Issue">
-                                  <IconButton 
-                                    size="small" 
+                                  <IconButton
+                                    size="small"
                                     className="action-icon"
                                   >
                                     <Edit />
@@ -524,7 +533,7 @@ const ViewIssues = () => {
                           </TableRow>
                         )}
                       </AnimatePresence>
-                      
+
                       {emptyRows > 0 && (
                         <TableRow style={{ height: 53 * emptyRows }}>
                           <TableCell colSpan={5} />
@@ -533,9 +542,9 @@ const ViewIssues = () => {
                     </TableBody>
                   </Table>
                 </TableContainer>
-                
+
                 <Divider />
-                
+
                 {/* Pagination */}
                 <Box className="pagination-container">
                   <Typography variant="body2" className="pagination-info">
@@ -555,7 +564,7 @@ const ViewIssues = () => {
           </Paper>
         </motion.div>
       </Container>
-      
+
       {/* Issue Details Drawer */}
       <Drawer
         anchor="right"
@@ -573,14 +582,14 @@ const ViewIssues = () => {
                 <Close />
               </IconButton>
             </div>
-            
+
             <Divider className="drawer-divider" />
-            
+
             <div className="drawer-section">
               <Typography variant="h6" className="section-title">
                 Issue Information
               </Typography>
-              
+
               <Grid container spacing={2}>
                 <Grid item xs={12}>
                   <div className="info-item">
@@ -588,11 +597,11 @@ const ViewIssues = () => {
                       Issue Type
                     </Typography>
                     <Typography variant="body1" className="info-value">
-                      {selectedIssue.issue_type}
+                      {formatIssueType(selectedIssue.issue_type)}
                     </Typography>
                   </div>
                 </Grid>
-                
+
                 <Grid item xs={12}>
                   <div className="info-item">
                     <Typography variant="body2" className="info-label">
@@ -607,7 +616,7 @@ const ViewIssues = () => {
                     />
                   </div>
                 </Grid>
-                
+
                 <Grid item xs={12}>
                   <div className="info-item">
                     <Typography variant="body2" className="info-label">
@@ -618,7 +627,7 @@ const ViewIssues = () => {
                     </Typography>
                   </div>
                 </Grid>
-                
+
                 <Grid item xs={12}>
                   <div className="info-item">
                     <Typography variant="body2" className="info-label">
@@ -631,35 +640,35 @@ const ViewIssues = () => {
                 </Grid>
               </Grid>
             </div>
-            
+
             <div className="drawer-section">
               <Typography variant="h6" className="section-title">
                 Actions
               </Typography>
-              
+
               <div className="action-buttons">
-                <Button 
-                  variant="contained" 
-                  color="primary" 
+                <Button
+                  variant="contained"
+                  color="primary"
                   startIcon={<Edit />}
                   fullWidth
                   className="drawer-button"
                 >
                   Edit Issue
                 </Button>
-                
-                <Button 
-                  variant="outlined" 
-                  color="secondary" 
+
+                <Button
+                  variant="outlined"
+                  color="secondary"
                   startIcon={<LocationOn />}
                   fullWidth
                   className="drawer-button"
                 >
                   View on Map
                 </Button>
-                
-                <Button 
-                  variant="outlined" 
+
+                <Button
+                  variant="outlined"
                   startIcon={<Download />}
                   fullWidth
                   className="drawer-button"

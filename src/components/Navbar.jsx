@@ -39,7 +39,9 @@ export default function Navbar() {
 
     if (confirmed) {
       localStorage.removeItem("token");
+      localStorage.removeItem("auth_token");
       localStorage.removeItem("user");
+      localStorage.removeItem("userData");
       setIsLoggedIn(false);
       navigate("/");
       setOpen(false);
@@ -96,7 +98,7 @@ export default function Navbar() {
                   {(() => {
                     try {
                       const user = JSON.parse(localStorage.getItem('userData') || localStorage.getItem('user') || '{}');
-                      return user.name ? user.name.charAt(0).toUpperCase() : 'U';
+                      return user.first_name ? user.first_name.charAt(0).toUpperCase() : (user.name ? user.name.charAt(0).toUpperCase() : 'U');
                     } catch { return 'U'; }
                   })()}
                 </div>
@@ -104,7 +106,7 @@ export default function Navbar() {
                   {(() => {
                     try {
                       const user = JSON.parse(localStorage.getItem('userData') || localStorage.getItem('user') || '{}');
-                      return user.name?.split(' ')[0] || 'User';
+                      return user.first_name || user.name?.split(' ')[0] || 'User';
                     } catch { return 'User'; }
                   })()}
                 </span>

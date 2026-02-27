@@ -28,7 +28,7 @@ const getApiBase = () => {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
-      return 'http://localhost:8000';
+      return 'http://localhost:8005';
     }
   }
 
@@ -66,16 +66,18 @@ async function request(path, body) {
   return data;
 }
 
-// dob removed from signup params and payload
-export async function signup({ fullName, email, password }) {
-  // Backend expects "fullName"
-  return request('/api/auth/signup', { fullName, email, password });
+export async function signup({ firstName, lastName, username, email, password }) {
+  return request('/api/auth/signup', { firstName, lastName, username, email, password });
 }
 
-export async function login({ email, password }) {
-  return request('/api/auth/login', { email, password });
+export async function login({ identifier, password }) {
+  return request('/api/auth/login', { identifier, password });
 }
 
 export async function googleSignIn(idToken) {
   return request('/api/auth/google', { credential: idToken });
+}
+
+export async function verifyEmail(token) {
+  return request('/api/auth/verify-email', { token });
 }

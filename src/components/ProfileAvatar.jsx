@@ -52,8 +52,10 @@ const ProfileAvatar = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userData');
+    localStorage.removeItem("token");
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userData");
     setIsDropdownOpen(false);
     navigate('/auth');
   };
@@ -88,7 +90,7 @@ const ProfileAvatar = () => {
               {isGuest ? 'Guest user' : 'View your profile'}
             </p>
           </div>
-          
+
           <button
             onClick={handleProfile}
             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center"
@@ -98,7 +100,7 @@ const ProfileAvatar = () => {
             </svg>
             Profile
           </button>
-          
+
           <button
             onClick={handleLogout}
             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center"

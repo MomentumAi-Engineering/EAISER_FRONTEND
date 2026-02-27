@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 import Navbar from '../components/Navbar';
 import apiClient from '../services/apiClient';
+import API_BASE_URL from '../config';
 
 // Memoized StatCard moved outside to prevent re-creation
 const StatCard = memo(({ icon: Icon, label, value, color, delay }) => (
@@ -95,6 +96,15 @@ export default function UserDashboard() {
     } catch (e) { return dateStr; }
   };
 
+  const formatIssueType = (type) => {
+    if (!type || String(type).toLowerCase() === 'manual report') return type || 'Civic Issue';
+    return String(type)
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   const fetchIssues = async (isBackground = false) => {
     // Only show full loader if we have NO data (cached or otherwise)
     if (!isBackground && issues.length === 0) setLoading(true);
@@ -128,13 +138,24 @@ export default function UserDashboard() {
           });
         }
 
-        previousIssuesRef.current = data;
-        setIssues(data);
+        // Filter out failed reports
+        const validData = data.filter(i => !['failed', 'error', 'rejected_invalid'].includes(i.status?.toLowerCase()));
+
+        previousIssuesRef.current = validData;
+        setIssues(validData);
 
         // Cache Statistics & Data for Instant Load next time
-        const total = data.length;
-        const resolved = data.filter(i => ['resolved', 'completed', 'accepted', 'rejected', 'declined'].includes(i.status?.toLowerCase())).length;
-        const pending = data.filter(i => ['needs_review', 'under_review', 'pending', 'submitted', 'approved'].includes(i.status?.toLowerCase())).length;
+        // Resolved: Dispatched to authority or completed
+        const resolved = validData.filter(i =>
+          ['resolved', 'completed', 'accepted', 'submitted', 'approved', 'dispatched'].includes(i.status?.toLowerCase())
+        ).length;
+
+        // Pending: Only those waiting for manual admin review
+        const pending = validData.filter(i =>
+          ['needs_review', 'under_review', 'pending'].includes(i.status?.toLowerCase())
+        ).length;
+
+        const total = validData.length;
         const rate = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
         const newStats = { totalReported: total, resolved, pending, activeRate: rate };
@@ -269,7 +290,13 @@ export default function UserDashboard() {
                     <div className="text-gray-600 text-center py-12 text-sm italic">Satellite link ready. Waiting for first report...</div>
                   ) : (
                     issues
-                      .filter(i => filter === 'all' || (filter === 'resolved' && ['resolved', 'completed', 'accepted', 'rejected', 'declined'].includes(i.status?.toLowerCase())) || (filter === 'pending' && !['resolved', 'completed', 'accepted', 'rejected', 'declined'].includes(i.status?.toLowerCase())))
+                      .filter(i => {
+                        if (filter === 'all') return true;
+                        const s = i.status?.toLowerCase();
+                        const isResolved = ['resolved', 'completed', 'accepted', 'submitted', 'approved', 'dispatched'].includes(s);
+                        const isPending = ['needs_review', 'under_review', 'pending'].includes(s);
+                        return filter === 'resolved' ? isResolved : isPending;
+                      })
                       .map((issue, idx) => (
                         <motion.div
                           key={issue._id || idx}
@@ -282,11 +309,11 @@ export default function UserDashboard() {
                           <div className="flex items-start justify-between">
                             <div>
                               <h3 className="text-white font-bold text-sm tracking-wide group-hover:text-yellow-400 transition-colors uppercase">
-                                {issue.issue_type?.replace(/_/g, ' ') || 'Civic Issue'}
+                                {formatIssueType(issue.issue_type)}
                               </h3>
                               <p className="text-gray-500 text-xs mt-1 line-clamp-1">{issue.address || 'Location analyzing...'}</p>
                               <div className="flex items-center gap-3 mt-3">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${['resolved', 'completed', 'accepted'].includes(issue.status?.toLowerCase()) ? 'bg-green-500/10 text-green-400' : 'bg-orange-500/10 text-orange-400'}`}>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${['resolved', 'completed', 'accepted', 'submitted', 'approved', 'dispatched'].includes(issue.status?.toLowerCase()) ? 'bg-green-500/10 text-green-400' : 'bg-orange-500/10 text-orange-400'}`}>
                                   {issue.status}
                                 </span>
                                 <span className="text-[10px] text-zinc-600 font-bold">{timeAgo(issue.timestamp)}</span>
@@ -333,10 +360,19 @@ export default function UserDashboard() {
                 onClick={e => e.stopPropagation()}
               >
                 <div className="h-60 md:h-auto md:w-1/2 bg-black relative">
-                  <img src={selectedIssue.image_url || `https://placehold.co/600x800/18181b/FFF?text=Digital+Evidence`} className="w-full h-full object-cover opacity-80" />
+                  <img
+                    src={selectedIssue.image_url ?
+                      (selectedIssue.image_url.startsWith('http') ? selectedIssue.image_url : `${API_BASE_URL.replace('/api', '')}${selectedIssue.image_url}`)
+                      : `https://placehold.co/600x800/18181b/FFF?text=Digital+Evidence`}
+                    className="w-full h-full object-cover opacity-80"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = `https://placehold.co/600x800/18181b/FFF?text=Satellite+Feed+Error`;
+                    }}
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
                   <div className="absolute bottom-4 left-4">
-                    <h2 className="text-xl font-black text-white uppercase tracking-tight">{selectedIssue.issue_type?.replace(/_/g, ' ')}</h2>
+                    <h2 className="text-xl font-black text-white uppercase tracking-tight">{formatIssueType(selectedIssue.issue_type)}</h2>
                     <p className="text-yellow-400/80 text-[10px] font-bold uppercase tracking-widest">{selectedIssue.category || 'Environmental'}</p>
                   </div>
                 </div>

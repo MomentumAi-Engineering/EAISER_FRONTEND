@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -29,7 +30,10 @@ import {
   Zap,
   Mail,
   Phone,
-  PenTool
+  PenTool,
+  Lock,
+  UserPlus,
+  LogIn
 } from 'lucide-react';
 import './UploadForm.css';
 import API_BASE_URL from '../config';
@@ -58,6 +62,9 @@ function UploadForm({ setStatus, fetchIssues }) {
   const [selectedAuthorities, setSelectedAuthorities] = useState([]);
   const [emailingAuthorities, setEmailingAuthorities] = useState(false);
   const [emailStatus, setEmailStatus] = useState('');
+  const [isGuest, setIsGuest] = useState(false);
+  const navigate = useNavigate(); // Assume useNavigate is available or add import
+
 
   // NEW: Manual Report Mode State (Manual Trigger)
   const [isManualMode, setIsManualMode] = useState(false);
@@ -331,8 +338,9 @@ function UploadForm({ setStatus, fetchIssues }) {
       setReportPreview(result.report);
       setEditedReport(result.report.report);
       setIssueId(result.id);
+      setIsGuest(result.is_guest || false);
 
-      // Auto-enable edit mode for Manual Reports as they are "blank" templates
+      // Auto-enable edit mode for Manual Reports as they are "blank" template
       if (isManualMode) {
         setIsEditing(true);
       } else {
@@ -416,10 +424,15 @@ function UploadForm({ setStatus, fetchIssues }) {
       const result = await response.json();
 
       if (response.ok) {
-        setSuccessMessage('Thank you for using SnapFix!');
+        setSuccessMessage('Thank you for using EAiSER Ai!');
         setStatus(`Issue submitted successfully! ID: ${result.id}`);
         fetchIssues();
-        resetForm(); // Full reset on success
+
+        // Wait for user to read success message before redirecting
+        setTimeout(() => {
+          resetForm();
+          navigate('/dashboard');
+        }, 2000);
       } else {
         setStatus(`Error: ${result.detail || 'Failed to submit issue'}`);
         setFormErrors({ ...formErrors, accept: result.detail || 'Failed to submit issue' });
@@ -1093,307 +1106,328 @@ function UploadForm({ setStatus, fetchIssues }) {
               </motion.div>
             )}
 
-            <div className="report-content p-8 space-y-8">
-              <motion.div
-                className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200 mb-6 pb-2 border-b border-white/5">
-                  <Target className="w-5 h-5 text-blue-400" /> Issue Overview
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Type</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedReport.issue_overview.issue_type}
-                        onChange={(e) => handleEditChange('issue_overview', 'issue_type', e.target.value)}
-                        className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
-                      />
-                    ) : (
-                      <p className="text-lg font-medium text-white">{editedReport.issue_overview.issue_type}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Severity</label>
-                    {isEditing ? (
-                      <select
-                        value={editedReport.issue_overview.severity}
-                        onChange={(e) => handleEditChange('issue_overview', 'severity', e.target.value)}
-                        className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
-                      >
-                        {severities.map((severity) => (
-                          <option key={severity.value} value={severity.value}>{severity.label}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${severities.find(s => s.value === editedReport.issue_overview.severity)?.color || 'bg-gray-500'} shadow-[0_0_10px_currentColor]`}></div>
-                        <span className="text-lg font-medium text-white capitalize">{editedReport.issue_overview.severity}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">AI Confidence</label>
-                    <div className="h-4 bg-gray-800 rounded-full overflow-hidden border border-gray-700 relative">
+            <div className="report-content p-8 space-y-8 relative overflow-hidden">
+              {/* GUEST WALL OVERLAY */}
+              {isGuest && (
+                <div className="absolute inset-0 z-[60] flex items-center justify-center bg-[#0a0f1e]/80 backdrop-blur-xl rounded-b-3xl p-8 text-center">
+                  <motion.div
+                    className="max-w-md space-y-8"
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ type: "spring", damping: 12 }}
+                  >
+                    <div className="w-24 h-24 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto border border-blue-500/30 relative">
+                      <Lock className="w-12 h-12 text-blue-400" />
                       <motion.div
-                        className={`h-full ${isManualMode ? 'bg-gray-600' : 'bg-gradient-to-r from-blue-600 to-cyan-400'}`}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${editedReport.issue_overview.confidence}%` }}
-                        transition={{ duration: 1, delay: 0.2 }}
-                      ></motion.div>
-                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white shadow-black drop-shadow-md">
-                        {isManualMode ? 'N/A' : `${editedReport.issue_overview.confidence}%`}
-                      </span>
+                        className="absolute inset-0 rounded-full border-2 border-blue-500/50"
+                        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      />
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="text-4xl font-extrabold text-white tracking-tight">
+                        Report <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Locked</span>
+                      </h4>
+                      <p className="text-gray-300 text-lg leading-relaxed">
+                        Your report has been generated successfully! 🚀 <br />
+                        To unlock the full AI analysis and submit this issue, please create an account or login.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-4 pt-6">
+                      <motion.button
+                        onClick={() => navigate('/signup')}
+                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(59,130,246,0.3)] text-lg"
+                        whileHover={{ scale: 1.02, translateY: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <UserPlus className="w-6 h-6" /> Create My Account
+                      </motion.button>
+                      <motion.button
+                        onClick={() => navigate('/login')}
+                        className="w-full py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold border border-white/10 flex items-center justify-center gap-3 backdrop-blur-md transition-all text-lg"
+                        whileHover={{ scale: 1.02, translateY: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <LogIn className="w-6 h-6" /> Login to Account
+                      </motion.button>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-2 text-blue-400/60 font-mono text-sm uppercase tracking-widest pt-4 animate-pulse">
+                      <Shield className="w-4 h-4" /> Progress Secured
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+
+              <div className={isGuest ? 'filter blur-2xl pointer-events-none select-none grayscale scale-[0.98] transition-all duration-700' : 'transition-all duration-700'}>
+                {/* Issue Overview */}
+                <motion.div
+                  className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200 mb-6 pb-2 border-b border-white/5">
+                    <Target className="w-5 h-5 text-blue-400" /> Issue Overview
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Type</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editedReport.issue_overview.issue_type}
+                          onChange={(e) => handleEditChange('issue_overview', 'issue_type', e.target.value)}
+                          className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                        />
+                      ) : (
+                        <p className="text-lg font-medium text-white">{editedReport.issue_overview.issue_type}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Severity</label>
+                      {isEditing ? (
+                        <select
+                          value={editedReport.issue_overview.severity}
+                          onChange={(e) => handleEditChange('issue_overview', 'severity', e.target.value)}
+                          className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                        >
+                          {severities.map((severity) => (
+                            <option key={severity.value} value={severity.value}>{severity.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${severities.find(s => s.value === editedReport.issue_overview.severity)?.color || 'bg-gray-500'} shadow-[0_0_10px_currentColor]`}></div>
+                          <span className="text-lg font-medium text-white capitalize">{editedReport.issue_overview.severity}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">AI Confidence</label>
+                      <div className="h-4 bg-gray-800 rounded-full overflow-hidden border border-gray-700 relative">
+                        <motion.div
+                          className={`h-full ${isManualMode ? 'bg-gray-600' : 'bg-gradient-to-r from-blue-600 to-cyan-400'}`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${editedReport.issue_overview.confidence}%` }}
+                          transition={{ duration: 1, delay: 0.2 }}
+                        ></motion.div>
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white shadow-black drop-shadow-md">
+                          {isManualMode ? 'N/A' : `${editedReport.issue_overview.confidence}%`}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Category</label>
+                      <p className="text-lg font-medium text-white">{editedReport.issue_overview.category}</p>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Category</label>
-                    <p className="text-lg font-medium text-white">{editedReport.issue_overview.category}</p>
-                  </div>
-                </div>
-
-                <div className="mt-6 space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Summary</label>
-                  {isEditing ? (
-                    <textarea
-                      value={editedReport.issue_overview.summary_explanation}
-                      onChange={(e) => handleEditChange('issue_overview', 'summary_explanation', e.target.value)}
-                      className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono min-h-[100px]"
-                      rows="3"
-                      maxLength={200}
-                    />
-                  ) : (
-                    <p className="text-gray-300 leading-relaxed border-l-2 border-blue-500/50 pl-4 py-1">
-                      {editedReport.issue_overview.summary_explanation}
-                    </p>
-                  )}
-                </div>
-              </motion.div>
-
-              <motion.div
-                className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200 mb-6 pb-2 border-b border-white/5">
-                  <MapPin className="w-5 h-5 text-blue-400" /> Location Details
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Address</label>
+                  <div className="mt-6 space-y-2">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Summary</label>
                     {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedReport.location?.address || reportPreview.report.template_fields.address || ''}
-                        onChange={(e) => handleEditChange('location', 'address', e.target.value)}
-                        className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
-                        placeholder="Enter address"
+                      <textarea
+                        value={editedReport.issue_overview.summary_explanation}
+                        onChange={(e) => handleEditChange('issue_overview', 'summary_explanation', e.target.value)}
+                        className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono min-h-[100px]"
+                        rows="3"
+                        maxLength={200}
                       />
                     ) : (
-                      <p className="text-lg font-medium text-white truncate" title={editedReport.location?.address}>
-                        {editedReport.location?.address || reportPreview.report.template_fields.address || 'Not specified'}
+                      <p className="text-gray-300 leading-relaxed border-l-2 border-blue-500/50 pl-4 py-1">
+                        {editedReport.issue_overview.summary_explanation}
                       </p>
                     )}
                   </div>
+                </motion.div>
 
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Zip Code</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedReport.location?.zip_code || reportPreview.report.template_fields.zip_code || ''}
-                        onChange={(e) => {
-                          const newZipCode = e.target.value;
-                          handleEditChange('location', 'zip_code', newZipCode);
-                          // Fetch authorities when zip code changes
-                          if (newZipCode && newZipCode.length >= 5) {
-                            fetchAuthoritiesByZipCode(newZipCode);
-                          }
-                        }}
-                        className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
-                        placeholder="Enter zip code"
-                        maxLength={5}
-                        pattern="\d{5}"
-                      />
-                    ) : (
-                      <p className="text-lg font-medium text-white font-mono tracking-wider">{editedReport.location?.zip_code || reportPreview.report.template_fields.zip_code || 'Not specified'}</p>
-                    )}
-                  </div>
-
-                  <div className="col-span-1 md:col-span-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Map Reference</label>
-                    <a
-                      href={reportPreview.report.template_fields.map_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-900/20 text-blue-300 hover:bg-blue-900/40 hover:text-white transition-all border border-blue-500/30 group"
-                    >
-                      <Map className="w-4 h-4 group-hover:scale-110 transition-transform" /> View Geospatial Data
-                      <ExternalLink className="w-3 h-3 opacity-50" />
-                    </a>
-                  </div>
-                </div>
-              </motion.div>
-
-              {!isManualMode && (
                 <motion.div
                   className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
+                  transition={{ delay: 0.2 }}
                 >
                   <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200 mb-6 pb-2 border-b border-white/5">
-                    <ImageIcon className="w-5 h-5 text-blue-400" /> Evidence Analysis
+                    <MapPin className="w-5 h-5 text-blue-400" /> Location Details
                   </h4>
-                  {reportPreview.image_content ? (
-                    <motion.div
-                      className="relative rounded-xl overflow-hidden border border-gray-700 group max-w-md mx-auto"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <img
-                        src={`data:image/jpeg;base64,${reportPreview.image_content}`}
-                        alt="Evidence"
-                        className="w-full h-auto object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                      />
-                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform">
-                        <span className="text-xs text-green-400 font-mono">HASH: {issueId.substring(0, 8)}... VALID</span>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Address</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editedReport.location?.address || reportPreview.report.template_fields.address || ''}
+                          onChange={(e) => handleEditChange('location', 'address', e.target.value)}
+                          className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                          placeholder="Enter address"
+                        />
+                      ) : (
+                        <p className="text-lg font-medium text-white truncate" title={editedReport.location?.address}>
+                          {editedReport.location?.address || reportPreview.report.template_fields.address || 'Not specified'}
+                        </p>
+                      )}
+                    </div>
 
-                      {/* Corner markers */}
-                      <div className="absolute top-2 left-2 w-4 h-4 border-t border-l border-white/50"></div>
-                      <div className="absolute bottom-2 right-2 w-4 h-4 border-b border-r border-white/50"></div>
-                    </motion.div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Zip Code</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editedReport.location?.zip_code || reportPreview.report.template_fields.zip_code || ''}
+                          onChange={(e) => {
+                            const newZipCode = e.target.value;
+                            handleEditChange('location', 'zip_code', newZipCode);
+                            if (newZipCode && newZipCode.length >= 5) {
+                              fetchAuthoritiesByZipCode(newZipCode);
+                            }
+                          }}
+                          className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                          placeholder="Enter zip code"
+                          maxLength={5}
+                          pattern="\d{5}"
+                        />
+                      ) : (
+                        <p className="text-lg font-medium text-white font-mono tracking-wider">{editedReport.location?.zip_code || reportPreview.report.template_fields.zip_code || 'Not specified'}</p>
+                      )}
+                    </div>
+
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Map Reference</label>
+                      <a
+                        href={reportPreview.report.template_fields.map_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-900/20 text-blue-300 hover:bg-blue-900/40 hover:text-white transition-all border border-blue-500/30 group"
+                      >
+                        <Map className="w-4 h-4 group-hover:scale-110 transition-transform" /> View Geospatial Data
+                        <ChevronRight className="w-3 h-3 opacity-50" />
+                      </a>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {!isManualMode && (
+                  <motion.div
+                    className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200 mb-6 pb-2 border-b border-white/5">
+                      <ImageIcon className="w-5 h-5 text-blue-400" /> Evidence Analysis
+                    </h4>
+                    {reportPreview.image_content ? (
+                      <div className="relative rounded-xl overflow-hidden border border-gray-700 group max-w-md mx-auto">
+                        <img
+                          src={`data:image/jpeg;base64,${reportPreview.image_content}`}
+                          alt="Evidence"
+                          className="w-full h-auto object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 translate-y-full group-hover:translate-y-0 transition-transform">
+                          <span className="text-xs text-green-400 font-mono">HASH: {issueId.substring(0, 8)}... VALID</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400 text-center py-6 italic border border-dashed border-gray-700 rounded-xl">No imagery available</div>
+                    )}
+                  </motion.div>
+                )}
+
+                <motion.div
+                  className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.45 }}
+                >
+                  <div className="flex items-center justify-between mb-6 pb-2 border-b border-white/5">
+                    <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200">
+                      <Users className="w-5 h-5 text-blue-400" /> Responsible Authorities
+                    </h4>
+                    {!isGuest && (
+                      <motion.button
+                        type="button"
+                        className="flex items-center gap-2 text-xs bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 px-3 py-1.5 rounded-lg border border-purple-500/30 transition-all"
+                        onClick={() => setShowAuthoritySelector(true)}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Edit className="w-3 h-3" />  {selectedAuthorities.length > 0 ? "Edit Selection" : "Select Authorities"}
+                      </motion.button>
+                    )}
+                  </div>
+
+                  {showRecommendedAuthorities ? (
+                    <div className="grid gap-3">
+                      {editedReport.responsible_authorities_or_parties.map((authority, index) => (
+                        <div key={index} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                          <div className="w-10 h-10 rounded-full bg-blue-900/30 flex items-center justify-center border border-blue-500/30 text-blue-400">
+                            <Building className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h5 className="font-bold text-white text-sm">{authority.name}</h5>
+                            <p className="text-xs text-gray-400 uppercase tracking-wide">{authority.type}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
-                    <div className="text-gray-400 text-center py-6 italic border border-dashed border-gray-700 rounded-xl">No imagery available</div>
+                    <div className="flex flex-col items-center justify-center p-6 bg-yellow-900/5 rounded-xl border border-dashed border-yellow-700/30 text-center">
+                      <AlertCircle className="w-8 h-8 text-yellow-600/50 mb-3" />
+                      <p className="text-yellow-500/70 text-sm mb-4">Authority selection required.</p>
+                      {!isGuest && (
+                        <button
+                          onClick={() => setShowAuthoritySelector(true)}
+                          className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-200 text-sm px-6 py-2 rounded-full border border-yellow-500/30"
+                        >
+                          Open Matrix
+                        </button>
+                      )}
+                    </div>
                   )}
                 </motion.div>
-              )}
-
-              {!isManualMode && (
-                <motion.div
-                  className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200 mb-6 pb-2 border-b border-white/5">
-                    <Shield className="w-5 h-5 text-blue-400" /> AI Deep Analysis
-                  </h4>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="p-4 bg-red-900/10 border border-red-500/20 rounded-xl">
-                      <label className="text-xs font-bold text-red-400 uppercase tracking-wider mb-2 block">Potential Impact</label>
-                      <p className="text-sm text-gray-300 leading-relaxed">{editedReport.detailed_analysis.potential_consequences_if_ignored}</p>
-                    </div>
-
-                    <div className="p-4 bg-yellow-900/10 border border-yellow-500/20 rounded-xl">
-                      <label className="text-xs font-bold text-yellow-400 uppercase tracking-wider mb-2 block">Safety Risk Assessment</label>
-                      <p className="text-sm text-gray-300 leading-relaxed">{editedReport.detailed_analysis.public_safety_risk}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              <motion.div
-                className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.45 }}
-              >
-                <div className="flex items-center justify-between mb-6 pb-2 border-b border-white/5">
-                  <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200">
-                    <Users className="w-5 h-5 text-blue-400" /> Responsible Authorities
-                  </h4>
-                  <motion.button
-                    type="button"
-                    className="flex items-center gap-2 text-xs bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 px-3 py-1.5 rounded-lg border border-purple-500/30 transition-all"
-                    onClick={() => setShowAuthoritySelector(true)}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Edit className="w-3 h-3" />  {selectedAuthorities.length > 0 ? "Edit Selection" : "Select Authorities"}
-                  </motion.button>
-                </div>
-
-                {/* Adaptive Authority Display */}
-                {showRecommendedAuthorities ? (
-                  <div className="grid gap-3">
-                    {editedReport.responsible_authorities_or_parties.map((authority, index) => (
-                      <motion.div
-                        key={index}
-                        className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileHover={{ x: 5, backgroundColor: 'rgba(255,255,255,0.1)' }}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-blue-900/30 flex items-center justify-center border border-blue-500/30 text-blue-400">
-                          <Building className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h5 className="font-bold text-white text-sm">{authority.name}</h5>
-                          <p className="text-xs text-gray-400 uppercase tracking-wide">{authority.type}</p>
-                        </div>
-                      </motion.div>
-                    ))}
-                    {editedReport.responsible_authorities_or_parties.length === 0 && (
-                      <p className="text-gray-400 text-sm italic text-center py-4">No specific authorities recommended by AI.</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-6 bg-yellow-900/5 rounded-xl border border-dashed border-yellow-700/30 tex-center">
-                    <AlertCircle className="w-8 h-8 text-yellow-600/50 mb-3" />
-                    <p className="text-yellow-500/70 text-sm mb-4 text-center">
-                      {isManualMode
-                        ? "Manual Reporting Mode: Authority selection required."
-                        : "Low confidence analysis. Manual authority selection recommended."
-                      }
-                    </p>
-                    <motion.button
-                      onClick={() => setShowAuthoritySelector(true)}
-                      className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-200 text-sm px-6 py-2 rounded-full border border-yellow-500/30 flex items-center gap-2 transition-colors"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Users className="w-4 h-4" /> Open Authority Matrix
-                    </motion.button>
-                  </div>
-                )}
-              </motion.div>
+              </div>
             </div>
 
             {!showDeclineForm ? (
-              <div className="report-actions flex flex-wrap gap-4 mt-8 pb-8 border-t border-white/5 pt-8">
-                <motion.button
-                  className="flex-[2] py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-green-900/40 flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale"
-                  onClick={handleAccept}
-                  disabled={isLoading}
-                  whileHover={!isLoading ? { scale: 1.02, translateY: -2 } : {}}
-                  whileTap={!isLoading ? { scale: 0.98 } : {}}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader className="w-5 h-5 animate-spin" /> Process...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-5 h-5" /> CONFIRM & SEND REPORT
-                    </>
-                  )}
-                </motion.button>
+              <div className="report-actions flex flex-wrap gap-4 mt-8 pb-8 border-t border-white/5 pt-8 px-8">
+                {isGuest ? (
+                  <motion.button
+                    className="flex-[2] py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-3 text-lg"
+                    onClick={() => navigate('/login')}
+                    whileHover={{ scale: 1.02, translateY: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <LogIn className="w-6 h-6" /> LOGIN TO SUBMIT REPORT
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    className="flex-[2] py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-green-900/40 flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale text-lg"
+                    onClick={handleAccept}
+                    disabled={isLoading}
+                    whileHover={!isLoading ? { scale: 1.02, translateY: -2 } : {}}
+                    whileTap={!isLoading ? { scale: 0.98 } : {}}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader className="w-6 h-6 animate-spin" /> Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-6 h-6" /> CONFIRM & SEND REPORT
+                      </>
+                    )}
+                  </motion.button>
+                )}
 
                 <motion.button
                   className="flex-1 py-4 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-300 rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
                   onClick={handleDecline}
-                  disabled={isLoading}
+                  disabled={isLoading || isGuest}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -1401,7 +1435,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                 </motion.button>
 
                 <motion.button
-                  className="flex-none px-4 py-4 bg-gray-800/50 hover:bg-gray-700/50 text-gray-400 hover:text-white rounded-xl font-bold border border-gray-700 flex items-center justify-center gap-2 transition-colors"
+                  className="flex-none px-6 py-4 bg-gray-800/50 hover:bg-gray-700/50 text-gray-400 hover:text-white rounded-xl font-bold border border-gray-700 flex items-center justify-center gap-2 transition-colors"
                   onClick={resetForm}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -1410,6 +1444,7 @@ function UploadForm({ setStatus, fetchIssues }) {
                   <RotateCcw className="w-5 h-5" />
                 </motion.button>
               </div>
+
             ) : (
               <motion.form
                 onSubmit={handleDeclineSubmit}
@@ -1476,23 +1511,27 @@ function UploadForm({ setStatus, fetchIssues }) {
             <AnimatePresence>
               {successMessage && (
                 <motion.div
-                  className="success-message"
-                  initial={{ opacity: 0, y: 20 }}
+                  className="success-message fixed bottom-10 left-1/2 -translate-x-1/2 z-[200]"
+                  initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
+                  exit={{ opacity: 0, y: 20 }}
                 >
-                  <div className="success-icon-bg">
-                    <Check className="success-icon" />
+                  <div className="bg-green-500 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-green-400">
+                    <div className="bg-white/20 p-2 rounded-full">
+                      <Check className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-lg">Transmission Complete</p>
+                      <p className="text-white/80 text-sm">{successMessage}</p>
+                    </div>
                   </div>
-                  <p>{successMessage}</p>
                 </motion.div>
               )}
             </AnimatePresence>
-          </motion.div>
+          </motion.div >
         )}
-      </AnimatePresence>
+      </AnimatePresence >
 
-      {/* Authority Selector Modal */}
       {/* Authority Selector Modal */}
       <AnimatePresence>
         {showAuthoritySelector && (
@@ -1654,7 +1693,8 @@ function UploadForm({ setStatus, fetchIssues }) {
           </motion.div>
         )}
       </AnimatePresence>
-      {/* AI Scanner Overlay - Utilising Portal to break out of all containers */}
+
+      {/* AI Scanner Overlay */}
       {isLoading && createPortal(
         <AnimatePresence>
           <motion.div
@@ -1663,30 +1703,20 @@ function UploadForm({ setStatus, fetchIssues }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {/* Main Scanner Container */}
             <div className="relative w-80 h-96 border-2 border-green-500/50 rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(34,197,94,0.3)] bg-black">
-              {/* User Image Background (Dimmed) */}
               {preview && (
                 <img src={preview} alt="Scanning" className="absolute inset-0 w-full h-full object-cover opacity-30 grayscale" />
               )}
-
-              {/* Grid Overlay */}
               <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,0,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,0,0.1)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
-
-              {/* Laser Scanning Line */}
               <motion.div
                 className="absolute top-0 left-0 w-full h-1 bg-green-400 shadow-[0_0_20px_#4ade80]"
                 animate={{ top: ["0%", "100%", "0%"] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
               />
-
-              {/* HUD Corners */}
               <div className="absolute top-2 left-2 w-8 h-8 border-t-2 border-l-2 border-green-500"></div>
               <div className="absolute top-2 right-2 w-8 h-8 border-t-2 border-r-2 border-green-500"></div>
               <div className="absolute bottom-2 left-2 w-8 h-8 border-b-2 border-l-2 border-green-500"></div>
               <div className="absolute bottom-2 right-2 w-8 h-8 border-b-2 border-r-2 border-green-500"></div>
-
-              {/* Central Aim */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-48 h-48 border border-green-500/30 rounded-full flex items-center justify-center animate-pulse">
                   <div className="w-40 h-40 border border-green-500/20 rounded-full flex items-center justify-center animate-spin-slow">
@@ -1695,8 +1725,6 @@ function UploadForm({ setStatus, fetchIssues }) {
                 </div>
               </div>
             </div>
-
-            {/* Dynamic Status Text */}
             <div className="mt-8 text-center space-y-2">
               <motion.div
                 className="text-green-400 font-mono text-xl tracking-widest font-bold"
@@ -1705,10 +1733,7 @@ function UploadForm({ setStatus, fetchIssues }) {
               >
                 AI ANALYSIS IN PROGRESS
               </motion.div>
-
               <ScanningText />
-
-              {/* Progress Bar pretending to load */}
               <div className="w-64 h-1 bg-gray-800 rounded-full mt-4 overflow-hidden">
                 <motion.div
                   className="h-full bg-green-500"
@@ -1718,7 +1743,6 @@ function UploadForm({ setStatus, fetchIssues }) {
                 />
               </div>
             </div>
-
           </motion.div>
         </AnimatePresence>,
         document.body
@@ -1735,32 +1759,22 @@ function UploadForm({ setStatus, fetchIssues }) {
             onClick={() => setAlertModal({ ...alertModal, show: false })}
           >
             <motion.div
-              className={`bg-[#0f172a] border rounded-2xl w-full max-w-sm overflow-hidden flex flex-col shadow-2xl relative ${alertModal.type === 'error' ? 'border-red-500/30' : 'border-yellow-500/30'
-                }`}
+              className={`bg-[#0f172a] border rounded-2xl w-full max-w-sm overflow-hidden flex flex-col shadow-2xl relative ${alertModal.type === 'error' ? 'border-red-500/30' : 'border-yellow-500/30'}`}
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className={`p-6 text-center ${alertModal.type === 'error' ? 'bg-red-900/10' : 'bg-yellow-900/10'}`}>
-                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${alertModal.type === 'error' ? 'bg-red-500/20 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)]' : 'bg-yellow-500/20 text-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.3)]'
-                  }`}>
-                  {alertModal.type === 'error' ? (
-                    <Shield className="w-8 h-8" />
-                  ) : (
-                    <AlertCircle className="w-8 h-8" />
-                  )}
+                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${alertModal.type === 'error' ? 'bg-red-500/20 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)]' : 'bg-yellow-500/20 text-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.3)]'}`}>
+                  {alertModal.type === 'error' ? <Shield className="w-8 h-8" /> : <AlertCircle className="w-8 h-8" />}
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">{alertModal.title}</h3>
                 <p className="text-gray-300 text-sm leading-relaxed">{alertModal.message}</p>
               </div>
-
               <div className="p-4 bg-black/20 border-t border-white/5">
                 <motion.button
-                  className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition-all ${alertModal.type === 'error'
-                    ? 'bg-red-600 hover:bg-red-500 shadow-red-900/30'
-                    : 'bg-yellow-600 hover:bg-yellow-500 shadow-yellow-900/30'
-                    }`}
+                  className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition-all ${alertModal.type === 'error' ? 'bg-red-600 hover:bg-red-500 shadow-red-900/30' : 'bg-yellow-600 hover:bg-yellow-500 shadow-yellow-900/30'}`}
                   onClick={() => setAlertModal({ ...alertModal, show: false })}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -1772,7 +1786,7 @@ function UploadForm({ setStatus, fetchIssues }) {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </motion.div >
   );
 }
 
