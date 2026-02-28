@@ -35,8 +35,8 @@ export default function AdminDashboard() {
   const [editFormData, setEditFormData] = useState({ issue_type: '', summary: '', confidence: 0 });
 
   // View Mode State
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'reviews'
-  const [viewMode, setViewMode] = useState('all'); // 'all' or 'assigned'
+  const [activeTab, setActiveTab] = useState(() => hasPermission('view_stats') ? 'overview' : 'reviews');
+  const [viewMode, setViewMode] = useState(() => hasPermission('view_all_issues') ? 'all' : 'assigned');
 
   // Notifications State
   const [notificationList, setNotificationList] = useState([]);
@@ -45,6 +45,9 @@ export default function AdminDashboard() {
 
   // Bulk Selection State
   const [selectedIssues, setSelectedIssues] = useState(new Set());
+
+  // Real analytics data for stats
+  const [analyticsData, setAnalyticsData] = useState(null);
 
   // Memoized toggle function to prevent re-renders
   const toggleIssueSelection = useCallback((id) => {
@@ -104,6 +107,12 @@ export default function AdminDashboard() {
     } catch (e) { console.error("Audio fail", e); }
   };
 
+  // Ref to track viewMode for the interval to avoid stale closures
+  const viewModeRef = React.useRef(viewMode);
+  useEffect(() => {
+    viewModeRef.current = viewMode;
+  }, [viewMode]);
+
   useEffect(() => {
     const token = localStorage.getItem('adminToken');
     if (!token) {
@@ -111,9 +120,33 @@ export default function AdminDashboard() {
       return;
     }
     fetchReviews();
-    const interval = setInterval(fetchReviews, 30000); // 30s polling
+    // Fetch real analytics
+    apiClient.getDashboardAnalytics().then(d => setAnalyticsData(d)).catch(() => { });
+    const interval = setInterval(() => {
+      // Use ref to get latest viewMode in interval
+      const currentMode = viewModeRef.current;
+      if (currentMode === 'assigned') {
+        apiClient.getMyAssignedIssues().then(resp => {
+          setReviews(resp.issues || []);
+        }).catch(() => { });
+      } else if (currentMode === 'resolved') {
+        apiClient.getResolvedReviews().then(data => {
+          setReviews(data || []);
+        }).catch(() => { });
+      } else {
+        fetchReviews(); // Default All view
+      }
+      apiClient.getDashboardAnalytics().then(d => setAnalyticsData(d)).catch(() => { });
+    }, 30000); // 30s polling
     return () => clearInterval(interval);
-  }, [navigate]);
+  }, [navigate]); // Only on mount/navigate change
+
+  useEffect(() => {
+    // If current tab is restricted for this user, switch to an allowed one
+    if (activeTab === 'overview' && !hasPermission('view_stats')) {
+      setActiveTab('reviews');
+    }
+  }, [activeTab]);
 
   const fetchReviews = async () => {
     try {
@@ -435,25 +468,29 @@ export default function AdminDashboard() {
 
         {/* Tab Navigation */}
         <div className="flex items-center gap-4 border-b border-gray-800">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'overview'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-gray-500 hover:text-gray-300'
-              }`}
-          >
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('reviews')}
-            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'reviews'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-gray-500 hover:text-gray-300'
-              }`}
-          >
-            Reviews
-            <span className="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded-full text-xs">{reviews.length}</span>
-          </button>
+          {hasPermission('view_stats') && (
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'overview'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-300'
+                }`}
+            >
+              Overview
+            </button>
+          )}
+          {hasPermission('view_reviews') && (
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'reviews'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-gray-500 hover:text-gray-300'
+                }`}
+            >
+              Reviews
+              <span className="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded-full text-xs">{reviews.length}</span>
+            </button>
+          )}
         </div>
 
         {/* Tab Content */}
@@ -462,36 +499,32 @@ export default function AdminDashboard() {
             <StatsGrid>
               <StatsCard
                 title="Total Reviews"
-                value={reviews.length}
-                change="+12%"
+                value={analyticsData?.counts?.total || reviews.length}
+                change={analyticsData ? `${analyticsData.counts.total}` : '...'}
                 trend="up"
                 icon={FileText}
                 color="blue"
               />
               <StatsCard
                 title="Pending"
-                value={reviews.filter(r => r.status === 'pending_review' || r.status === 'pending').length}
-                change="-5%"
-                trend="down"
+                value={analyticsData?.counts?.pending || reviews.filter(r => r.status === 'pending_review' || r.status === 'pending' || r.status === 'needs_review').length}
+                change={analyticsData ? `${analyticsData.counts.pending} active` : '...'}
+                trend={analyticsData?.counts?.pending > 0 ? 'up' : 'down'}
                 icon={Clock}
                 color="orange"
               />
               <StatsCard
                 title="Approved Today"
-                value={reviews.filter(r => r.status === 'approved').length}
-                change="+8%"
+                value={analyticsData?.counts?.approved_today || 0}
+                change={analyticsData ? `${analyticsData.counts.approved} total` : '...'}
                 trend="up"
                 icon={CheckCircle2}
                 color="green"
               />
               <StatsCard
                 title="High Confidence"
-                value={reviews.filter(r => {
-                  const report = r.report?.report || r.report || {};
-                  const aiData = report.unified_report || report.issue_overview || {};
-                  return (aiData.confidence_percent || 0) > 80;
-                }).length}
-                change="+15%"
+                value={analyticsData?.counts?.high_confidence || 0}
+                change={analyticsData ? `>${'80%'} confidence` : '...'}
                 trend="up"
                 icon={TrendingUp}
                 color="purple"
@@ -506,33 +539,39 @@ export default function AdminDashboard() {
             {
               hasPermission('view_assigned_issues') && (
                 <div className="flex gap-2 mb-6 bg-gray-900/50 p-1 rounded-lg w-fit">
-                  <button
-                    onClick={() => switchViewMode('all')}
-                    className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'all'
-                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
-                      : 'text-gray-400 hover:text-white'
-                      }`}
-                  >
-                    All Issues
-                  </button>
-                  <button
-                    onClick={() => switchViewMode('assigned')}
-                    className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'assigned'
-                      ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20'
-                      : 'text-gray-400 hover:text-white'
-                      }`}
-                  >
-                    Assigned to Me
-                  </button>
-                  <button
-                    onClick={() => switchViewMode('resolved')}
-                    className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'resolved'
-                      ? 'bg-green-600 text-white shadow-lg shadow-green-600/20'
-                      : 'text-gray-400 hover:text-white'
-                      }`}
-                  >
-                    Resolved History
-                  </button>
+                  {hasPermission('view_all_issues') && (
+                    <button
+                      onClick={() => switchViewMode('all')}
+                      className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'all'
+                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                        : 'text-gray-400 hover:text-white'
+                        }`}
+                    >
+                      All Issues
+                    </button>
+                  )}
+                  {hasPermission('view_assigned_issues') && (
+                    <button
+                      onClick={() => switchViewMode('assigned')}
+                      className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'assigned'
+                        ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20'
+                        : 'text-gray-400 hover:text-white'
+                        }`}
+                    >
+                      Assigned to Me
+                    </button>
+                  )}
+                  {hasPermission('view_all_issues') && (
+                    <button
+                      onClick={() => switchViewMode('resolved')}
+                      className={`px-6 py-2 rounded-lg transition-all ${viewMode === 'resolved'
+                        ? 'bg-green-600 text-white shadow-lg shadow-green-600/20'
+                        : 'text-gray-400 hover:text-white'
+                        }`}
+                    >
+                      Resolved History
+                    </button>
+                  )}
                 </div>
               )
             }
@@ -656,7 +695,7 @@ export default function AdminDashboard() {
                   <div className="bg-black/40 border border-gray-800 rounded-xl p-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Assigned Authority</span>
-                      {!editAuthority && (
+                      {!editAuthority && hasPermission('edit_report') && (
                         <button
                           onClick={() => setEditAuthority(true)}
                           className="text-xs flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors"
@@ -767,7 +806,7 @@ export default function AdminDashboard() {
                   ) : (
                     <CheckCircle2 className="w-4 h-4" />
                   )}
-                  Confirm & Send
+                  {hasPermission('send_to_authority') ? 'Confirm & Send' : 'Confirm & Queue'}
                 </button>
               </div>
             </div>
@@ -930,7 +969,7 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                         </div>
-                        {detailModal.reporter_email && (
+                        {detailModal.reporter_email && hasPermission('manage_users') && (
                           <button
                             onClick={() => handleDeactivateUser(detailModal.reporter_email, detailModal._id || detailModal.issue_id)}
                             className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded text-xs transition-colors flex items-center gap-1"
@@ -950,7 +989,8 @@ export default function AdminDashboard() {
                       <select
                         value={editFormData.issue_type}
                         onChange={(e) => setEditFormData({ ...editFormData, issue_type: e.target.value })}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none capitalize"
+                        disabled={!hasPermission('edit_report')}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none capitalize disabled:opacity-75 disabled:cursor-not-allowed"
                       >
                         {[
                           'pothole', 'road_damage', 'broken_streetlight', 'garbage',
@@ -985,8 +1025,9 @@ export default function AdminDashboard() {
                         min="0"
                         max="100"
                         value={editFormData.confidence}
+                        disabled={!hasPermission('edit_report')}
                         onChange={(e) => setEditFormData({ ...editFormData, confidence: Number(e.target.value) })}
-                        className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                        className="w-full h-2 rounded-lg appearance-none cursor-pointer disabled:cursor-not-allowed"
                         style={{
                           background: (() => {
                             const val = editFormData.confidence;
@@ -1004,20 +1045,23 @@ export default function AdminDashboard() {
                       <label className="text-sm font-semibold text-gray-400 mb-2 block">Summary / Description</label>
                       <textarea
                         value={editFormData.summary}
+                        disabled={!hasPermission('edit_report')}
                         onChange={(e) => setEditFormData({ ...editFormData, summary: e.target.value })}
-                        className="w-full h-32 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
+                        className="w-full h-32 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none disabled:opacity-75 disabled:cursor-not-allowed"
                         placeholder="Enter detailed description of the issue..."
                       />
                     </div>
 
                     <div className="flex gap-4 pt-4 border-t border-gray-800">
-                      <button
-                        onClick={handleSaveChanges}
-                        disabled={processingId === (detailModal._id || detailModal.issue_id)}
-                        className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                      >
-                        <Save className="w-4 h-4" /> Save Changes
-                      </button>
+                      {hasPermission('edit_report') && (
+                        <button
+                          onClick={handleSaveChanges}
+                          disabled={processingId === (detailModal._id || detailModal.issue_id)}
+                          className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                        >
+                          <Save className="w-4 h-4" /> Save Changes
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1034,8 +1078,9 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-500">Set Status:</span>
                   <select
-                    className="bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 outline-none"
+                    className="bg-gray-800 border border-gray-700 text-gray-300 text-xs rounded px-2 py-1 outline-none disabled:opacity-50"
                     value={detailModal.status || 'needs_review'}
+                    disabled={!canActOnIssue(detailModal)}
                     onChange={(e) => handleSetStatus(detailModal._id || detailModal.issue_id, e.target.value)}
                   >
                     <option value="needs_review">Needs Review</option>
@@ -1045,29 +1090,32 @@ export default function AdminDashboard() {
                     <option value="duplicate">Duplicate</option>
                   </select>
                 </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      const id = detailModal._id || detailModal.issue_id;
-                      if (window.confirm('Are you sure you want to decline this report?')) {
-                        handleDecline(id);
+                {canActOnIssue(detailModal) && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        const id = detailModal._id || detailModal.issue_id;
+                        if (window.confirm('Are you sure you want to decline this report?')) {
+                          handleDecline(id);
+                          closeDetailModal();
+                        }
+                      }}
+                      className="px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg font-semibold flex items-center gap-2 transition-all"
+                    >
+                      <XCircle className="w-4 h-4" /> Decline Report
+                    </button>
+                    <button
+                      onClick={() => {
+                        openApproveModal(detailModal);
                         closeDetailModal();
-                      }
-                    }}
-                    className="px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg font-semibold flex items-center gap-2 transition-all"
-                  >
-                    <XCircle className="w-4 h-4" /> Decline Report
-                  </button>
-                  <button
-                    onClick={() => {
-                      openApproveModal(detailModal);
-                      closeDetailModal();
-                    }}
-                    className="px-6 py-2 bg-green-500 hover:bg-green-400 text-black font-bold rounded-lg shadow-lg shadow-green-900/20 flex items-center gap-2 transition-all"
-                  >
-                    <CheckCircle2 className="w-4 h-4" /> Approve & Assign
-                  </button>
-                </div>
+                      }}
+                      className="px-6 py-2 bg-green-500 hover:bg-green-400 text-black font-bold rounded-lg shadow-lg shadow-green-900/20 flex items-center gap-2 transition-all"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      {hasPermission('send_to_authority') ? 'Approve & Send' : 'Verify & Queue'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

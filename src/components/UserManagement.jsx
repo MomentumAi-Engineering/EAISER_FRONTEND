@@ -6,6 +6,7 @@ import {
     Users, Search, ShieldAlert, CheckCircle2,
     XCircle, Ban, AlertTriangle, Loader2
 } from 'lucide-react';
+import { hasPermission } from '../utils/permissions';
 
 export default function UserManagement() {
     const [users, setUsers] = useState([]);
@@ -14,6 +15,12 @@ export default function UserManagement() {
     const [searchTerm, setSearchTerm] = useState('');
     const [processingId, setProcessingId] = useState(null);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!hasPermission('view_users')) {
+            navigate(adminPath('/dashboard'));
+        }
+    }, [navigate]);
 
     useEffect(() => {
         fetchUsers();
@@ -191,31 +198,33 @@ export default function UserManagement() {
                                         </td>
 
                                         <td className="p-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleToggleStatus(user)}
-                                                    disabled={processingId === user.id}
-                                                    className={`px-3 py-1.5 rounded text-xs font-medium transition flex items-center gap-2 ${user.is_active
-                                                        ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30'
-                                                        : 'bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30'
-                                                        }`}
-                                                >
-                                                    {user.is_active ? (
-                                                        <><Ban className="w-3 h-3" /> Block</>
-                                                    ) : (
-                                                        <><CheckCircle2 className="w-3 h-3" /> Unblock</>
-                                                    )}
-                                                </button>
+                                            {hasPermission('manage_users') && (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handleToggleStatus(user)}
+                                                        disabled={processingId === user.id}
+                                                        className={`px-3 py-1.5 rounded text-xs font-medium transition flex items-center gap-2 ${user.is_active
+                                                            ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30'
+                                                            : 'bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30'
+                                                            }`}
+                                                    >
+                                                        {user.is_active ? (
+                                                            <><Ban className="w-3 h-3" /> Block</>
+                                                        ) : (
+                                                            <><CheckCircle2 className="w-3 h-3" /> Unblock</>
+                                                        )}
+                                                    </button>
 
-                                                <button
-                                                    onClick={() => handleDelete(user)}
-                                                    disabled={processingId === user.id}
-                                                    className="px-3 py-1.5 rounded text-xs font-medium bg-gray-800 hover:bg-red-900/50 text-gray-400 hover:text-red-400 border border-gray-700 hover:border-red-900 transition"
-                                                    title="Permanently Delete User"
-                                                >
-                                                    <XCircle className="w-3 h-3" />
-                                                </button>
-                                            </div>
+                                                    <button
+                                                        onClick={() => handleDelete(user)}
+                                                        disabled={processingId === user.id}
+                                                        className="px-3 py-1.5 rounded text-xs font-medium bg-gray-800 hover:bg-red-900/50 text-gray-400 hover:text-red-400 border border-gray-700 hover:border-red-900 transition"
+                                                        title="Permanently Delete User"
+                                                    >
+                                                        <XCircle className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

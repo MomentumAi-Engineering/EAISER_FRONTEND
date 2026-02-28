@@ -606,6 +606,52 @@ class ApiClient {
       }
     });
   }
+
+  async getDashboardAnalytics() {
+    return this.request('/api/admin/review/analytics/dashboard', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+    });
+  }
+
+  async getWarRoomData(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/api/admin/review/analytics/warroom?${query}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+    });
+  }
+
+  async changePassword(currentPassword, newPassword) {
+    return this.request('/api/admin/review/change-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+    });
+  }
+
+  async setup2FA(email) {
+    return this.request('/api/admin/review/setup-2fa', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ email })
+    });
+  }
+
+  async disable2FA() {
+    return this.request('/api/admin/review/disable-2fa', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      }
+    });
+  }
+
   async updateIssueReport(issue_id, summary, issue_type, confidence) {
     const payload = { issue_id };
     if (summary) payload.summary = summary;
@@ -730,6 +776,25 @@ class ApiClient {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, notes })
+    });
+  }
+
+  // --- System Settings ---
+
+  async getMaintenanceStatus() {
+    return this.request('/api/admin/settings/maintenance-status', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+    });
+  }
+
+  async toggleMaintenanceMode(enabled) {
+    return this.request('/api/admin/settings/maintenance-toggle', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ enabled })
     });
   }
 }

@@ -5,6 +5,7 @@ import apiClient from '../services/apiClient';
 import DashboardLayout from './DashboardLayout';
 import { adminPath } from '../utils/adminPaths';
 import { Shield, Plus, MoreVertical, Search, Lock, User, Trash2, CheckCircle2, XCircle } from 'lucide-react';
+import { hasPermission, hasRole, hasAnyRole } from '../utils/permissions';
 
 export default function TeamManagement() {
     const navigate = useNavigate();
@@ -13,6 +14,12 @@ export default function TeamManagement() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [currentAdmin, setCurrentAdmin] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        if (!hasPermission('view_team')) {
+            navigate(adminPath('/dashboard'));
+        }
+    }, [navigate]);
 
     // New admin form
     const [newAdmin, setNewAdmin] = useState({
@@ -107,12 +114,14 @@ export default function TeamManagement() {
                         </h1>
                         <p className="text-gray-500 mt-1">Manage access control and team roles</p>
                     </div>
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all"
-                    >
-                        <Plus className="w-5 h-5" /> Invide Member
-                    </button>
+                    {hasPermission('create_team_member') && (
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all"
+                        >
+                            <Plus className="w-5 h-5" /> Invite Member
+                        </button>
+                    )}
                 </div>
 
                 {/* Filters & Stats */}
@@ -163,26 +172,28 @@ export default function TeamManagement() {
                                     </span>
                                 </div>
 
-                                <div className="pt-4 border-t border-gray-800 flex gap-2">
-                                    {admin.is_active ? (
-                                        <button
-                                            onClick={() => handleDeactivate(admin.id || admin._id)}
-                                            className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-sm font-medium transition-colors"
-                                        >
-                                            Deactivate
+                                {hasPermission('manage_team') && (
+                                    <div className="pt-4 border-t border-gray-800 flex gap-2">
+                                        {admin.is_active ? (
+                                            <button
+                                                onClick={() => handleDeactivate(admin.id || admin._id)}
+                                                className="flex-1 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-sm font-medium transition-colors"
+                                            >
+                                                Deactivate
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleReactivate(admin.id || admin._id)}
+                                                className="flex-1 py-2 rounded-lg bg-green-900/20 hover:bg-green-900/30 text-green-400 text-sm font-medium transition-colors"
+                                            >
+                                                Reactivate
+                                            </button>
+                                        )}
+                                        <button className="p-2 rounded-lg bg-gray-800 hover:bg-red-900/20 text-gray-400 hover:text-red-400 transition-colors">
+                                            <Trash2 className="w-4 h-4" />
                                         </button>
-                                    ) : (
-                                        <button
-                                            onClick={() => handleReactivate(admin.id || admin._id)}
-                                            className="flex-1 py-2 rounded-lg bg-green-900/20 hover:bg-green-900/30 text-green-400 text-sm font-medium transition-colors"
-                                        >
-                                            Reactivate
-                                        </button>
-                                    )}
-                                    <button className="p-2 rounded-lg bg-gray-800 hover:bg-red-900/20 text-gray-400 hover:text-red-400 transition-colors">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -254,15 +265,15 @@ export default function TeamManagement() {
                                     value={newAdmin.role}
                                     onChange={e => setNewAdmin({ ...newAdmin, role: e.target.value })}
                                 >
-                                    <option value="admin">Admin</option>
-                                    <option value="super_admin">Super Admin</option>
                                     <option value="team_member">Team Member</option>
                                     <option value="viewer">Viewer</option>
+                                    {(hasPermission('create_admin') || hasRole('super_admin')) && <option value="admin">Admin</option>}
+                                    {hasRole('super_admin') && <option value="super_admin">Super Admin</option>}
                                 </select>
                             </div>
 
                             <button className="w-full py-3 mt-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all">
-                                Send Investation
+                                Send Invitation
                             </button>
                         </form>
                     </div>

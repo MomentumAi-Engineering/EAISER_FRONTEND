@@ -23,6 +23,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/apiClient';
 import { adminPath } from '../utils/adminPaths';
+import { hasPermission } from '../utils/permissions';
 
 /**
  * DashboardLayout Component
@@ -48,19 +49,22 @@ export default function DashboardLayout({ children, currentPage = 'dashboard' })
     const adminName = adminData.name || 'Admin';
     const adminRole = adminData.role || 'admin';
 
-    // Navigation items — use adminPath() for subdomain-aware routing
-    const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: adminPath('/dashboard') },
-        { id: 'warroom', label: 'Live War Room', icon: Globe, path: adminPath('/warroom'), badge: 'LIVE' },
-        { id: 'reviews', label: 'Reviews', icon: FileText, path: adminPath('/dashboard'), badge: notifications > 99 ? '99+' : (notifications > 0 ? notifications : null) },
-        { id: 'users', label: 'Users', icon: Users, path: adminPath('/users') },
-        { id: 'team', label: 'Team', icon: Shield, path: adminPath('/team') },
-        { id: 'stats', label: 'Analytics', icon: BarChart3, path: adminPath('/stats') },
-        { id: 'audit', label: 'Audit Log', icon: History, path: adminPath('/audit') },
-        { id: 'mapping', label: 'Mapping', icon: MapPin, path: adminPath('/mapping') },
-        { id: 'authorities', label: 'Authorities', icon: Building2, path: adminPath('/authorities') },
-        { id: 'settings', label: 'Settings', icon: Settings, path: adminPath('/settings') },
+    // Navigation items — filtered by role-based permissions
+    const allNavItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: adminPath('/dashboard'), permission: 'view_dashboard' },
+        { id: 'warroom', label: 'Live War Room', icon: Globe, path: adminPath('/warroom'), badge: 'LIVE', permission: 'view_warroom' },
+        { id: 'reviews', label: 'Reviews', icon: FileText, path: adminPath('/dashboard'), badge: notifications > 99 ? '99+' : (notifications > 0 ? notifications : null), permission: 'view_reviews' },
+        { id: 'users', label: 'Users', icon: Users, path: adminPath('/users'), permission: 'view_users' },
+        { id: 'team', label: 'Team', icon: Shield, path: adminPath('/team'), permission: 'view_team' },
+        { id: 'stats', label: 'Analytics', icon: BarChart3, path: adminPath('/stats'), permission: 'view_analytics' },
+        { id: 'audit', label: 'Audit Log', icon: History, path: adminPath('/audit'), permission: 'view_audit' },
+        { id: 'mapping', label: 'Mapping', icon: MapPin, path: adminPath('/mapping'), permission: 'view_mapping' },
+        { id: 'authorities', label: 'Authorities', icon: Building2, path: adminPath('/authorities'), permission: 'view_authorities' },
+        { id: 'settings', label: 'Settings', icon: Settings, path: adminPath('/settings'), permission: 'view_settings' },
     ];
+
+    // Filter nav items based on current admin's role permissions
+    const navItems = allNavItems.filter(item => hasPermission(item.permission));
 
     // Sound helper
     const playNotificationSound = () => {

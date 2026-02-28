@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie, Sector, LineChart, Line, ComposedChart } from 'recharts';
-import { TrendingUp, TrendingDown, Clock, Activity, Zap, Brain } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, ComposedChart } from 'recharts';
+import { TrendingUp, TrendingDown, Clock, Brain, MapPin, Flame, Activity } from 'lucide-react';
+import apiClient from '../services/apiClient';
 
 const Card = ({ title, children, className = '' }) => (
     <div className={`bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-xl p-5 flex flex-col ${className}`}>
@@ -15,48 +16,73 @@ const Card = ({ title, children, className = '' }) => (
 );
 
 export default function DashboardAnalytics({ reviews }) {
-    // Prediction Data State
-    const [predictionData, setPredictionData] = React.useState([]);
-    const [trendInfo, setTrendInfo] = React.useState({ pct: 0, dir: 'up' });
+    const [analytics, setAnalytics] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
 
     React.useEffect(() => {
-        const fetchForecast = async () => {
+        const fetchAnalytics = async () => {
             try {
-                // Fetch from REAL AI Service
-                const data = await apiClient.get('/admin/review/analytics/forecast');
-                // Note: Using generic get if specific method not in client, checking below
-                // If apiClient doesn't have generic get, we'll need to add it or use fetch. 
-                // Assuming apiClient has standard methods. If not, I will add it.
-
-                if (data && data.chart_data) {
-                    setPredictionData(data.chart_data);
-                    setTrendInfo({ pct: data.trend_percentage, dir: data.trend_direction });
-                }
+                const data = await apiClient.getDashboardAnalytics();
+                setAnalytics(data);
             } catch (err) {
-                console.error("AI Forecast failed", err);
+                console.error("Analytics fetch failed", err);
             } finally {
                 setLoading(false);
             }
         };
-
-        fetchForecast();
+        fetchAnalytics();
+        // Refresh every 2 minutes
+        const interval = setInterval(fetchAnalytics, 120000);
+        return () => clearInterval(interval);
     }, []);
 
+    // Use REAL data from backend, fallback to computed from reviews prop
+    const counts = analytics?.counts || {};
+    const chartData = analytics?.chart_data || [];
+    const trendPct = analytics?.trend_percentage || 0;
+    const trendDir = analytics?.trend_direction || 'up';
+    const avgResolution = analytics?.avg_resolution_hours || 0;
+    const systemLoad = analytics?.system_load || 0;
+    const hotspots = analytics?.hotspots || [];
+    const recentSubmissions = analytics?.recent_submissions_1h || 0;
+
+    // Pie chart from REAL counts
     const distributionData = [
-        { name: 'Pending', value: reviews.filter(r => r.status === 'pending_review' || r.status === 'needs_review').length || 15, color: '#f59e0b' },
-        { name: 'Resolved', value: reviews.filter(r => ['approved', 'resolved', 'completed', 'submitted'].includes(r.status)).length || 45, color: '#10b981' },
-        { name: 'Rejected', value: reviews.filter(r => ['rejected', 'declined'].includes(r.status)).length || 10, color: '#ef4444' },
+        { name: 'Pending', value: counts.pending || reviews.filter(r => r.status === 'pending_review' || r.status === 'needs_review' || r.status === 'pending').length, color: '#f59e0b' },
+        { name: 'Approved', value: counts.approved || reviews.filter(r => ['approved', 'submitted'].includes(r.status)).length, color: '#10b981' },
+        { name: 'Rejected', value: counts.rejected || reviews.filter(r => ['rejected', 'declined'].includes(r.status)).length, color: '#ef4444' },
     ];
+
+    // Format resolution time nicely
+    const formatResolution = (hours) => {
+        if (hours === 0) return 'N/A';
+        if (hours < 1) return `${Math.round(hours * 60)}m`;
+        if (hours < 24) return `${hours}h`;
+        return `${Math.round(hours / 24)}d`;
+    };
+
+    if (loading) {
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 bg-gray-900/50 border border-gray-800 rounded-xl p-5 h-[280px] animate-pulse" />
+                    <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 h-[280px] animate-pulse" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[1, 2, 3, 4].map(i => <div key={i} className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 h-[200px] animate-pulse" />)}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            {/* Top Row: AI Prediction */}
+            {/* Top Row: AI Prediction + Status */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card title={<><Brain className="w-4 h-4 text-purple-500" /> AI Issue Forecast</>} className="lg:col-span-2">
                     <div className="flex-1 w-full min-h-0">
                         <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart data={predictionData}>
+                            <ComposedChart data={chartData}>
                                 <defs>
                                     <linearGradient id="colorPredicted" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2} />
@@ -75,8 +101,8 @@ export default function DashboardAnalytics({ reviews }) {
                         </ResponsiveContainer>
                     </div>
                     <div className="mt-2 text-xs text-gray-500 text-center">
-                        AI Model v2.1 predicts <span className={trendInfo.dir === 'up' ? "text-purple-400 font-bold" : "text-green-400 font-bold"}>
-                            {trendInfo.dir === 'up' ? '+' : ''}{trendInfo.pct}% {trendInfo.dir === 'up' ? 'surge' : 'drop'}
+                        AI Model v2.1 predicts <span className={trendDir === 'up' ? "text-purple-400 font-bold" : "text-green-400 font-bold"}>
+                            {trendDir === 'up' ? '+' : ''}{trendPct}% {trendDir === 'up' ? 'surge' : 'drop'}
                         </span> in reports this week.
                     </div>
                 </Card>
@@ -113,39 +139,76 @@ export default function DashboardAnalytics({ reviews }) {
                 </Card>
             </div>
 
-            {/* Bottom: Real-Time Metrics */}
+            {/* Bottom Row: Real Metrics + Hotspots */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Avg Resolution Time - REAL */}
                 <Card title="Avg Resolution Time">
                     <div className="flex flex-col items-center justify-center h-full">
                         <div className="relative w-32 h-32 flex items-center justify-center">
                             <Clock className="w-10 h-10 text-blue-500 animate-pulse" />
                             <svg className="absolute inset-0 w-full h-full transform -rotate-90">
                                 <circle cx="64" cy="64" r="56" stroke="#1f2937" strokeWidth="8" fill="none" />
-                                <circle cx="64" cy="64" r="56" stroke="#3b82f6" strokeWidth="8" fill="none" strokeDasharray="351" strokeDashoffset="100" strokeLinecap="round" />
+                                <circle cx="64" cy="64" r="56" stroke="#3b82f6" strokeWidth="8" fill="none"
+                                    strokeDasharray="351"
+                                    strokeDashoffset={351 - (351 * Math.min(avgResolution / 48, 1))}
+                                    strokeLinecap="round" />
                             </svg>
                         </div>
                         <div className="mt-4 text-center">
-                            <span className="text-3xl font-bold text-white">4.2h</span>
-                            <p className="text-xs text-green-400 mt-1 flex items-center justify-center gap-1">
-                                <TrendingDown className="w-3 h-3" /> 12% faster
-                            </p>
+                            <span className="text-3xl font-bold text-white">{formatResolution(avgResolution)}</span>
+                            <p className="text-xs text-gray-500 mt-1">From real resolved issues</p>
                         </div>
                     </div>
                 </Card>
 
-                <Card title="System Load">
-                    <div className="flex-1 w-full min-h-0">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={[
-                                { val: 30 }, { val: 45 }, { val: 35 }, { val: 50 }, { val: 70 }, { val: 55 }, { val: 40 }
-                            ]}>
-                                <Line type="monotone" dataKey="val" stroke="#f59e0b" strokeWidth={2} dot={false} />
-                            </LineChart>
-                        </ResponsiveContainer>
+                {/* System Activity - REAL */}
+                <Card title="System Activity">
+                    <div className="flex flex-col items-center justify-center h-full">
+                        <div className="relative w-32 h-32 flex items-center justify-center">
+                            <Activity className="w-10 h-10 text-amber-500" />
+                            <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+                                <circle cx="64" cy="64" r="56" stroke="#1f2937" strokeWidth="8" fill="none" />
+                                <circle cx="64" cy="64" r="56" stroke="#f59e0b" strokeWidth="8" fill="none"
+                                    strokeDasharray="351"
+                                    strokeDashoffset={351 - (351 * systemLoad / 100)}
+                                    strokeLinecap="round" />
+                            </svg>
+                        </div>
+                        <div className="mt-4 text-center">
+                            <span className="text-3xl font-bold text-amber-500">{systemLoad}%</span>
+                            <p className="text-xs text-gray-500 mt-1">{recentSubmissions} submissions last hour</p>
+                        </div>
                     </div>
-                    <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs text-gray-400">Current Load</span>
-                        <span className="text-lg font-bold text-amber-500">42%</span>
+                </Card>
+
+                {/* Top Hotspot Locations - REAL */}
+                <Card title={<><MapPin className="w-4 h-4 text-red-500" /> Top Hotspots</>} className="lg:col-span-2">
+                    <div className="space-y-2 overflow-y-auto max-h-[220px] pr-2">
+                        {hotspots.length === 0 ? (
+                            <div className="text-center text-gray-500 py-8">
+                                <MapPin className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                                <p className="text-sm">No hotspot data yet</p>
+                            </div>
+                        ) : (
+                            hotspots.map((spot, i) => (
+                                <div key={i} className="flex items-center justify-between bg-gray-800/50 rounded-lg px-3 py-2 group hover:bg-gray-800 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
+                                            ${i === 0 ? 'bg-red-500/20 text-red-400' : i === 1 ? 'bg-orange-500/20 text-orange-400' : 'bg-gray-700 text-gray-300'}`}>
+                                            #{i + 1}
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-medium text-white truncate max-w-[200px]">{spot.location}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Flame className={`w-3 h-3 ${spot.count >= 5 ? 'text-red-500' : 'text-orange-400'}`} />
+                                        <span className="text-sm font-bold text-white">{spot.count}</span>
+                                        <span className="text-xs text-gray-500">reports</span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </Card>
             </div>
