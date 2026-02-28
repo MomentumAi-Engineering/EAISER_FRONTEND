@@ -5,14 +5,28 @@ const ReportContext = createContext();
 
 export const useReportContext = () => useContext(ReportContext);
 
+const SESSION_KEY = 'eaiser_pending_report';
+
 export const ReportProvider = ({ children }) => {
     const [loading, setLoading] = useState(false);
-    const [reportResult, setReportResult] = useState(null);
+    const [reportResult, setReportResult] = useState(() => {
+        // Restore report from sessionStorage on mount (survives login redirect)
+        try {
+            const saved = sessionStorage.getItem(SESSION_KEY);
+            return saved ? JSON.parse(saved) : null;
+        } catch { return null; }
+    });
     const [error, setError] = useState(null);
     const [inProgress, setInProgress] = useState(false);
 
-    // You can extend this to store form data if needed to restore the form state
-    // const [formData, setFormData] = useState({});
+    // Persist reportResult to sessionStorage whenever it changes
+    useEffect(() => {
+        if (reportResult) {
+            try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(reportResult)); } catch { }
+        } else {
+            sessionStorage.removeItem(SESSION_KEY);
+        }
+    }, [reportResult]);
 
     const generateReport = async ({ imageFile, description, address, zip_code, latitude, longitude, user_email, issue_type }) => {
         setLoading(true);

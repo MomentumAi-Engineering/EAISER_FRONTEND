@@ -94,6 +94,7 @@ export default function SimpleReport() {
   const [coords, setCoords] = useState(null);
   const [formData, setFormData] = useState({ streetAddress: "", zipCode: "" });
   const [guestLimitReached, setGuestLimitReached] = useState(false);
+  const [locationMissing, setLocationMissing] = useState(false);
   const fileInputRef = useRef(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const videoRef = useRef(null);
@@ -383,6 +384,23 @@ export default function SimpleReport() {
       return;
     }
 
+    // ---------------------------------------------------------------
+    // LOCATION MANDATORY CHECK
+    // ---------------------------------------------------------------
+    const hasAddress = formData.streetAddress && formData.streetAddress.trim().length > 0;
+    const hasCoords = coords && coords.lat && coords.lng && coords.lat !== 0 && coords.lng !== 0;
+
+    if (!hasAddress || !hasCoords) {
+      setLocationMissing(true);
+      await showAlert(
+        "Location is mandatory. Please use GPS or enter a valid address before generating a report.",
+        { variant: 'error', title: 'Location Required' }
+      );
+      return;
+    }
+    setLocationMissing(false);
+    // ---------------------------------------------------------------
+
     // Get user email if logged in
     let userEmail = undefined;
     try {
@@ -401,10 +419,10 @@ export default function SimpleReport() {
       description: isManualMode
         ? `${formData.description || ''}\nTime: ${formData.incidentDate || 'Not specified'}`
         : "User reported issue via web interface",
-      address: formData.streetAddress || "",
+      address: formData.streetAddress,
       zip_code: formData.zipCode || "",
-      latitude: coords?.lat || 0,
-      longitude: coords?.lng || 0,
+      latitude: coords.lat,
+      longitude: coords.lng,
       user_email: userEmail,
       issue_type: isManualMode ? (formData.issueType || 'Manual Report') : 'other'
     });
@@ -445,6 +463,7 @@ export default function SimpleReport() {
             userZip={formData.zipCode}
             userLat={coords?.lat}
             userLon={coords?.lng}
+            onClearReport={clearReport}
           />
         </div>
       </div>
@@ -821,7 +840,7 @@ export default function SimpleReport() {
         </AnimatePresence>
 
         {/* Location Details Section - Advanced Priority UI */}
-        <div className="bg-gradient-to-br from-gray-900/80 to-black border border-gray-800 rounded-3xl p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden group/loc transition-all">
+        <div className={`bg-gradient-to-br from-gray-900/80 to-black border ${locationMissing ? 'border-red-500/60' : 'border-gray-800'} rounded-3xl p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden group/loc transition-all`}>
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-xl font-black text-white flex items-center gap-3">
@@ -830,8 +849,8 @@ export default function SimpleReport() {
                 </div>
                 Incident Location
               </h2>
-              <p className="text-gray-500 text-[10px] items-center flex gap-1 mt-1 font-bold uppercase tracking-wider">
-                Precision GPS Tracking Active
+              <p className={`text-[10px] items-center flex gap-1 mt-1 font-bold uppercase tracking-wider ${locationMissing ? 'text-red-400' : 'text-gray-500'}`}>
+                {locationMissing ? '⚠ Location is required to generate report' : 'Precision GPS Tracking Active'}
               </p>
             </div>
             <div className="px-3 py-1 bg-gray-800/50 border border-gray-700 rounded-full text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -1016,7 +1035,9 @@ export default function SimpleReport() {
           ) : guestLimitReached ? (
             "Guest Limit Reached - Login Required"
           ) : (
-            "Generate Report"
+            <>
+              <Zap className="w-4 h-4" /> Generate Report
+            </>
           )}
         </button>
       </div>

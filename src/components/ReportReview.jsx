@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/apiClient';
-import { Image as ImageIcon, MapPin, FileText, CheckCircle2, Clock, Check, AlertTriangle, ShieldAlert, Send, Edit2 } from 'lucide-react';
+import { Image as ImageIcon, MapPin, FileText, CheckCircle2, Clock, Check, AlertTriangle, ShieldAlert, Send, Edit2, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import confetti from 'canvas-confetti'; // Assuming it's installed, otherwise I will guide to install or use fallback.
@@ -35,7 +35,7 @@ const pick = (obj, keys, fallback = undefined) => {
   return fallback;
 };
 
-export default function ReportReview({ issue, imagePreview, analysisDescription, userAddress, userZip, userLat, userLon, imageName }) {
+export default function ReportReview({ issue, imagePreview, analysisDescription, userAddress, userZip, userLat, userLon, imageName, onClearReport }) {
   const navigate = useNavigate();
   const issueId = pick(issue, ['id', 'issue_id', 'data.id'], 'N/A');
   const status = pick(issue, ['report.status', 'status'], 'pending');
@@ -53,6 +53,11 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [error, setError] = useState(null);
+
+  // Manual report form state (for No Issue Detected card)
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualDescription, setManualDescription] = useState('');
+  const [manualIssueType, setManualIssueType] = useState('other');
 
   // Extract authorities
   const recommendedAuthorities = pick(issue, ['report.report.responsible_authorities_or_parties', 'responsible_authorities_or_parties'], []);
@@ -99,6 +104,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   // If they have a token NOW, unlock the wall. Otherwise trust API or fallback to true.
   const isGuest = isAuthenticated ? false : (API_IsGuest !== null ? !!API_IsGuest : true);
 
+  // Auth popup state for guest users trying to submit
+  const [showAuthPopup, setShowAuthPopup] = useState(false);
+
   // EDIT MODE STATE
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -135,6 +143,14 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   };
 
   const handleSubmit = async () => {
+    // ---------------------------------------------------------------
+    // AUTH GATE: Block unauthenticated users from submitting
+    // ---------------------------------------------------------------
+    if (isGuest) {
+      setShowAuthPopup(true);
+      return;
+    }
+
     let finalAuths = selectedAuths;
 
     // For Manual Reports or Low Confidence, allow submission to Internal Team
@@ -142,7 +158,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       if (editForm.issue_type === 'Manual Report' || confidence === 0) {
         finalAuths = [{
           name: "Internal Review Team",
-          email: "eaiser@momntumai.com", // Default Admin Email
+          email: "eaiser@momntumai.com",
           type: "internal"
         }];
       } else {
@@ -154,12 +170,17 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     setSubmitting(true);
     setError(null);
     try {
-      // Pass editForm if isEditing was used, otherwise undefined
       const reportData = isEditing ? editForm : undefined;
       const response = await apiClient.submitIssue(issueId, finalAuths, reportData);
       setSuccessMessage(response.message || "Report submitted successfully.");
       setIsReview(response.report?.status === 'needs_review');
       setSubmitSuccess(true);
+
+      // Clear persisted report from sessionStorage
+      try { sessionStorage.removeItem('eaiser_pending_report'); } catch { }
+
+      // Clear report context so the review page refreshes
+      if (onClearReport) onClearReport();
 
       // Trigger Confetti
       confetti({
@@ -169,10 +190,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         colors: ['#4ade80', '#22c55e', '#ffffff']
       });
 
-      // Automatically redirect after 3 seconds to clear state and show fresh form
+      // Redirect to Dashboard after 3 seconds
       setTimeout(() => {
-        // Force full reload to ensure previous report state is completely cleared
-        window.location.href = '/';
+        navigate('/dashboard');
       }, 3000);
 
     } catch (err) {
@@ -221,6 +241,236 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         >
           Submit Another Report
         </button>
+      </div>
+    );
+  }
+
+  // --- NO ISSUE DETECTED → SHORT MANUAL REVIEW CARD ---
+  const aiEval = pick(issue, ['report.report.ai_evaluation', 'report.ai_evaluation', 'ai_evaluation'], {});
+  const isNoIssue = (
+    aiEval.issue_detected === false
+    || status === 'manual_review_required'
+    || pick(issue, ['report.report._manual_review_required', 'report._manual_review_required', '_manual_review_required'], false) === true
+  );
+
+  if (isNoIssue && !submitSuccess) {
+    const noIssueSummary = pick(issue, [
+      'report.report.issue_overview.summary_explanation',
+      'report.report.ai_evaluation.rationale',
+      'report.issue_overview.summary_explanation',
+    ], 'Our AI system did not detect a clear civic infrastructure issue in this image.');
+
+    // Handler for manual report submission (forces Internal Review Team only)
+    const handleManualSubmit = async () => {
+      if (isGuest) {
+        setShowAuthPopup(true);
+        return;
+      }
+
+      if (!manualDescription.trim()) {
+        setError("Please describe the issue before submitting.");
+        return;
+      }
+
+      const internalTeam = [{
+        name: "Internal Review Team",
+        email: "eaiser@momntumai.com",
+        type: "internal"
+      }];
+
+      const manualReportData = {
+        issue_type: manualIssueType,
+        severity: 'medium',
+        summary: manualDescription.trim(),
+        description: manualDescription.trim(),
+      };
+
+      setSubmitting(true);
+      setError(null);
+      try {
+        const response = await apiClient.submitIssue(issueId, internalTeam, manualReportData);
+        setSuccessMessage(response.message || "Manual report submitted to admin team for review.");
+        setIsReview(true);
+        setSubmitSuccess(true);
+
+        try { sessionStorage.removeItem('eaiser_pending_report'); } catch { }
+
+        // Clear report context so review page refreshes
+        if (onClearReport) onClearReport();
+
+        confetti({
+          particleCount: 100,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ['#facc15', '#eab308', '#ffffff']
+        });
+
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 3000);
+      } catch (err) {
+        console.error("Manual submit failed", err);
+        setError(err.message || "Failed to submit manual report. Please try again.");
+      } finally {
+        setSubmitting(false);
+      }
+    };
+
+    return (
+      <div className="mt-8 bg-gradient-to-br from-gray-900/80 to-black/80 backdrop-blur-xl rounded-2xl border border-yellow-800/40 p-8 text-center max-w-2xl mx-auto">
+        <div className="w-20 h-20 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-yellow-500/20">
+          <AlertTriangle className="w-10 h-10 text-yellow-500" />
+        </div>
+
+        <h2 className="text-2xl font-bold text-white mb-3">No Issue Detected</h2>
+        <p className="text-gray-400 text-sm mb-6 max-w-md mx-auto leading-relaxed">
+          {String(noIssueSummary)}
+        </p>
+
+        {/* Show submitted image */}
+        {imagePreview && (
+          <div className="mb-6 max-w-sm mx-auto">
+            <img src={imagePreview} alt="Submitted" className="w-full h-48 object-cover rounded-xl border border-gray-700" />
+          </div>
+        )}
+
+        <div className="bg-white/5 border border-gray-700 rounded-xl p-5 text-left mb-6 max-w-md mx-auto">
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-3">What happens now?</p>
+          <ul className="space-y-2 text-sm text-gray-300">
+            <li className="flex gap-2">
+              <CheckCircle2 className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+              <span>This report is flagged for <strong className="text-white">manual review</strong> by our team.</span>
+            </li>
+            <li className="flex gap-2">
+              <CheckCircle2 className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+              <span>No automatic authority notifications will be sent.</span>
+            </li>
+            <li className="flex gap-2">
+              <CheckCircle2 className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
+              <span>If our team finds a valid issue, it will be escalated.</span>
+            </li>
+          </ul>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-xl text-red-200 text-sm max-w-md mx-auto">
+            {error}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 max-w-md mx-auto">
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${submitting
+              ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+              : 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-lg'
+              }`}
+          >
+            {submitting ? 'Submitting...' : (
+              <><Send className="w-4 h-4" /> Request Manual Review</>
+            )}
+          </button>
+
+          {/* --- MANUAL REPORT OPTION --- */}
+          <div className="relative">
+            <div className="flex items-center gap-4 my-2">
+              <div className="h-px flex-1 bg-gray-800" />
+              <span className="text-[10px] font-black text-gray-600 uppercase italic">Or</span>
+              <div className="h-px flex-1 bg-gray-800" />
+            </div>
+
+            <button
+              onClick={() => setShowManualForm(!showManualForm)}
+              className={`w-full py-3 border rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${showManualForm
+                ? 'bg-blue-500/10 border-blue-500/40 text-blue-400'
+                : 'bg-white/5 hover:bg-white/10 border-gray-700 text-gray-300 hover:text-white'
+                }`}
+            >
+              <Edit2 className="w-4 h-4" />
+              {showManualForm ? 'Hide Manual Report Form' : 'Generate Manual Report'}
+            </button>
+
+            {showManualForm && (
+              <div className="mt-4 bg-gray-900/60 border border-gray-700 rounded-2xl p-6 text-left space-y-4">
+                <div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                    <Edit2 className="w-3 h-3 text-blue-400" /> Manual Report
+                  </p>
+                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                    Describe the issue in your own words. This report will be sent <strong className="text-yellow-400">only to the admin team</strong> — not directly to authorities.
+                  </p>
+                </div>
+
+                {/* Issue Type */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Issue Type</label>
+                  <select
+                    value={manualIssueType}
+                    onChange={(e) => setManualIssueType(e.target.value)}
+                    className="w-full px-4 py-3 bg-black/40 border border-gray-700 rounded-xl text-sm text-white outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+                  >
+                    <option value="other">Select Issue Type...</option>
+                    <option value="pothole">Pothole / Road Hole</option>
+                    <option value="road_damage">Road Damage</option>
+                    <option value="broken_streetlight">Broken Streetlight</option>
+                    <option value="garbage">Garbage / Waste</option>
+                    <option value="flood">Flooding / Waterlogging</option>
+                    <option value="water_leakage">Water Leakage</option>
+                    <option value="fire">Fire / Smoke Hazard</option>
+                    <option value="dead_animal">Dead Animal</option>
+                    <option value="vandalism">Public Property Vandalism</option>
+                    <option value="car_accident">Car Accident</option>
+                    <option value="abandoned_vehicle">Abandoned Vehicle</option>
+                    <option value="other_issue">Other</option>
+                  </select>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Describe the Issue</label>
+                  <textarea
+                    value={manualDescription}
+                    onChange={(e) => setManualDescription(e.target.value)}
+                    rows={4}
+                    placeholder="Describe what you see in detail — what is the problem, how severe is it, and any other relevant information..."
+                    className="w-full px-4 py-3 bg-black/40 border border-gray-700 rounded-xl text-sm text-white outline-none focus:border-blue-500 transition-colors resize-none placeholder:text-gray-600"
+                  />
+                  <p className="text-[10px] text-gray-600 mt-1 text-right">{manualDescription.length}/500</p>
+                </div>
+
+                {/* Admin-only notice */}
+                <div className="flex items-start gap-2 bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
+                  <ShieldAlert className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-blue-300/80 leading-relaxed">
+                    This manual report will be reviewed by our <strong>admin team only</strong>. It will <strong>not</strong> be sent to any external authority directly.
+                  </p>
+                </div>
+
+                {/* Submit Manual Report Button */}
+                <button
+                  onClick={handleManualSubmit}
+                  disabled={submitting || !manualDescription.trim()}
+                  className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${submitting || !manualDescription.trim()
+                    ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                    }`}
+                >
+                  {submitting ? 'Submitting...' : (
+                    <><Send className="w-4 h-4" /> Submit Manual Report to Admin</>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full py-3 bg-white/5 hover:bg-white/10 border border-gray-700 rounded-xl font-semibold text-white text-sm transition-all"
+          >
+            Submit Another Report
+          </button>
+        </div>
       </div>
     );
   }
@@ -498,22 +748,44 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       </div>
       {/* Header */}
       <div className={isGuest ? "relative" : ""}>
-        {isGuest && (
-          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md rounded-2xl p-8 text-center border border-gray-700">
-            <div className="max-w-md space-y-6">
-              <div className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto border border-blue-500/30">
-                <ShieldAlert className="w-10 h-10 text-blue-400" />
-              </div>
-              <h4 className="text-3xl font-extrabold text-white">Report Locked</h4>
-              <p className="text-gray-300">Your report has been generated successfully! 🚀 <br />To unlock the full AI analysis and submit this issue, please create an account or login.</p>
-              <div className="flex flex-col gap-3 pt-4">
-                <button onClick={() => navigate('/signup', { state: { returnTo: window.location.pathname } })} className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg transition-all">Create My Account</button>
-                <button onClick={() => navigate('/login', { state: { returnTo: window.location.pathname } })} className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl font-bold transition-all">Login to Account</button>
+        {/* Auth Popup Overlay - shown when guest clicks Submit */}
+        {showAuthPopup && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowAuthPopup(false)}>
+            <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-700 rounded-3xl p-10 max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="text-center space-y-6">
+                <div className="w-20 h-20 bg-yellow-500/15 rounded-full flex items-center justify-center mx-auto border border-yellow-500/30">
+                  <LogIn className="w-10 h-10 text-yellow-400" />
+                </div>
+                <h3 className="text-2xl font-extrabold text-white">Login Required</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Your report has been generated successfully! To submit this report to the authorities, please <strong className="text-white">Login</strong> or <strong className="text-white">Sign Up</strong>.
+                </p>
+                <div className="space-y-3 pt-2">
+                  <button
+                    onClick={() => navigate('/signup', { state: { returnTo: '/report' } })}
+                    className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl font-bold shadow-lg transition-all text-sm"
+                  >
+                    Create My Account
+                  </button>
+                  <button
+                    onClick={() => navigate('/login', { state: { returnTo: '/report' } })}
+                    className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl font-bold transition-all text-sm"
+                  >
+                    Login to Existing Account
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowAuthPopup(false)}
+                  className="text-xs text-gray-500 hover:text-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
         )}
-        <div className={isGuest ? "filter blur-xl pointer-events-none select-none grayscale opacity-30" : ""}>
+
+        <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Report Review</h2>
             <span className="text-xs text-gray-400">Issue ID: {issueId}</span>
@@ -709,14 +981,14 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
             )}
           </div>
 
-          {error && !isGuest && (
+          {error && (
             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/50 rounded-xl text-red-200 text-sm">
               {error}
             </div>
           )}
 
-          {/* Action Buttons */}
-          {!isGuest && !summaryExplanation?.includes("Please provide the correct image") && (
+          {/* Action Buttons — visible to everyone, auth checked on click */}
+          {!summaryExplanation?.includes("Please provide the correct image") && (
             <div className="flex gap-3">
               <button
                 onClick={handleSubmit}
