@@ -67,6 +67,8 @@ export default function SimpleReport() {
           lng: place.geometry.location.lng(),
         });
 
+        setMapZoom(20);
+
         // Parse address components
         let zip = "";
         if (place.address_components) {
@@ -98,6 +100,9 @@ export default function SimpleReport() {
   const fileInputRef = useRef(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const videoRef = useRef(null);
+  const mapRef = useRef(null);
+  const [mapZoom, setMapZoom] = useState(20);
+  const [showMapExit, setShowMapExit] = useState(false);
   const [verification, setVerification] = useState(null);
   const [userAccuracy, setUserAccuracy] = useState(20); // Default 20m
   const [photoAccuracy, setPhotoAccuracy] = useState(15); // Default 15m
@@ -296,6 +301,7 @@ export default function SimpleReport() {
           setUserAccuracy(accuracy || 20);
           setLocationPermission(true);
           setCoords({ lat: latitude, lng: longitude });
+          setMapZoom(20);
           await reverseGeocode(latitude, longitude);
           showAlert("Location captured & Address updated!", { variant: 'success', title: 'GPS Sync' });
         },
@@ -325,6 +331,7 @@ export default function SimpleReport() {
           lat: location.lat,
           lng: location.lng,
         });
+        setMapZoom(20);
         setLocationPermission(false); // Because user typed manually
       } else {
         await showAlert("Address not found", { variant: 'error' });
@@ -986,10 +993,35 @@ export default function SimpleReport() {
                 <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Real-time Satellite View</p>
                 <span className="text-[10px] font-bold text-gray-500 italic">Drag marker to refine exact spot</span>
               </div>
-              <div className="h-96 rounded-3xl overflow-hidden border border-gray-800 shadow-2xl relative">
+              <div className="h-96 rounded-3xl overflow-hidden border border-gray-800 shadow-2xl relative group">
                 <GoogleMap
                   center={coords}
-                  zoom={15}
+                  zoom={mapZoom}
+                  onLoad={(map) => {
+                    mapRef.current = map;
+
+                    // Listeners to detect view changes
+                    map.addListener('maptypeid_changed', () => {
+                      const type = map.getMapTypeId();
+                      const isSat = type === 'satellite' || type === 'hybrid';
+                      const sv = map.getStreetView();
+                      setShowMapExit(isSat || (sv && sv.getVisible()));
+                    });
+
+                    const sv = map.getStreetView();
+                    if (sv) {
+                      sv.addListener('visible_changed', () => {
+                        const type = map.getMapTypeId();
+                        const isSat = type === 'satellite' || type === 'hybrid';
+                        setShowMapExit(isSat || sv.getVisible());
+                      });
+                    }
+                  }}
+                  onZoomChanged={() => {
+                    if (mapRef.current) {
+                      setMapZoom(mapRef.current.getZoom());
+                    }
+                  }}
                   mapContainerStyle={{ width: "100%", height: "100%" }}
                   mapTypeId="terrain"
                   options={{
@@ -1012,10 +1044,34 @@ export default function SimpleReport() {
                       const lat = e.latLng.lat();
                       const lng = e.latLng.lng();
                       setCoords({ lat, lng });
+                      setMapZoom(20);
                       await reverseGeocode(lat, lng);
                     }}
                   />
                 </GoogleMap>
+                {showMapExit && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (mapRef.current) {
+                        // Hide Street View if active
+                        const streetView = mapRef.current.getStreetView();
+                        if (streetView && streetView.getVisible()) {
+                          streetView.setVisible(false);
+                        }
+                        // Reset to normal terrain view
+                        mapRef.current.setMapTypeId('terrain');
+                        mapRef.current.setHeading(0);
+                        mapRef.current.setTilt(0);
+                        setMapZoom(20);
+                        setShowMapExit(false);
+                      }
+                    }}
+                    className="absolute bottom-6 left-6 z-[100] px-4 py-2.5 bg-red-600/90 hover:bg-red-500 text-white font-black rounded-xl text-xs sm:text-sm shadow-[0_4px_25px_rgba(220,38,38,0.6)] border border-red-500/50 backdrop-blur-md flex items-center gap-2 hover:scale-105 active:scale-95 transition-all animate-in fade-in zoom-in duration-300"
+                  >
+                    <X className="w-5 h-5" /> EXIT SATELLITE VIEW
+                  </button>
+                )}
               </div>
             </div>
           )}
