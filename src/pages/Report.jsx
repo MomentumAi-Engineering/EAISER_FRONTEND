@@ -424,7 +424,7 @@ export default function SimpleReport() {
     await generateReport({
       imageFile: isManualMode ? null : selectedFile,
       description: isManualMode
-        ? `${formData.description || ''}\nTime: ${formData.incidentDate || 'Not specified'}`
+        ? (formData.description || '')
         : "User reported issue via web interface",
       address: formData.streetAddress,
       zip_code: formData.zipCode || "",
@@ -512,7 +512,13 @@ export default function SimpleReport() {
         <div className="flex justify-end mb-2">
           {!isManualMode && (
             <button
-              onClick={() => setIsManualMode(true)}
+              onClick={() => {
+                setIsManualMode(true);
+                // Reset photo related data
+                setSelectedImage(null);
+                setSelectedFile(null);
+                setPhotoCoords(null);
+              }}
               className="text-yellow-500 hover:text-yellow-400 text-sm font-semibold underline"
             >
               Skip & Report Manually
@@ -520,13 +526,26 @@ export default function SimpleReport() {
           )}
           {isManualMode && (
             <button
-              onClick={() => setIsManualMode(false)}
+              onClick={() => {
+                setIsManualMode(false);
+                // Reset manual form data if returning
+                setFormData(prev => ({ ...prev, issueType: 'other', incidentDate: '', description: '' }));
+              }}
               className="text-blue-500 hover:text-blue-400 text-sm font-semibold underline"
             >
               Back to Photo Upload
             </button>
           )}
         </div>
+
+        <input
+          ref={fileInputRef}
+          id="file-upload"
+          type="file"
+          accept=".png,.jpg,.jpeg,.webp,.bmp,.gif,.tiff,.heic"
+          onChange={handleFileChange}
+          className="hidden"
+        />
 
         {/* Manual Mode UI */}
         <AnimatePresence mode="wait">
@@ -558,15 +577,6 @@ export default function SimpleReport() {
                     Step 01
                   </div>
                 </div>
-
-                <input
-                  ref={fileInputRef}
-                  id="file-upload"
-                  type="file"
-                  accept=".png,.jpg,.jpeg,.webp,.bmp,.gif,.tiff,.heic"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
 
                 {selectedImage ? (
                   <div className="relative rounded-2xl overflow-hidden border border-gray-700 aspect-video bg-black/50 shadow-inner group/preview">
@@ -718,7 +728,12 @@ export default function SimpleReport() {
                     <div className="flex flex-col items-center gap-3">
                       <p className="text-[10px] font-bold text-gray-600 uppercase tracking-[4px] mb-1">Backup Routing</p>
                       <button
-                        onClick={() => setIsManualMode(true)}
+                        onClick={() => {
+                          setIsManualMode(true);
+                          setSelectedImage(null);
+                          setSelectedFile(null);
+                          setPhotoCoords(null);
+                        }}
                         className="group/manual relative px-8 py-3 bg-gray-900/50 hover:bg-gray-800 border border-gray-800 rounded-2xl text-xs font-black text-gray-400 hover:text-yellow-500 transition-all overflow-hidden"
                       >
                         <div className="absolute inset-0 bg-yellow-500/5 translate-y-full group-hover/manual:translate-y-0 transition-transform duration-300" />
@@ -761,7 +776,10 @@ export default function SimpleReport() {
                       <Fingerprint className="w-3 h-3" /> Manual Auth
                     </span>
                     <button
-                      onClick={() => setIsManualMode(false)}
+                      onClick={() => {
+                        setIsManualMode(false);
+                        setFormData(prev => ({ ...prev, issueType: 'other', incidentDate: '', description: '' }));
+                      }}
                       className="text-[10px] font-black text-blue-500 hover:text-blue-400 uppercase tracking-wider flex items-center gap-1 group/back"
                     >
                       <ArrowLeft className="w-3 h-3 transition-transform group-hover/back:-translate-x-1" /> Back to Upload
@@ -792,7 +810,7 @@ export default function SimpleReport() {
                         <option value="fire">Thermal/Fire Hazard</option>
                         <option value="dead_animal">Sanitation Response Req.</option>
                         <option value="vandalism">Public Property Vandalism</option>
-                        <option value="other_issue">Classified Other</option>
+                        <option value="other_issue">Add Manually</option>
                       </select>
                       <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600 transition-colors group-hover/select:text-yellow-500">
                         <Zap className="w-4 h-4" />
@@ -833,12 +851,26 @@ export default function SimpleReport() {
                       placeholder="Provide a detailed log of the observation for AI-assisted classification..."
                       className="w-full px-6 py-5 bg-gray-900/40 border border-gray-800 rounded-3xl text-sm text-white outline-none focus:border-white/20 focus:bg-gray-900/60 transition-all resize-none shadow-inner"
                     />
-                    <div className="flex justify-between px-2">
-                      <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest italic">Character limit: 500</p>
+                    <div className="flex justify-between items-center px-2">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        type="button"
+                        className="relative group overflow-hidden px-5 py-2.5 bg-gray-900 border border-blue-500/30 hover:border-blue-500 text-blue-400 hover:text-white font-bold uppercase rounded-xl text-[10px] tracking-widest transition-all duration-300 shadow-[0_0_15px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] flex items-center gap-2"
+                      >
+                        <div className="absolute inset-0 bg-blue-600/20 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                        <Camera className="w-4 h-4 relative z-10 group-hover:scale-110 transition-transform duration-300" />
+                        <span className="relative z-10">{selectedFile ? 'Change Attachment' : 'Add Attachment'}</span>
+                      </button>
                       <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest italic flex items-center gap-1">
                         <Zap className="w-2.5 h-2.5" /> High Priority Log
                       </p>
                     </div>
+                    {/* Show selected file name in manual mode if uploaded */}
+                    {selectedFile && (
+                      <p className="text-[10px] text-green-400 font-medium px-2 mt-1 truncate">
+                        Attached: {selectedFile.name}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -987,116 +1019,119 @@ export default function SimpleReport() {
             )}
           </div>
 
-          {coords && isLoaded && (
-            <div className="mt-8">
-              <div className="flex items-center justify-between mb-3 px-1">
-                <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Real-time Satellite View</p>
-                <span className="text-[10px] font-bold text-gray-500 italic">Drag marker to refine exact spot</span>
-              </div>
-              <div className="h-96 rounded-3xl overflow-hidden border border-gray-800 shadow-2xl relative group">
-                <GoogleMap
-                  center={coords}
-                  zoom={mapZoom}
-                  onLoad={(map) => {
-                    mapRef.current = map;
+          {
+            coords && isLoaded && (
+              <div className="mt-8">
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Real-time Satellite View</p>
+                  <span className="text-[10px] font-bold text-gray-500 italic">Drag marker to refine exact spot</span>
+                </div>
+                <div className="h-96 rounded-3xl overflow-hidden border border-gray-800 shadow-2xl relative group">
+                  <GoogleMap
+                    center={coords}
+                    zoom={mapZoom}
+                    onLoad={(map) => {
+                      mapRef.current = map;
 
-                    // Listeners to detect view changes
-                    map.addListener('maptypeid_changed', () => {
-                      const type = map.getMapTypeId();
-                      const isSat = type === 'satellite' || type === 'hybrid';
-                      const sv = map.getStreetView();
-                      setShowMapExit(isSat || (sv && sv.getVisible()));
-                    });
-
-                    const sv = map.getStreetView();
-                    if (sv) {
-                      sv.addListener('visible_changed', () => {
+                      // Listeners to detect view changes
+                      map.addListener('maptypeid_changed', () => {
                         const type = map.getMapTypeId();
                         const isSat = type === 'satellite' || type === 'hybrid';
-                        setShowMapExit(isSat || sv.getVisible());
+                        const sv = map.getStreetView();
+                        setShowMapExit(isSat || (sv && sv.getVisible()));
                       });
-                    }
-                  }}
-                  onZoomChanged={() => {
-                    if (mapRef.current) {
-                      setMapZoom(mapRef.current.getZoom());
-                    }
-                  }}
-                  mapContainerStyle={{ width: "100%", height: "100%" }}
-                  mapTypeId="terrain"
-                  options={{
-                    streetViewControl: true,
-                    mapTypeControl: true,
-                    mapTypeControlOptions: {
-                      style: 1, // HORIZONTAL_BAR
-                      position: 3, // TOP_RIGHT
-                      mapTypeIds: ['terrain', 'roadmap', 'satellite', 'hybrid']
-                    },
-                    fullscreenControl: true,
-                    rotateControl: true,
-                    tilt: 45, // Enable 45-degree imagery
-                  }}
-                >
-                  <Marker
-                    position={coords}
-                    draggable={true}
-                    onDragEnd={async (e) => {
-                      const lat = e.latLng.lat();
-                      const lng = e.latLng.lng();
-                      setCoords({ lat, lng });
-                      setMapZoom(20);
-                      await reverseGeocode(lat, lng);
-                    }}
-                  />
-                </GoogleMap>
-                {showMapExit && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (mapRef.current) {
-                        // Hide Street View if active
-                        const streetView = mapRef.current.getStreetView();
-                        if (streetView && streetView.getVisible()) {
-                          streetView.setVisible(false);
-                        }
-                        // Reset to normal terrain view
-                        mapRef.current.setMapTypeId('terrain');
-                        mapRef.current.setHeading(0);
-                        mapRef.current.setTilt(0);
-                        setMapZoom(20);
-                        setShowMapExit(false);
+
+                      const sv = map.getStreetView();
+                      if (sv) {
+                        sv.addListener('visible_changed', () => {
+                          const type = map.getMapTypeId();
+                          const isSat = type === 'satellite' || type === 'hybrid';
+                          setShowMapExit(isSat || sv.getVisible());
+                        });
                       }
                     }}
-                    className="absolute bottom-6 left-6 z-[100] px-4 py-2.5 bg-red-600/90 hover:bg-red-500 text-white font-black rounded-xl text-xs sm:text-sm shadow-[0_4px_25px_rgba(220,38,38,0.6)] border border-red-500/50 backdrop-blur-md flex items-center gap-2 hover:scale-105 active:scale-95 transition-all animate-in fade-in zoom-in duration-300"
+                    onZoomChanged={() => {
+                      if (mapRef.current) {
+                        setMapZoom(mapRef.current.getZoom());
+                      }
+                    }}
+                    mapContainerStyle={{ width: "100%", height: "100%" }}
+                    mapTypeId="terrain"
+                    options={{
+                      streetViewControl: true,
+                      mapTypeControl: true,
+                      mapTypeControlOptions: {
+                        style: 1, // HORIZONTAL_BAR
+                        position: 3, // TOP_RIGHT
+                        mapTypeIds: ['terrain', 'roadmap', 'satellite', 'hybrid']
+                      },
+                      fullscreenControl: true,
+                      rotateControl: true,
+                      tilt: 45, // Enable 45-degree imagery
+                    }}
                   >
-                    <X className="w-5 h-5" /> EXIT SATELLITE VIEW
-                  </button>
-                )}
+                    <Marker
+                      position={coords}
+                      draggable={true}
+                      onDragEnd={async (e) => {
+                        const lat = e.latLng.lat();
+                        const lng = e.latLng.lng();
+                        setCoords({ lat, lng });
+                        setMapZoom(20);
+                        await reverseGeocode(lat, lng);
+                      }}
+                    />
+                  </GoogleMap>
+                  {showMapExit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (mapRef.current) {
+                          // Hide Street View if active
+                          const streetView = mapRef.current.getStreetView();
+                          if (streetView && streetView.getVisible()) {
+                            streetView.setVisible(false);
+                          }
+                          // Reset to normal terrain view
+                          mapRef.current.setMapTypeId('terrain');
+                          mapRef.current.setHeading(0);
+                          mapRef.current.setTilt(0);
+                          setMapZoom(20);
+                          setShowMapExit(false);
+                        }
+                      }}
+                      className="absolute bottom-6 left-6 z-[100] px-4 py-2.5 bg-red-600/90 hover:bg-red-500 text-white font-black rounded-xl text-xs sm:text-sm shadow-[0_4px_25px_rgba(220,38,38,0.6)] border border-red-500/50 backdrop-blur-md flex items-center gap-2 hover:scale-105 active:scale-95 transition-all animate-in fade-in zoom-in duration-300"
+                    >
+                      <X className="w-5 h-5" /> EXIT SATELLITE VIEW
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )
+          }
+        </div >
 
         {/* Generate Report Button */}
-        <button
+        < button
           onClick={handleGenerateReport}
           disabled={loading || guestLimitReached}
           className={`w-full mt-6 py-3 font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 
             ${loading || guestLimitReached ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-400 text-black'}`}
         >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" /> Generating...
-            </>
-          ) : guestLimitReached ? (
-            "Guest Limit Reached - Login Required"
-          ) : (
-            <>
-              <Zap className="w-4 h-4" /> Generate Report
-            </>
-          )}
-        </button>
-      </div>
+          {
+            loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Generating...
+              </>
+            ) : guestLimitReached ? (
+              "Guest Limit Reached - Login Required"
+            ) : (
+              <>
+                <Zap className="w-4 h-4" /> Generate Report
+              </>
+            )}
+        </button >
+      </div >
     </div >
   );
 }

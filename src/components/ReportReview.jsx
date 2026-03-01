@@ -109,6 +109,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
   // EDIT MODE STATE
   const [isEditing, setIsEditing] = useState(false);
+  const [hasEdited, setHasEdited] = useState(false);
   const [editForm, setEditForm] = useState({
     issue_type: 'Other',
     severity: 'medium',
@@ -140,6 +141,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const handleEditChange = (e) => {
     const { name, value } = e.target;
     setEditForm(prev => ({ ...prev, [name]: value }));
+    setHasEdited(true);
   };
 
   const handleSubmit = async () => {
@@ -170,17 +172,13 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     setSubmitting(true);
     setError(null);
     try {
-      const reportData = isEditing ? editForm : undefined;
+      const reportData = (isEditing || hasEdited) ? editForm : undefined;
       const response = await apiClient.submitIssue(issueId, finalAuths, reportData);
       setSuccessMessage(response.message || "Report submitted successfully.");
       setIsReview(response.report?.status === 'needs_review');
       setSubmitSuccess(true);
 
-      // Clear persisted report from sessionStorage
       try { sessionStorage.removeItem('eaiser_pending_report'); } catch { }
-
-      // Clear report context so the review page refreshes
-      if (onClearReport) onClearReport();
 
       // Trigger Confetti
       confetti({
@@ -190,10 +188,11 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         colors: ['#4ade80', '#22c55e', '#ffffff']
       });
 
-      // Redirect to Dashboard after 3 seconds
+      // Redirect to Dashboard after 6 seconds
       setTimeout(() => {
+        if (onClearReport) onClearReport();
         navigate('/dashboard');
-      }, 3000);
+      }, 6000);
 
     } catch (err) {
       console.error("Submit failed", err);
@@ -295,9 +294,6 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
         try { sessionStorage.removeItem('eaiser_pending_report'); } catch { }
 
-        // Clear report context so review page refreshes
-        if (onClearReport) onClearReport();
-
         confetti({
           particleCount: 100,
           spread: 60,
@@ -306,8 +302,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         });
 
         setTimeout(() => {
+          if (onClearReport) onClearReport();
           navigate('/dashboard');
-        }, 3000);
+        }, 6000);
       } catch (err) {
         console.error("Manual submit failed", err);
         setError(err.message || "Failed to submit manual report. Please try again.");
@@ -475,87 +472,100 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     );
   }
 
-  // --- SUCCESS VIEW ---
+  // --- SUCCESS VIEW (ANIMATED POPUP) ---
   if (submitSuccess) {
-    if (isReview) {
-      return (
-        <div className="mt-8 bg-gradient-to-br from-gray-900/80 to-black/80 backdrop-blur-xl rounded-2xl border border-yellow-900/50 p-8 text-center max-w-2xl mx-auto">
-          <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-yellow-500/20">
-            <Clock className="w-8 h-8 text-yellow-500" />
-          </div>
-
-          <h2 className="text-2xl font-bold text-white mb-4">Verification in Progress</h2>
-
-          <p className="text-gray-300 mb-6 text-lg">
-            {successMessage || "Your report has been submitted to EAiSER AI for professional verification."}
-          </p>
-
-          <div className="bg-white/5 border border-gray-700 rounded-xl p-6 text-left mb-8">
-            <p className="text-sm text-gray-400 mb-2 font-semibold uppercase tracking-wider">Verification Rationale</p>
-            <p className="text-sm text-gray-300 mb-4">
-              To maintain elite data standards and prevent erroneous reporting, this submission is undergoing a brief manual validation by our civic engineers.
-            </p>
-
-            <p className="text-sm text-gray-400 mb-2 font-semibold uppercase tracking-wider">Next Steps</p>
-            <ul className="space-y-3 text-sm text-gray-300">
-              <li className="flex gap-3">
-                <CheckCircle2 className="w-5 h-5 text-blue-500 shrink-0" />
-                <span>Engineers confirm the incident details and visual evidence.</span>
-              </li>
-              <li className="flex gap-3">
-                <CheckCircle2 className="w-5 h-5 text-blue-500 shrink-0" />
-                <span>Authorized dispatch occurs immediately upon approval.</span>
-              </li>
-            </ul>
-          </div>
-
-          <button
-            onClick={() => navigate('/')}
-            className="px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl font-semibold text-white transition-all"
-          >
-            Back to Home
-          </button>
-        </div>
-      )
-    }
-
     return (
-      <div className="mt-8 bg-gradient-to-br from-gray-900/80 to-black/80 backdrop-blur-xl rounded-2xl border border-green-900/50 p-8 text-center max-w-2xl mx-auto">
-        <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
-          <svg className="w-10 h-10 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <motion.path
-              d="M20 6L9 17l-5-5"
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={{ duration: 0.8, ease: "easeInOut" }}
-            />
-          </svg>
-        </div>
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md px-4">
+        {/* Animated Background Rays */}
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
+          className="absolute top-1/2 left-1/2 -mt-[100vw] -ml-[100vw] w-[200vw] h-[200vw] bg-[conic-gradient(from_0deg_at_50%_50%,rgba(0,0,0,0)_0%,rgba(59,130,246,0.1)_25%,rgba(0,0,0,0)_50%,rgba(59,130,246,0.1)_75%,rgba(0,0,0,0)_100%)] rounded-full z-0"
+        />
 
-        <h2 className="text-2xl font-bold text-white mb-4">Report Submitted Successfully</h2>
-
-        <p className="text-gray-300 mb-6 text-lg">
-          {successMessage || "Thank you! Your report has been submitted to the selected authorities."}
-        </p>
-
-        <div className="bg-white/5 border border-gray-700 rounded-xl p-6 text-left mb-8">
-          <p className="text-sm text-gray-400 mb-4">Authorities Notified:</p>
-          <ul className="space-y-2">
-            {selectedAuths.map((auth, idx) => (
-              <li key={idx} className="flex items-center gap-2 text-sm text-gray-200">
-                <Check className="w-4 h-4 text-green-500" />
-                {auth.name}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <button
-          onClick={() => navigate('/')}
-          className="px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl font-semibold text-white transition-all"
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0, y: 50 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+          className="relative z-10 bg-gradient-to-br from-gray-900 to-black p-8 md:p-12 rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(59,130,246,0.2)] max-w-xl w-full text-center"
         >
-          Back to Home
-        </button>
+          {isReview ? (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", bounce: 0.6, duration: 0.8, delay: 0.2 }}
+              className="w-24 h-24 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(234,179,8,0.3)] border border-yellow-500/50"
+            >
+              <Clock className="w-12 h-12 text-yellow-400" />
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", bounce: 0.6, duration: 0.8, delay: 0.2 }}
+              className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(34,197,94,0.3)] border border-green-500/50"
+            >
+              <svg className="w-12 h-12 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                <motion.path
+                  d="M20 6L9 17l-5-5"
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.8, ease: "easeInOut" }}
+                />
+              </svg>
+            </motion.div>
+          )}
+
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="text-3xl md:text-4xl font-black text-white mb-6"
+          >
+            {isReview ? (
+              <span>Report Submitted for <span className="text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">Review</span></span>
+            ) : (
+              <span>Report <span className="text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">Submitted</span> successfully</span>
+            )}
+          </motion.h2>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.8 }}
+            className="min-h-[60px]"
+          >
+            {isReview ? (
+              <p className="text-yellow-200/90 text-lg tracking-wide border-t border-b border-white/5 py-4 leading-relaxed font-medium">
+                Your report has been received and is being verified by our team before dispatching to the authorities.
+              </p>
+            ) : (
+              <div className="border-t border-b border-white/5 py-4">
+                <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-2">Report Submitted to:</p>
+                <div className="flex flex-col items-center justify-center gap-1">
+                  {selectedAuths.map((auth, idx) => (
+                    <p key={idx} className="text-blue-300 text-lg font-semibold tracking-wide flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-green-400" /> {auth.name}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 1.5 }}
+            className="mt-8 pt-4 pb-2"
+          >
+            <p className="text-white font-black text-xl md:text-2xl mb-3 tracking-wide">Thank you for using EAiSER</p>
+            <div className="flex flex-col items-center mt-6">
+              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+              <p className="text-[11px] text-gray-500 uppercase tracking-widest font-semibold animate-pulse">Redirecting to Dashboard...</p>
+            </div>
+          </motion.div>
+        </motion.div>
       </div>
     );
   }
@@ -582,8 +592,8 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     else if (labelsText.includes('garbage') || labelsText.includes('trash') || labelsText.includes('waste')) issueType = 'garbage';
     else if (labelsText.includes('flood') || labelsText.includes('waterlogging')) issueType = 'flood';
     else if (labelsText.includes('fire') || labelsText.includes('smoke')) issueType = 'fire';
-    else if (labelsText.includes('roadkill') || labelsText.includes('dead animal') || labelsText.includes('carcass') || labelsText.includes('animal')) issueType = 'dead_animal';
     else if (labelsText.includes('accident') || labelsText.includes('crash') || labelsText.includes('collision')) issueType = 'car_accident';
+    else if (labelsText.includes('roadkill') || labelsText.includes('dead animal') || labelsText.includes('carcass') || labelsText.includes('animal')) issueType = 'dead_animal';
     else if (labelsText.includes('abandoned') || (labelsText.includes('vehicle') && labelsText.includes('dust'))) issueType = 'abandoned_vehicle';
   }
 
@@ -596,7 +606,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   ], null);
 
   // Is Manual Report Check
-  const isManualReport = String(issueType) === 'Manual Report' || (confidence !== null && Number(confidence) === 0);
+  const isManualReport = String(issueType).toLowerCase() === 'manual report' || (confidence !== null && Number(confidence) === 0) || !imagePreview;
   const aiSeverity = pick(aiOverview, ['severity'], pick(issue, ['severity', 'priority'], ''));
   const category = pick(issue, ['category'], '');
   const zipCodeBase = pick(issue, ['zip_code', 'location.zip_code'], '—');
@@ -609,15 +619,12 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const longitude = (typeof userLon === 'number' && !Number.isNaN(userLon)) ? userLon : longitudeBase;
   const authorities = pick(issue, ['authorities', 'available_authorities', 'report.available_authorities'], []);
 
-  const imageAnalysis = pick(aiReport, ['ai_evaluation.image_analysis', 'ai_evaluation.rationale'], null);
-
-  // Merge AI summary and analysis for a unified description
-  const combinedAIAnalysis = [summaryExplanation, imageAnalysis]
-    .filter(Boolean)
-    .join('\n\n');
-
   const reportText = pick(aiReport, ['issue_overview.user_feedback', 'issue_overview.summary_explanation', 'additional_notes.summary', 'template_fields.formatted_text'], null);
-  const descriptionText = analysisDescription || combinedAIAnalysis || reportText || null;
+
+  // Enforce strictly the single formatted string for AI reports. For manual reports, keep user input.
+  const descriptionText = isManualReport
+    ? (analysisDescription || summaryExplanation || reportText || null)
+    : summaryExplanation;
   const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
   // recommendedAuthorities removed here as it was already declared above
 
@@ -693,7 +700,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   return (
     <div className="mt-8 bg-gradient-to-br from-gray-900/60 to-black/60 backdrop-blur-xl rounded-2xl border border-gray-800 p-6">
       {/* Alert for AI Generated / Cartoon / No Issue images */}
-      {(confidence < 25 || (summaryExplanation && summaryExplanation.includes("Please provide the correct image"))) && (
+      {(!isManualReport && (confidence < 25 || (summaryExplanation && summaryExplanation.includes("Please provide the correct image")))) && (
         <div className="mb-6 bg-red-500/10 border border-red-500/50 rounded-xl p-5 flex items-start gap-4">
           <ShieldAlert className="w-6 h-6 text-red-500 flex-shrink-0 mt-1" />
           <div className="flex-1">
@@ -721,7 +728,18 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
             </div>
           </div>
           <button
-            onClick={() => setIsEditing(!isEditing)}
+            onClick={() => {
+              if (!isEditing && !hasEdited) {
+                setEditForm(prev => ({
+                  ...prev,
+                  issue_type: issueType,
+                  severity: priorityLabel.toLowerCase(),
+                  summary: descriptionText || '',
+                  description: descriptionText || ''
+                }));
+              }
+              setIsEditing(!isEditing);
+            }}
             className={`px-3 py-2 border rounded-lg text-xs transition-all ${isEditing
               ? 'bg-yellow-500 text-black border-yellow-500'
               : 'bg-white/5 hover:bg-white/10 border-gray-700'
@@ -817,7 +835,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                   <option value="other">Other</option>
                 </select>
               ) : (
-                <p className="text-sm font-semibold">{formatIssueType(issueType)}</p>
+                <p className="text-sm font-semibold">{formatIssueType(hasEdited ? editForm.issue_type : issueType)}</p>
               )}
             </div>
 
@@ -836,18 +854,18 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                   <option value="critical">Critical</option>
                 </select>
               ) : (
-                <span className={`text-sm font-semibold uppercase ${priorityLabel.toLowerCase() === 'high' || priorityLabel.toLowerCase() === 'critical'
+                <span className={`text-sm font-semibold uppercase ${((hasEdited ? editForm.severity : priorityLabel) || '').toLowerCase() === 'high' || ((hasEdited ? editForm.severity : priorityLabel) || '').toLowerCase() === 'critical'
                   ? 'text-red-400'
-                  : priorityLabel.toLowerCase() === 'medium'
+                  : ((hasEdited ? editForm.severity : priorityLabel) || '').toLowerCase() === 'medium'
                     ? 'text-yellow-400'
                     : 'text-green-400'
                   }`}>
-                  {priorityLabel}
+                  {hasEdited ? editForm.severity : priorityLabel}
                 </span>
               )}
             </div>
 
-            {confidence !== null && (
+            {!isManualReport && confidence !== null && (
               <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
                 <p className="text-xs text-gray-400">Confidence</p>
                 <p className="text-sm font-semibold">{String(confidence)}%</p>
@@ -883,15 +901,15 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                 placeholder="Describe the issue in detail..."
               />
             ) : (
-              descriptionText ? (
-                <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap text-gray-200 leading-relaxed">
-                  {String(descriptionText)}
+              (hasEdited ? editForm.summary : descriptionText) ? (
+                <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-sm whitespace-pre-wrap break-words text-gray-200 leading-relaxed overflow-hidden">
+                  {String(hasEdited ? editForm.summary : descriptionText)}
                 </div>
               ) : (
                 <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs text-gray-400">No summary provided.</div>
               )
             )}
-            {confidence !== null && (
+            {!isManualReport && confidence !== null && (
               <div className="mt-3">
                 <p className="text-xs text-gray-400 mb-1">Confidence</p>
                 <div className="h-2 rounded-full overflow-hidden"
