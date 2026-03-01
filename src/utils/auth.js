@@ -8,8 +8,9 @@ export const getCurrentUser = async () => {
   }
 
   try {
-    const apiUrl = import.meta.env.VITE_REACT_APP_API_URL; // should be http://localhost:5000/api/auth
-    if (!apiUrl) throw new Error('VITE_REACT_APP_API_URL not set');
+    const { AUTH_BASE_URL } = await import('../config'); // Lazy import to avoid cycle if it exists
+    const apiUrl = import.meta.env.VITE_REACT_APP_API_URL || AUTH_BASE_URL;
+    if (!apiUrl) throw new Error('Auth API URL not set');
 
     const res = await fetch(`${apiUrl}/me`, {
       headers: { 'Authorization': `Bearer ${token}` },

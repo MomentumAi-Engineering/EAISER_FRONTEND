@@ -32,10 +32,10 @@ const AILoader = ({
 
     // Status mapping for AI Face
     const faceState = {
-        loading: '🤔',
-        processing: '🙂',
+        loading: '🧐',
+        processing: '😊',
         success: '😄',
-        error: '😵'
+        error: '🧐'
     };
 
     // Handle Typewriter Effect
@@ -110,13 +110,13 @@ const AILoader = ({
 
                             {/* Mouth System */}
                             {status === 'loading' && (
-                                <path d="M30 30 Q 40 25 50 30" stroke="#FFCC00" strokeWidth="3" fill="none" strokeLinecap="round" className="animate-mouth-think" />
+                                <path d="M30 30 Q 40 33 50 30" stroke="#FFCC00" strokeWidth="3" fill="none" strokeLinecap="round" className="animate-mouth-think" />
                             )}
                             {status === 'success' && (
                                 <path d="M25 25 Q 40 40 55 25" stroke="#22D3EE" strokeWidth="4" fill="none" strokeLinecap="round" className="animate-mouth-happy" />
                             )}
                             {status === 'error' && (
-                                <path d="M30 30 L 50 30" stroke="#EF4444" strokeWidth="3" fill="none" strokeLinecap="round" />
+                                <path d="M30 30 Q 40 35 50 30" stroke="#EF4444" strokeWidth="3" fill="none" strokeLinecap="round" className="animate-mouth-interested" />
                             )}
                         </svg>
 
@@ -173,8 +173,12 @@ const AILoader = ({
           95% { transform: scaleY(0.1); }
         }
         @keyframes mouth-think {
-          0%, 100% { d: path("M30 30 Q 40 25 50 30"); }
-          50% { d: path("M30 30 Q 40 35 50 30"); }
+          0%, 100% { d: path("M30 30 Q 40 32 50 30"); }
+          50% { d: path("M30 30 Q 40 38 50 30"); }
+        }
+        @keyframes mouth-interested {
+          0%, 100% { d: path("M30 30 Q 40 35 50 30"); }
+          50% { d: path("M34 30 Q 40 36 46 30"); }
         }
         @keyframes cursor-blink {
           0%, 100% { opacity: 1; }
@@ -194,6 +198,7 @@ const AILoader = ({
         .animate-pulse-slow { animation: pulse-slow 4s ease-in-out infinite; will-change: transform, opacity; }
         .animate-blink { animation: blink 5s infinite; }
         .animate-mouth-think { animation: mouth-think 3s ease-in-out infinite; }
+        .animate-mouth-interested { animation: mouth-interested 2s ease-in-out infinite; }
         .animate-cursor-blink { animation: cursor-blink 1s infinite; }
         .animate-spin-slow { animation: spin-slow 15s linear infinite; will-change: transform; }
       `}</style>

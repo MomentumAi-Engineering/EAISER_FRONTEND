@@ -35,11 +35,25 @@ const pick = (obj, keys, fallback = undefined) => {
   return fallback;
 };
 
-export default function ReportReview({ issue, imagePreview, analysisDescription, userAddress, userZip, userLat, userLon, imageName, onClearReport }) {
+export default function ReportReview({ issue, imagePreview, analysisDescription, userAddress, userZip, userLat, userLon, imageName, onClearReport, isManualMode, incidentDate }) {
   const navigate = useNavigate();
   const issueId = pick(issue, ['id', 'issue_id', 'data.id'], 'N/A');
   const status = pick(issue, ['report.status', 'status'], 'pending');
   const dispatchDecision = pick(issue, ['report.dispatch_decision', 'dispatch_decision'], null);
+
+  // Compute confidence early as it's used in submit handlers
+  let confidence = pick(issue, [
+    'report.report.unified_report.confidence_percent',
+    'report.unified_report.confidence_percent',
+    'report.report.issue_overview.confidence',
+    'report.issue_overview.confidence',
+  ], null);
+  if (confidence !== null) {
+    try {
+      const num = Number(confidence);
+      confidence = num <= 1 ? Math.round(num * 100) : Math.round(num);
+    } catch { }
+  }
 
   const formatIssueType = (type) => {
     if (!type || String(type).toLowerCase() === 'manual report') return type || 'Unknown';
@@ -70,16 +84,23 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   });
   const allAuthorities = Array.from(allAuthsMap.values());
 
+  const [allAuthoritiesState, setAllAuthoritiesState] = useState([]);
+  const [needsAuthorityRefresh, setNeedsAuthorityRefresh] = useState(false);
+  const [isRefreshingAuths, setIsRefreshingAuths] = useState(false);
+
   // State for selected authorities
   const [selectedAuths, setSelectedAuths] = useState([]);
 
   // Initialize selected authorities with recommended ones
   useEffect(() => {
-    if (recommendedAuthorities.length > 0) {
-      setSelectedAuths(recommendedAuthorities);
-    } else if (allAuthorities.length > 0) {
-      // Default to first if no specific recommendation
-      setSelectedAuths([allAuthorities[0]]);
+    if (!hasEdited) {
+      setAllAuthoritiesState(allAuthorities);
+      if (recommendedAuthorities.length > 0) {
+        setSelectedAuths(recommendedAuthorities);
+      } else if (allAuthorities.length > 0) {
+        // Default to first if no specific recommendation
+        setSelectedAuths([allAuthorities[0]]);
+      }
     }
   }, [issue]);
 
@@ -138,10 +159,79 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     }
   }, [issue]);
 
+  if (hasEdited) {
+    confidence = null; // Auto remove confidence string if user manually edits
+  }
+
   const handleEditChange = (e) => {
     const { name, value } = e.target;
     setEditForm(prev => ({ ...prev, [name]: value }));
     setHasEdited(true);
+    setNeedsAuthorityRefresh(true);
+  };
+
+  const handleRefreshAuthorities = async () => {
+    try {
+      setIsRefreshingAuths(true);
+      setError(null);
+      const currentZipCode = userZip || pick(issue, ['zip_code', 'location.zip_code'], 'default');
+      const res = await apiClient.getAuthoritiesByZip(currentZipCode);
+
+      const formIssueType = (editForm.issue_type || "other").toLowerCase();
+      const typeMap = {
+        pothole: ['public_works', 'transportation'],
+        road_damage: ['public_works', 'transportation'],
+        broken_streetlight: ['public_works'],
+        garbage: ['sanitation', 'environment', 'public_works'],
+        flood: ['water_utility', 'public_works', 'emergency'],
+        water_leakage: ['water_utility', 'public_works'],
+        fire: ['fire', 'emergency'],
+        dead_animal: ['animal_control', 'sanitation', 'public_works'],
+        vandalism: ['police', 'public_works'],
+        car_accident: ['police', 'emergency', 'transportation'],
+        abandoned_vehicle: ['police', 'code_enforcement', 'public_works']
+      };
+
+      const neededCategories = typeMap[formIssueType] || ['general', 'public_works'];
+
+      let newAuths = [];
+      const addedEmails = new Set();
+
+      for (const cat of neededCategories) {
+        if (res[cat] && Array.isArray(res[cat])) {
+          res[cat].forEach(auth => {
+            if (!addedEmails.has(auth.email)) {
+              newAuths.push(auth);
+              addedEmails.add(auth.email);
+            }
+          });
+        }
+      }
+
+      if (newAuths.length === 0 && res.default) {
+        Object.values(res.default).flat().forEach(auth => {
+          if (!addedEmails.has(auth.email)) {
+            newAuths.push(auth);
+            addedEmails.add(auth.email);
+          }
+        });
+      }
+
+      if (newAuths.length === 0 && allAuthorities.length > 0) {
+        newAuths = allAuthorities;
+      }
+
+      setAllAuthoritiesState(newAuths);
+      setSelectedAuths(newAuths);
+      setNeedsAuthorityRefresh(false);
+
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch updated authorities. You may proceed with current selection.");
+      setNeedsAuthorityRefresh(false);
+    } finally {
+      setIsRefreshingAuths(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -157,7 +247,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
     // For Manual Reports or Low Confidence, allow submission to Internal Team
     if (finalAuths.length === 0) {
-      if (editForm.issue_type === 'Manual Report' || confidence === 0) {
+      const originalType = pick(issue, ['issue_overview.issue_type', 'report.report.issue_overview.issue_type', 'report.unified_report.issue_type', 'issue_type'], 'Unknown');
+      const isManual = originalType === 'Manual Report' || (confidence !== null && Number(confidence) === 0);
+      if (isManual || confidence < 75) {
         finalAuths = [{
           name: "Internal Review Team",
           email: "eaiser@momntumai.com",
@@ -235,7 +327,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         </div>
 
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => onClearReport ? onClearReport() : window.location.reload()}
           className="px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl font-semibold text-white transition-all"
         >
           Submit Another Report
@@ -253,11 +345,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   );
 
   if (isNoIssue && !submitSuccess) {
-    const noIssueSummary = pick(issue, [
-      'report.report.issue_overview.summary_explanation',
-      'report.report.ai_evaluation.rationale',
-      'report.issue_overview.summary_explanation',
-    ], 'Our AI system did not detect a clear civic infrastructure issue in this image.');
+    const noIssueSummary = "AI detection inconclusive. To ensure the city receives accurate info, please Request a Review or Manually Describe the issue to proceed.";
 
     // Handler for manual report submission (forces Internal Review Team only)
     const handleManualSubmit = async () => {
@@ -332,19 +420,20 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         )}
 
         <div className="bg-white/5 border border-gray-700 rounded-xl p-5 text-left mb-6 max-w-md mx-auto">
-          <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-3">What happens now?</p>
-          <ul className="space-y-2 text-sm text-gray-300">
-            <li className="flex gap-2">
+          <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">What happens next?</p>
+          <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mb-3">Once Submitted:</p>
+          <ul className="space-y-3 text-sm text-gray-300">
+            <li className="flex gap-3">
               <CheckCircle2 className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
-              <span>This report is flagged for <strong className="text-white">manual review</strong> by our team.</span>
+              <span><strong className="text-white">Expert Verification:</strong> Our team will receive your report for manual review.</span>
             </li>
-            <li className="flex gap-2">
+            <li className="flex gap-3">
               <CheckCircle2 className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
-              <span>No automatic authority notifications will be sent.</span>
+              <span><strong className="text-white">Precision Guard:</strong> To ensure high accuracy, city notifications are held until the issue is confirmed.</span>
             </li>
-            <li className="flex gap-2">
+            <li className="flex gap-3">
               <CheckCircle2 className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
-              <span>If our team finds a valid issue, it will be escalated.</span>
+              <span><strong className="text-white">Rapid Escalation:</strong> Once verified, your report is fast-tracked to the correct municipal department.</span>
             </li>
           </ul>
         </div>
@@ -462,7 +551,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
           </div>
 
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => onClearReport ? onClearReport() : window.location.reload()}
             className="w-full py-3 bg-white/5 hover:bg-white/10 border border-gray-700 rounded-xl font-semibold text-white text-sm transition-all"
           >
             Submit Another Report
@@ -560,9 +649,20 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
             className="mt-8 pt-4 pb-2"
           >
             <p className="text-white font-black text-xl md:text-2xl mb-3 tracking-wide">Thank you for using EAiSER</p>
-            <div className="flex flex-col items-center mt-6">
-              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-              <p className="text-[11px] text-gray-500 uppercase tracking-widest font-semibold animate-pulse">Redirecting to Dashboard...</p>
+            <div className="flex flex-col items-center mt-6 gap-4">
+              <button
+                onClick={() => {
+                  if (onClearReport) onClearReport();
+                  navigate('/dashboard');
+                }}
+                className="px-8 py-3 bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-xl transition-all shadow-lg shadow-yellow-500/20 active:scale-95"
+              >
+                Back to Dashboard
+              </button>
+              <div className="flex items-center gap-2">
+                <div className="w-3.5 h-3.5 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Auto-redirecting...</p>
+              </div>
             </div>
           </motion.div>
         </motion.div>
@@ -597,16 +697,8 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     else if (labelsText.includes('abandoned') || (labelsText.includes('vehicle') && labelsText.includes('dust'))) issueType = 'abandoned_vehicle';
   }
 
-  // Prefer unified_report.confidence_percent when available
-  let confidence = pick(issue, [
-    'report.report.unified_report.confidence_percent',
-    'report.unified_report.confidence_percent',
-    'report.report.issue_overview.confidence',
-    'report.issue_overview.confidence',
-  ], null);
-
   // Is Manual Report Check
-  const isManualReport = String(issueType).toLowerCase() === 'manual report' || (confidence !== null && Number(confidence) === 0) || !imagePreview;
+  const isManualReport = isManualMode || String(issueType).toLowerCase() === 'manual report' || (confidence !== null && Number(confidence) === 0) || !imagePreview;
   const aiSeverity = pick(aiOverview, ['severity'], pick(issue, ['severity', 'priority'], ''));
   const category = pick(issue, ['category'], '');
   const zipCodeBase = pick(issue, ['zip_code', 'location.zip_code'], '—');
@@ -627,13 +719,6 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     : summaryExplanation;
   const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
   // recommendedAuthorities removed here as it was already declared above
-
-  if (confidence !== null) {
-    try {
-      const num = Number(confidence);
-      confidence = num <= 1 ? Math.round(num * 100) : Math.round(num);
-    } catch { }
-  }
 
   const lat = typeof latitude === 'number' ? latitude : Number(latitude);
   const lon = typeof longitude === 'number' ? longitude : Number(longitude);
@@ -699,21 +784,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   // Render a clean card with the report details
   return (
     <div className="mt-8 bg-gradient-to-br from-gray-900/60 to-black/60 backdrop-blur-xl rounded-2xl border border-gray-800 p-6">
-      {/* Alert for AI Generated / Cartoon / No Issue images */}
-      {(!isManualReport && (confidence < 25 || (summaryExplanation && summaryExplanation.includes("Please provide the correct image")))) && (
-        <div className="mb-6 bg-red-500/10 border border-red-500/50 rounded-xl p-5 flex items-start gap-4">
-          <ShieldAlert className="w-6 h-6 text-red-500 flex-shrink-0 mt-1" />
-          <div className="flex-1">
-            <h3 className="text-red-500 font-bold text-lg leading-tight mb-1">Authenticity Warning</h3>
-            <p className="text-gray-200 text-sm font-medium">
-              {summaryExplanation || "Please provide the correct image. No issue, animated, or fake image detected."}
-            </p>
-            <div className="mt-2 text-xs text-gray-400 font-normal">
-              Note: Our AI system automatically rejects cartoons, illustrations, and images that do not show clear public infrastructure issues.
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Authenticity Warning removed as requested */}
 
       {/* Top header and progress */}
       <div className="mb-6">
@@ -819,20 +890,20 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                   name="issue_type"
                   value={editForm.issue_type}
                   onChange={handleEditChange}
-                  className="w-full bg-black/20 border border-gray-600 rounded px-2 py-1 text-sm mt-1 focus:border-yellow-500 outline-none"
+                  className="w-full bg-black/40 text-white border border-gray-700/50 rounded-xl px-4 py-3 text-sm mt-2 focus:border-yellow-500/50 transition-all outline-none cursor-pointer hover:bg-black/60 shadow-sm"
                 >
-                  <option value="Manual Report">Manual Report</option>
-                  <option value="pothole">Pothole</option>
-                  <option value="road_damage">Road Damage</option>
-                  <option value="broken_streetlight">Broken Streetlight</option>
-                  <option value="garbage">Garbage / Trash</option>
-                  <option value="flood">Flooding</option>
-                  <option value="water_leakage">Water Leakage</option>
-                  <option value="fire">Fire Hazard</option>
-                  <option value="dead_animal">Dead Animal</option>
-                  <option value="car_accident">Car Accident</option>
-                  <option value="abandoned_vehicle">Abandoned Vehicle</option>
-                  <option value="other">Other</option>
+                  <option className="bg-gray-900 text-white" value="Manual Report">Manual Report</option>
+                  <option className="bg-gray-900 text-white" value="pothole">Pothole</option>
+                  <option className="bg-gray-900 text-white" value="road_damage">Road Damage</option>
+                  <option className="bg-gray-900 text-white" value="broken_streetlight">Broken Streetlight</option>
+                  <option className="bg-gray-900 text-white" value="garbage">Garbage / Trash</option>
+                  <option className="bg-gray-900 text-white" value="flood">Flooding</option>
+                  <option className="bg-gray-900 text-white" value="water_leakage">Water Leakage</option>
+                  <option className="bg-gray-900 text-white" value="fire">Fire Hazard</option>
+                  <option className="bg-gray-900 text-white" value="dead_animal">Dead Animal</option>
+                  <option className="bg-gray-900 text-white" value="car_accident">Car Accident</option>
+                  <option className="bg-gray-900 text-white" value="abandoned_vehicle">Abandoned Vehicle</option>
+                  <option className="bg-gray-900 text-white" value="other">Other</option>
                 </select>
               ) : (
                 <p className="text-sm font-semibold">{formatIssueType(hasEdited ? editForm.issue_type : issueType)}</p>
@@ -846,12 +917,12 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                   name="severity"
                   value={editForm.severity}
                   onChange={handleEditChange}
-                  className="w-full bg-black/20 border border-gray-600 rounded px-2 py-1 text-sm mt-1 focus:border-yellow-500 outline-none"
+                  className="w-full bg-black/40 text-white border border-gray-700/50 rounded-xl px-4 py-3 text-sm mt-2 focus:border-yellow-500/50 transition-all outline-none cursor-pointer hover:bg-black/60 shadow-sm"
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
+                  <option className="bg-gray-900 text-white" value="low">Low</option>
+                  <option className="bg-gray-900 text-white" value="medium">Medium</option>
+                  <option className="bg-gray-900 text-white" value="high">High</option>
+                  <option className="bg-gray-900 text-white" value="critical">Critical</option>
                 </select>
               ) : (
                 <span className={`text-sm font-semibold uppercase ${((hasEdited ? editForm.severity : priorityLabel) || '').toLowerCase() === 'high' || ((hasEdited ? editForm.severity : priorityLabel) || '').toLowerCase() === 'critical'
@@ -865,10 +936,15 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               )}
             </div>
 
-            {!isManualReport && confidence !== null && (
+            {!isManualReport && confidence !== null && !isEditing ? (
               <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
                 <p className="text-xs text-gray-400">Confidence</p>
                 <p className="text-sm font-semibold">{String(confidence)}%</p>
+              </div>
+            ) : (
+              <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+                <p className="text-xs text-gray-400">Report Date</p>
+                <p className="text-sm font-semibold">{String(incidentDate || pick(issue, ['timestamp_formatted', 'report.timestamp_formatted'], new Date().toLocaleDateString())).split(' ')[0]}</p>
               </div>
             )}
           </div>
@@ -966,9 +1042,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               <span className="text-xs font-normal text-gray-400">Tap to select/deselect</span>
             </p>
 
-            {allAuthorities.length > 0 ? (
+            {allAuthoritiesState.length > 0 ? (
               <div className="grid md:grid-cols-2 gap-2">
-                {allAuthorities.map((auth, idx) => {
+                {allAuthoritiesState.map((auth, idx) => {
                   const isSelected = selectedAuths.some(a => a.email === auth.email);
                   return (
                     <div
@@ -1007,11 +1083,25 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
           {/* Action Buttons — visible to everyone, auth checked on click */}
           {!summaryExplanation?.includes("Please provide the correct image") && (
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3">
+              {needsAuthorityRefresh && !isManualReport && (
+                <button
+                  onClick={handleRefreshAuthorities}
+                  disabled={isRefreshingAuths}
+                  className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${isRefreshingAuths ? 'bg-gray-700 text-gray-400' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                    }`}
+                >
+                  {isRefreshingAuths ? (
+                    <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Refreshing...</>
+                  ) : (
+                    <>Refresh Authorities (Required)</>
+                  )}
+                </button>
+              )}
               <button
                 onClick={handleSubmit}
-                disabled={submitting || (selectedAuths.length === 0 && editForm.issue_type !== 'Manual Report' && confidence !== 0)}
-                className={`flex-1 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${submitting || (selectedAuths.length === 0 && editForm.issue_type !== 'Manual Report' && confidence !== 0)
+                disabled={submitting || (needsAuthorityRefresh && !isManualReport) || (selectedAuths.length === 0 && !isManualReport && confidence !== 0 && confidence !== null)}
+                className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${submitting || (needsAuthorityRefresh && !isManualReport) || (selectedAuths.length === 0 && !isManualReport && confidence !== 0 && confidence !== null)
                   ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                   : 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-lg hover:shadow-yellow-500/20'
                   }`}

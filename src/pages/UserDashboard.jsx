@@ -37,6 +37,7 @@ export default function UserDashboard() {
   });
 
   const [filter, setFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('All Locations');
   const [notifications, setNotifications] = useState(0);
   // Only show full page loader if we have NO data
   const [loading, setLoading] = useState(() => !localStorage.getItem('dashboard_issues'));
@@ -51,6 +52,15 @@ export default function UserDashboard() {
   const [notificationList, setNotificationList] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
+
+  const zipCodes = React.useMemo(() => {
+    const zips = new Set();
+    issues.forEach(i => {
+      const zip = i.zip_code || i.location?.zip_code;
+      if (zip) zips.add(zip);
+    });
+    return ['All Locations', ...Array.from(zips).sort()];
+  }, [issues]);
 
   const previousIssuesRef = React.useRef(issues);
   const navigate = useNavigate();
@@ -103,6 +113,24 @@ export default function UserDashboard() {
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
+  };
+
+  const cleanAIReportText = (text) => {
+    if (!text) return '';
+    let cleaned = text
+      .split('\n')[0] // Take only the first paragraph if there are multiple
+      .replace(/AI Analysis:/gi, '')
+      .replace(/\*\*.*?\*\*/g, '') // Remove bold markers
+      .replace(/has been reported at.*$/i, '.') // Remove location suffixes
+      .replace(/Zip:.*$/i, '.')
+      .replace(/priority:.*$/i, '.')
+      .replace(/confidence:.*$/i, '.')
+      .replace(/(\.){2,}/g, '.') // Fix double dots
+      .trim();
+
+    // Ensure it ends with a dot if it's a sentence
+    if (cleaned && !cleaned.endsWith('.')) cleaned += '.';
+    return cleaned;
   };
 
   const fetchIssues = async (isBackground = false) => {
@@ -222,8 +250,16 @@ export default function UserDashboard() {
                     className="absolute right-0 top-full mt-2 w-80 bg-zinc-900 border border-yellow-500/20 rounded-xl shadow-2xl z-50 overflow-hidden"
                   >
                     <div className="p-3 border-b border-white/5 flex justify-between items-center">
-                      <h3 className="text-sm font-bold text-white">Notifications</h3>
-                      <button onClick={() => { setNotifications(0); setNotificationList([]); }} className="text-xs text-gray-500 hover:text-white">Clear all</button>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-white">Notifications</h3>
+                        <button onClick={() => { setNotifications(0); setNotificationList([]); }} className="text-[10px] text-gray-500 hover:text-white ml-2">Clear all</button>
+                      </div>
+                      <button
+                        onClick={() => setShowNotifications(false)}
+                        className="p-1 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                     <div className="max-h-60 overflow-y-auto custom-scrollbar">
                       {notificationList.length === 0 ? (
@@ -246,7 +282,7 @@ export default function UserDashboard() {
               <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
             <button onClick={() => navigate('/report')} className="px-5 py-2.5 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition-all flex items-center gap-2 text-sm shadow-lg shadow-yellow-500/10">
-              <Activity className="w-4 h-4" /> Report New
+              <Activity className="w-4 h-4" /> New Report
             </button>
           </div>
         </header>
@@ -266,9 +302,9 @@ export default function UserDashboard() {
           <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
             <div className="lg:col-span-2 space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <StatCard icon={Activity} label="Total Posts" value={stats.totalReported} color="bg-blue-500/10" delay={0.1} />
-                <StatCard icon={Clock} label="Pending Review" value={stats.pending} color="bg-orange-500/10" delay={0.2} />
-                <StatCard icon={CheckCircle} label="Success Rate" value={`${stats.activeRate}%`} color="bg-green-500/10" delay={0.3} />
+                <StatCard icon={Activity} label="Total Reports" value={stats.totalReported} color="bg-blue-500/10" delay={0.1} />
+                <StatCard icon={Clock} label="Under Review" value={stats.pending} color="bg-orange-500/10" delay={0.2} />
+                <StatCard icon={CheckCircle} label="Routed" value={stats.resolved} color="bg-green-500/10" delay={0.3} />
               </div>
 
               <div className="bg-zinc-900/40 p-5 rounded-2xl border border-white/5 backdrop-blur-md">
@@ -276,8 +312,20 @@ export default function UserDashboard() {
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-yellow-400" /> Recent Issues
                   </h2>
-                  <div className="flex gap-2">
-                    {['all', 'pending', 'resolved'].map((t) => (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {zipCodes.length > 1 && (
+                      <select
+                        value={locationFilter}
+                        onChange={(e) => setLocationFilter(e.target.value)}
+                        className="bg-zinc-800 border border-white/5 text-gray-400 text-xs rounded-lg px-2 py-1.5 outline-none hover:text-white hover:border-white/10 transition-colors cursor-pointer mr-2"
+                      >
+                        {zipCodes.map(zip => (
+                          <option key={zip} value={zip}>{zip}</option>
+                        ))}
+                      </select>
+                    )}
+
+                    {['all', 'routed', 'in review'].map((t) => (
                       <button key={t} onClick={() => setFilter(t)} className={`px-3 py-1.5 rounded-lg text-xs transition-all capitalize font-bold ${filter === t ? 'bg-yellow-400 text-black shadow-lg shadow-yellow-500/10' : 'bg-zinc-800 text-gray-500 hover:text-white'}`}>
                         {t}
                       </button>
@@ -291,11 +339,21 @@ export default function UserDashboard() {
                   ) : (
                     issues
                       .filter(i => {
-                        if (filter === 'all') return true;
-                        const s = i.status?.toLowerCase();
-                        const isResolved = ['resolved', 'completed', 'accepted', 'submitted', 'approved', 'dispatched'].includes(s);
-                        const isPending = ['needs_review', 'under_review', 'pending'].includes(s);
-                        return filter === 'resolved' ? isResolved : isPending;
+                        let statusMatch = true;
+                        if (filter !== 'all') {
+                          const s = i.status?.toLowerCase();
+                          const isResolved = ['resolved', 'completed', 'accepted', 'submitted', 'approved', 'dispatched'].includes(s);
+                          const isPending = ['needs_review', 'under_review', 'pending'].includes(s);
+                          statusMatch = filter === 'routed' ? isResolved : isPending;
+                        }
+
+                        let locationMatch = true;
+                        if (locationFilter !== 'All Locations') {
+                          const zip = i.zip_code || i.location?.zip_code;
+                          locationMatch = zip === locationFilter;
+                        }
+
+                        return statusMatch && locationMatch;
                       })
                       .map((issue, idx) => (
                         <motion.div
@@ -331,7 +389,7 @@ export default function UserDashboard() {
             <div className="space-y-6">
               <div className="bg-gradient-to-br from-zinc-900 to-black p-6 rounded-2xl border border-yellow-500/10">
                 <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-yellow-400" /> Stats Alpha
+                  <BarChart3 className="w-4 h-4 text-yellow-400" /> Clearance Performance
                 </h3>
                 <div className="space-y-4">
                   <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
@@ -362,12 +420,12 @@ export default function UserDashboard() {
                 <div className="h-60 md:h-auto md:w-1/2 bg-black relative">
                   <img
                     src={selectedIssue.image_url ?
-                      (selectedIssue.image_url.startsWith('http') ? selectedIssue.image_url : `${API_BASE_URL.replace('/api', '')}${selectedIssue.image_url}`)
-                      : `https://placehold.co/600x800/18181b/FFF?text=Digital+Evidence`}
+                      (selectedIssue.image_url.startsWith('http') ? selectedIssue.image_url : `${API_BASE_URL.replace('/api', '')}${selectedIssue.image_url.startsWith('/') ? '' : '/'}${selectedIssue.image_url}`)
+                      : (selectedIssue.image_id ? `${API_BASE_URL}/issues/${selectedIssue._id || selectedIssue.id}/image` : `https://placehold.co/600x800/18181b/FFF?text=Digital+Evidence`)}
                     className="w-full h-full object-cover opacity-80"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = `https://placehold.co/600x800/18181b/FFF?text=Satellite+Feed+Error`;
+                      e.target.src = `https://placehold.co/600x800/18181b/FFF?text=Evidence+Feed+Error`;
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
@@ -383,8 +441,25 @@ export default function UserDashboard() {
                   </div>
                   <div className="mb-6">
                     <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Intel Summary</h3>
-                    <p className="text-gray-400 text-sm leading-relaxed italic">"{selectedIssue.report?.summary || selectedIssue.description || "Synthesizing report metadata..."}"</p>
+                    <p className="text-gray-400 text-xs leading-relaxed italic">
+                      "Our AI analyzed the image and identified a potential <span className="text-yellow-400/80">{formatIssueType(selectedIssue.issue_type)}</span> showing <span className="text-white/90">{cleanAIReportText(selectedIssue.description || selectedIssue.report?.summary || 'an identified civic concern')}</span>. This issue is located at <span className="text-white/70">{selectedIssue.address?.split(',')[1]?.trim() || selectedIssue.address?.split(',')[0] || 'Unknown City'}</span> (ZIP {selectedIssue.zip_code || selectedIssue.location?.zip_code || 'N/A'})."
+                    </p>
                   </div>
+
+                  {/* Authorities Section */}
+                  {(selectedIssue.report?.responsible_authorities_or_parties?.length > 0 || selectedIssue.report?.report?.responsible_authorities_or_parties?.length > 0) && (
+                    <div className="mb-6">
+                      <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Dispatched Authorities</h3>
+                      <div className="space-y-2">
+                        {(selectedIssue.report?.responsible_authorities_or_parties || selectedIssue.report?.report?.responsible_authorities_or_parties).map((auth, idx) => (
+                          <div key={idx} className="flex items-center gap-2 bg-white/5 p-2 rounded-lg border border-white/5">
+                            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
+                            <span className="text-[11px] text-gray-300 font-bold uppercase tracking-wider">{auth.name || auth.department || auth}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {selectedIssue.admin_note && (
                     <div className="p-3 bg-yellow-500/5 border border-yellow-500/10 rounded-xl">
                       <h3 className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-1">Admin Feedback</h3>

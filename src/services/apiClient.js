@@ -12,16 +12,13 @@ class ApiClient {
       import.meta.env &&
       import.meta.env.VITE_API_BASE_URL;
 
-    const isDev =
-      typeof import.meta !== 'undefined' &&
-      import.meta.env &&
-      import.meta.env.DEV;
+    const isDev = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
     this.baseURL = (
       baseURL ||
       envApi ||
       (isDev
-        ? 'http://localhost:8000'
+        ? 'http://localhost:8005'
         : 'https://eaiser-backend-rf95.onrender.com')
     ).replace(/\/$/, '');
 

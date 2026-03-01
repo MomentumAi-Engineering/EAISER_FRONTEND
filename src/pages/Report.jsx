@@ -15,7 +15,10 @@ import {
   Calendar,
   Clock,
   ClipboardList,
-  Fingerprint
+  Fingerprint,
+  Globe,
+  Activity,
+  AlertTriangle
 } from "lucide-react";
 import * as geolib from 'geolib';
 import EXIF from 'exif-js';
@@ -27,6 +30,25 @@ import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from "@react-google-m
 import Navbar from "../components/Navbar";
 import { useReportContext } from "../context/ReportContext";
 import { useDialog } from "../context/DialogContext";
+
+const SERVICED_ZIP_CODES = ["37013", "37027", "37062", "37072", "37076", "37115", "37138", "37201", "37203", "37204", "37205", "37206", "37207", "37208", "37209", "37210", "37211", "37212", "37214", "37215", "37216", "37217", "37218", "37219", "37220", "37221", "37222", "37224", "37227", "37228", "37229", "37230", "37232", "37234", "37235", "37236", "37238", "37240", "37242", "37250"];
+
+const isInsideFairview = (lat, lng, zip = null) => {
+  // If we have a zip, check if it's in our authority database
+  if (zip) {
+    return SERVICED_ZIP_CODES.includes(String(zip));
+  }
+
+  // Fallback to geographic bounds ONLY if no zip is provided
+  if (!lat || !lng) return true;
+  return lat <= FAIRVIEW_BOUNDS.north &&
+    lat >= FAIRVIEW_BOUNDS.south &&
+    lng >= FAIRVIEW_BOUNDS.west &&
+    lng <= FAIRVIEW_BOUNDS.east;
+};
+
+const OUTSIDE_AREA_MESSAGE = "Location outside immediate service zone. You can still report; we'll relay it to local authorities. For emergencies, please call local services directly.";
+// -----------------------------------
 
 const LIBRARIES = ["places"];
 
@@ -84,6 +106,15 @@ export default function SimpleReport() {
           zipCode: zip || prev.zipCode,
         }));
 
+        // Check if outside Fairview (Check Zip first, then Geo)
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        if (!isInsideFairview(lat, lng, zip)) {
+          setIsOutsideServicedArea(true);
+        } else {
+          setIsOutsideServicedArea(false);
+        }
+
         setLocationPermission(false); // Because user typed manually/selected
       }
     }
@@ -108,6 +139,7 @@ export default function SimpleReport() {
   const [photoAccuracy, setPhotoAccuracy] = useState(15); // Default 15m
   const [facingMode, setFacingMode] = useState('environment');
   const [isShutterFlash, setIsShutterFlash] = useState(false);
+  const [isOutsideServicedArea, setIsOutsideServicedArea] = useState(false);
 
   // Reverse Geocode Helper
   const reverseGeocode = async (lat, lng) => {
@@ -116,22 +148,26 @@ export default function SimpleReport() {
         `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
       );
       const data = await res.json();
-      if (data.results && data.results[0]) {
-        const result = data.results[0];
+      if (data.results.length > 0) {
+        const place = data.results[0];
+        const zipComponent = place.address_components.find(c => c.types.includes("postal_code"));
         let zip = "";
-        const zipComponent = result.address_components.find((c) =>
-          c.types.includes("postal_code")
-        );
         if (zipComponent) zip = zipComponent.long_name;
 
         setFormData((prev) => ({
           ...prev,
-          streetAddress: result.formatted_address,
-          zipCode: zip,
+          streetAddress: place.formatted_address,
+          zipCode: zip || prev.zipCode,
         }));
+
+        // Trigger Outside Fairview check
+        setIsOutsideServicedArea(!isInsideFairview(lat, lng, zip));
+        return zip; // Return zip for immediate checks
       }
+      return null;
     } catch (error) {
-      console.error("Reverse geocoding failed", error);
+      console.error("Reverse geocoding failed:", error);
+      return null;
     }
   };
 
@@ -302,7 +338,11 @@ export default function SimpleReport() {
           setLocationPermission(true);
           setCoords({ lat: latitude, lng: longitude });
           setMapZoom(20);
-          await reverseGeocode(latitude, longitude);
+          const zip = await reverseGeocode(latitude, longitude);
+
+          // Trigger Outside Fairview check
+          setIsOutsideServicedArea(!isInsideFairview(latitude, longitude, zip));
+
           showAlert("Location captured & Address updated!", { variant: 'success', title: 'GPS Sync' });
         },
         () => showAlert("Location access denied", { variant: 'error', title: 'Location Error' }),
@@ -333,6 +373,13 @@ export default function SimpleReport() {
         });
         setMapZoom(20);
         setLocationPermission(false); // Because user typed manually
+
+        // Get zip from address if possible or via geocode result
+        const zipComponent = data.results[0].address_components.find(c => c.types.includes("postal_code"));
+        const zip = zipComponent ? zipComponent.long_name : null;
+
+        // Trigger Outside Fairview check
+        setIsOutsideServicedArea(!isInsideFairview(location.lat, location.lng, zip));
       } else {
         await showAlert("Address not found", { variant: 'error' });
       }
@@ -389,6 +436,13 @@ export default function SimpleReport() {
     if (!selectedFile && !isManualMode) {
       await showAlert("Please upload an image first.", { variant: 'warning' });
       return;
+    }
+
+    if (isManualMode) {
+      if (!formData.issueType || formData.issueType === 'other' || !formData.incidentDate || !formData.description || formData.description.trim() === '') {
+        await showAlert("All fields (Category, Date, Description) are mandatory for a manual report.", { variant: 'warning', title: "Missing Information" });
+        return;
+      }
     }
 
     // ---------------------------------------------------------------
@@ -471,6 +525,8 @@ export default function SimpleReport() {
             userLat={coords?.lat}
             userLon={coords?.lng}
             onClearReport={clearReport}
+            isManualMode={isManualMode}
+            incidentDate={formData.incidentDate}
           />
         </div>
       </div>
@@ -483,12 +539,11 @@ export default function SimpleReport() {
       <AILoader
         status="loading"
         messages={[
-          "Analyzing civic issue data...",
-          "Scanning location & severity...",
-          "Matching authority jurisdiction...",
-          "Finalizing verified report...",
-          "Verifying visual evidence accuracy...",
-          "Syncing with authority databases..."
+          "Analyzing visual evidence...",
+          "Scanning location data...",
+          "Evaluating civic issue patterns...",
+          "Cross-referencing databases...",
+          "Finalizing analysis..."
         ]}
       />
     );
@@ -537,6 +592,62 @@ export default function SimpleReport() {
             </button>
           )}
         </div>
+
+        {/* --- PREMIUM OUTSIDE SERVICED AREA POPUP --- */}
+        <AnimatePresence>
+          {isOutsideServicedArea && (
+            <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                className="relative max-w-md w-full p-8 rounded-[3rem] bg-gradient-to-b from-gray-900 via-black to-gray-900 border border-yellow-500/30 shadow-[0_0_80px_-20px_rgba(234,179,8,0.4)] overflow-hidden"
+              >
+                {/* Visual Flair: Animated Glow Orb */}
+                <div className="absolute -top-20 -left-20 w-40 h-40 bg-yellow-500/10 rounded-full blur-[60px]" />
+
+                <div className="relative z-10 flex flex-col items-center text-center">
+                  <div className="relative mb-6">
+                    {/* Pulsing Radar Ring */}
+                    <div className="absolute inset-0 bg-yellow-500/20 rounded-full animate-ping" />
+                    <div className="relative w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.5)]">
+                      <Globe className="w-8 h-8 text-black" />
+                    </div>
+                  </div>
+
+                  <span className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.4em] mb-2">Service Boundary</span>
+                  <h3 className="text-2xl font-black text-white mb-4">Outside Area</h3>
+
+                  <p className="text-gray-300 text-xs leading-relaxed mb-8 font-medium bg-white/5 p-4 rounded-2xl border border-white/5">
+                    {OUTSIDE_AREA_MESSAGE}
+                  </p>
+
+                  <div className="flex flex-col w-full gap-3">
+                    <button
+                      onClick={() => setIsOutsideServicedArea(false)}
+                      className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-yellow-500/10 active:scale-95 flex items-center justify-center gap-3 group"
+                    >
+                      <Activity className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                      Continue Anyway
+                    </button>
+
+                    <div className="flex items-center justify-center gap-2 py-2">
+                      <div className="w-1 h-1 bg-yellow-500/40 rounded-full" />
+                      <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest italic">Review Mode Enabled</span>
+                      <div className="w-1 h-1 bg-yellow-500/40 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Corner Accents */}
+                <div className="absolute top-0 right-0 p-6">
+                  <AlertTriangle className="w-5 h-5 text-yellow-500/10" />
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+        {/* ------------------------------------------- */}
 
         <input
           ref={fileInputRef}
@@ -828,7 +939,7 @@ export default function SimpleReport() {
                         <Clock className="w-4 h-4" />
                       </div>
                       <input
-                        type="datetime-local"
+                        type="date"
                         name="incidentDate"
                         value={formData.incidentDate || ''}
                         onChange={handleChange}
@@ -960,7 +1071,7 @@ export default function SimpleReport() {
                 onClick={() => getCoordsFromAddress(`${formData.streetAddress} ${formData.zipCode}`)}
                 className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
               >
-                <MapPin className="w-3.5 h-3.5" /> Force Update Map
+                <MapPin className="w-3.5 h-3.5" /> View Pin Location
               </button>
             </div>
 
@@ -1078,7 +1189,10 @@ export default function SimpleReport() {
                         const lng = e.latLng.lng();
                         setCoords({ lat, lng });
                         setMapZoom(20);
-                        await reverseGeocode(lat, lng);
+                        const newZip = await reverseGeocode(lat, lng);
+
+                        // Trigger Outside Fairview check
+                        setIsOutsideServicedArea(!isInsideFairview(lat, lng, newZip));
                       }}
                     />
                   </GoogleMap>

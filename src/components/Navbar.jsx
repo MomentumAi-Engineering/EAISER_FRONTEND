@@ -59,9 +59,9 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 
         {/* Logo */}
-        <h1 className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow-md">
-          EaiserAI
-        </h1>
+        <Link to="/" className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow-md hover:scale-105 transition-transform cursor-pointer block">
+          EAiSER
+        </Link>
 
         {/* Desktop Menu */}
         <ul className="hidden md:flex gap-10 text-lg font-semibold">

@@ -32,8 +32,8 @@ const getApiBase = () => {
     }
   }
 
-  // fallback to same origin
-  return '';
+  // fallback to cloud api
+  return 'https://eaiser-backend-rf95.onrender.com';
 };
 
 const API_BASE = getApiBase();

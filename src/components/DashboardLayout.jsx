@@ -322,8 +322,16 @@ export default function DashboardLayout({ children, currentPage = 'dashboard' })
                             {showNotifications && (
                                 <div className="absolute right-0 mt-3 w-80 bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl z-[60] overflow-hidden animate-in slide-in-from-top-2">
                                     <div className="p-4 border-b border-gray-800 bg-gray-800/30 flex justify-between items-center">
-                                        <h4 className="font-bold text-sm">System Notifications</h4>
-                                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Real-time</span>
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="font-bold text-sm">System Notifications</h4>
+                                            <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Real-time</span>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowNotifications(false)}
+                                            className="p-1 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-colors"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
                                     </div>
                                     <div className="max-h-96 overflow-y-auto custom-scrollbar">
                                         {notificationList.length === 0 ? (
