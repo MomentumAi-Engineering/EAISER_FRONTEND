@@ -47,7 +47,7 @@ const isInsideFairview = (lat, lng, zip = null) => {
     lng <= FAIRVIEW_BOUNDS.east;
 };
 
-const OUTSIDE_AREA_MESSAGE = "Location outside immediate service zone. You can still report; we'll relay it to local authorities. For emergencies, please call local services directly.";
+const OUTSIDE_AREA_MESSAGE = "It seems this incident is outside EAiSER’s current serviced areas. If you’d like, please go ahead and finish your report; our team will review it and do our best to share the information with the appropriate local authorities. For the fastest and most reliable response, we strongly recommend that you also contact your local authorities directly through their current channels. We are actively working to expand into more regions so we can fully support incidents like yours in the future.";
 // -----------------------------------
 
 const LIBRARIES = ["places"];
