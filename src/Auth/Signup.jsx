@@ -135,23 +135,41 @@ export default function Signup() {
       }
 
       if (!googleInitRef.current) {
+        console.log("Initializing Google accounts with Client ID:", GOOGLE_CLIENT_ID);
         googleId.initialize({
           client_id: GOOGLE_CLIENT_ID,
           callback: handleGoogleCredential,
+          use_fedcm_for_prompt: true, // ✅ Mandatory FedCM support for 2026/Chromium 123+
         });
         googleInitRef.current = true;
       }
 
       googleId.prompt((notification) => {
-        // ❗ Handle ALL outcomes
+        const reason = notification.getNotDisplayedReason();
+        const skippedReason = notification.getSkippedReason ? notification.getSkippedReason() : "N/A";
+
+        console.log("Google prompt status:", {
+          isDisplayed: notification.isDisplayed(),
+          isNotDisplayed: notification.isNotDisplayed(),
+          notDisplayedReason: reason,
+          isSkipped: notification.isSkippedMoment(),
+          skippedReason: skippedReason
+        });
+
         if (notification.isNotDisplayed()) {
-          console.log("Google prompt not displayed reason:", notification.getNotDisplayedReason());
-          setError(`Google popup blocked: ${notification.getNotDisplayedReason()}`);
+          console.error("Google prompt not displayed:", reason);
+          if (reason === 'suppressed_by_user') {
+            setError("Google sign-in was recently closed multiple times. Please wait or use email.");
+          } else {
+            setError(`Google popup blocked or FedCM error: ${reason}`);
+          }
           setLoading(false);
         }
 
         if (notification.isSkippedMoment()) {
-          setError("Google sign-in skipped");
+          console.warn("Google sign-in skipped:", skippedReason);
+          // Only set error if it wasn't already set by isNotDisplayed
+          setError((prev) => prev || "Google sign-in skipped or blocked by browser.");
           setLoading(false);
         }
 
