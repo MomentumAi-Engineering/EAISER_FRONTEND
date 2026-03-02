@@ -55,6 +55,10 @@ export const ReportProvider = ({ children }) => {
         }
     };
 
+    const clearError = () => {
+        setError(null);
+    };
+
     const clearReport = () => {
         setReportResult(null);
         setError(null);
@@ -68,7 +72,8 @@ export const ReportProvider = ({ children }) => {
         error,
         inProgress,
         generateReport,
-        clearReport
+        clearReport,
+        clearError
     };
 
     return (

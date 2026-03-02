@@ -55,8 +55,29 @@ const LIBRARIES = ["places"];
 export default function SimpleReport() {
   const navigate = useNavigate();
   // Use Global Context
-  const { generateReport, loading, error, reportResult, clearReport } = useReportContext();
+  const { generateReport, loading, error, reportResult, clearReport, clearError } = useReportContext();
   const { showAlert, showConfirm } = useDialog();
+
+  // 🚀 Premium Pop Card for Errors (AI Rejections & General Failures)
+  useEffect(() => {
+    if (error) {
+      const isAIRejection = error.includes("AI detected") || error.includes("cartoon-like");
+
+      showAlert(error, {
+        title: isAIRejection ? "Visual Analysis Failed" : "Processing Error",
+        variant: "error",
+        confirmText: isAIRejection ? "Try Real Photo" : "Try Again"
+      });
+
+      if (isAIRejection) {
+        setSelectedImage(null);
+        setSelectedFile(null);
+      }
+
+      // Clear error immediately so it doesn't loop
+      clearError();
+    }
+  }, [error, showAlert, clearError]);
 
   useEffect(() => {
     return () => {
@@ -557,11 +578,12 @@ export default function SimpleReport() {
           Report an Issue
         </h1>
 
-        {error && (
+        {/* Inline error hidden in favor of premium pop-up card */}
+        {/* {error && (
           <div className="bg-red-500/10 border border-red-500/50 text-red-200 p-4 rounded-xl text-sm">
             {error}
           </div>
-        )}
+        )} */}
 
         {/* Manual Mode Toggle */}
         <div className="flex justify-end mb-2">
