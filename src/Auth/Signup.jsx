@@ -21,6 +21,8 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
   const returnTo = location.state?.returnTo || '/dashboard';
   const googleInitRef = useRef(false);
   const googleButtonRef = useRef(null);
