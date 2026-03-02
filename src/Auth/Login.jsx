@@ -124,6 +124,7 @@ export default function EaiserLogin() {
           client_id: GOOGLE_CLIENT_ID,
           callback: handleGoogleCredential,
           use_fedcm_for_prompt: true, // ✅ Mandatory FedCM support for 2026/Chromium 123+
+          itp_support: true,          // ✅ Better support for Intelligent Tracking Prevention
         });
         googleInitRef.current = true;
       }
@@ -133,6 +134,7 @@ export default function EaiserLogin() {
         const skippedReason = notification.getSkippedReason ? notification.getSkippedReason() : "N/A";
 
         console.log("Google prompt status:", {
+          momentType: notification.getMomentType(),
           isDisplayed: notification.isDisplayed(),
           isNotDisplayed: notification.isNotDisplayed(),
           notDisplayedReason: reason,
@@ -143,7 +145,9 @@ export default function EaiserLogin() {
         if (notification.isNotDisplayed()) {
           console.error("Google prompt not displayed:", reason);
           if (reason === 'suppressed_by_user') {
-            setError("Google sign-in was recently closed multiple times. Please wait or use email.");
+            setError("Google sign-in was recently closed. Please try again or use email.");
+          } else if (reason === 'opt_out_or_no_session') {
+            setError("No active Google session found. Please sign in to Google first.");
           } else {
             setError(`Google popup blocked or FedCM error: ${reason}`);
           }
@@ -152,7 +156,11 @@ export default function EaiserLogin() {
 
         if (notification.isSkippedMoment()) {
           console.warn("Google sign-in skipped:", skippedReason);
-          setError((prev) => prev || "Google sign-in skipped or blocked by browser.");
+          if (skippedReason === 'unknown_reason') {
+            setError("Google sign-in was blocked by the browser. Try clicking the button again or use another method.");
+          } else {
+            setError(`Google sign-in skipped: ${skippedReason}`);
+          }
           setLoading(false);
         }
 
