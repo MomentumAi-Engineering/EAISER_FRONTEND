@@ -40,7 +40,8 @@ class ApiClient {
     let authHeader = {};
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
-      if (token) {
+      // Robust token check to avoid "Bearer null" or "Bearer undefined"
+      if (token && token !== 'null' && token !== 'undefined' && token.length > 10) {
         authHeader = { Authorization: `Bearer ${token}` };
       }
     }
@@ -49,12 +50,23 @@ class ApiClient {
       method,
       headers: { ...this.defaultHeaders, ...authHeader, ...headers },
       body,
-      credentials: 'include', // allow cookies/session if backend uses them
+      credentials: 'include',
     });
+
     const contentType = res.headers.get('content-type') || '';
     const isJson = contentType.includes('application/json');
     const data = isJson ? await res.json() : await res.text();
+
     if (!res.ok) {
+      // Clear stale tokens if 401 Unauthorized with specific "Could not validate credentials" message
+      if (res.status === 401 && (data?.detail === "Could not validate credentials" || data === "Could not validate credentials")) {
+        console.warn('🔒 Clearing invalid auth tokens');
+        localStorage.removeItem('token');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userData');
+      }
+
       // Throw structured error for callers to handle
       const message = typeof data === 'string' ? data : data?.detail || 'Request failed';
       const error = new Error(message);

@@ -527,6 +527,37 @@ export default function SimpleReport() {
   };
 
   if (reportResult) {
+    // 🔑 Guest Data Recovery: after login redirect, local state (image, address) is lost.
+    // Fall back to data stored in the reportResult (now included by backend).
+    const resolvedImagePreview =
+      selectedImage ||
+      (reportResult?.image_content ? `data:image/jpeg;base64,${reportResult.image_content}` : null) ||
+      (reportResult?.report?.image_content ? `data:image/jpeg;base64,${reportResult.report.image_content}` : null);
+
+    const resolvedAddress =
+      formData.streetAddress ||
+      reportResult?.address ||
+      reportResult?.report?.address ||
+      '';
+
+    const resolvedZip =
+      formData.zipCode ||
+      reportResult?.zip_code ||
+      reportResult?.report?.zip_code ||
+      '';
+
+    const resolvedLat =
+      coords?.lat ||
+      reportResult?.latitude ||
+      reportResult?.report?.latitude ||
+      null;
+
+    const resolvedLon =
+      coords?.lng ||
+      reportResult?.longitude ||
+      reportResult?.report?.longitude ||
+      null;
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white p-6">
         <div className="max-w-4xl mx-auto">
@@ -539,12 +570,12 @@ export default function SimpleReport() {
           </button>
           <ReportReview
             issue={reportResult}
-            imagePreview={selectedImage}
+            imagePreview={resolvedImagePreview}
             imageName={selectedFile?.name}
-            userAddress={formData.streetAddress}
-            userZip={formData.zipCode}
-            userLat={coords?.lat}
-            userLon={coords?.lng}
+            userAddress={resolvedAddress}
+            userZip={resolvedZip}
+            userLat={resolvedLat}
+            userLon={resolvedLon}
             onClearReport={clearReport}
             isManualMode={isManualMode}
             incidentDate={formData.incidentDate}

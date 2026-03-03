@@ -63,8 +63,35 @@ function UploadForm({ setStatus, fetchIssues }) {
   const [emailingAuthorities, setEmailingAuthorities] = useState(false);
   const [emailStatus, setEmailStatus] = useState('');
   const [isGuest, setIsGuest] = useState(false);
+  // Restored image preview (from base64 in sessionStorage after login)
+  const [restoredImagePreview, setRestoredImagePreview] = useState(null);
   const navigate = useNavigate(); // Assume useNavigate is available or add import
 
+  // 🔑 Guest Report Recovery: restore data from sessionStorage after login redirect
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+    if (!token) return; // Only restore for authenticated users
+    try {
+      const saved = sessionStorage.getItem('eaiser_guest_upload_report');
+      if (saved) {
+        const data = JSON.parse(saved);
+        setReportPreview(data.reportPreview);
+        setEditedReport(data.editedReport);
+        setIssueId(data.issueId);
+        setIsGuest(false); // Logged in now, lift the guest wall
+        if (data.address) setAddress(data.address);
+        if (data.zipCode) setZipCode(data.zipCode);
+        if (data.latitude && data.longitude) setCoordinates({ latitude: data.latitude, longitude: data.longitude });
+        if (data.image_content) {
+          setRestoredImagePreview(`data:image/jpeg;base64,${data.image_content}`);
+        }
+        setActiveStep(2); // Go straight to review step
+        sessionStorage.removeItem('eaiser_guest_upload_report');
+      }
+    } catch (e) {
+      console.warn('Could not restore guest report from sessionStorage:', e);
+    }
+  }, []); // Run once on mount
 
   // NEW: Manual Report Mode State (Manual Trigger)
   const [isManualMode, setIsManualMode] = useState(false);
@@ -340,6 +367,27 @@ function UploadForm({ setStatus, fetchIssues }) {
       setIssueId(result.id);
       setIsGuest(result.is_guest || false);
 
+      // 🔑 Guest Data Persistence: Save full result to sessionStorage so data survives login redirect
+      if (result.is_guest) {
+        try {
+          sessionStorage.setItem('eaiser_guest_upload_report', JSON.stringify({
+            reportPreview: result.report,
+            editedReport: result.report.report,
+            issueId: result.id,
+            isGuest: true,
+            address: result.address || address,
+            zipCode: result.zip_code || zipCode,
+            latitude: result.latitude || (coordinates?.latitude),
+            longitude: result.longitude || (coordinates?.longitude),
+            // Store image_content from top-level for recovery after login
+            image_content: result.image_content || result.report?.image_content || null,
+            confidence: result.confidence || 0,
+          }));
+        } catch (e) {
+          console.warn('Could not persist guest report to sessionStorage:', e);
+        }
+      }
+
       // Auto-enable edit mode for Manual Reports as they are "blank" template
       if (isManualMode) {
         setIsEditing(true);
@@ -614,7 +662,7 @@ function UploadForm({ setStatus, fetchIssues }) {
   // Show if AI confidence is Medium/High (>= 40%) OR if user has manually selected authorities (even if low confidence)
   // For LOW confidence (<40%), we default to hiding the *list* and just showing the button to add manually.
   // Manual Report confidence is 0, so it falls into Low Confidence flow.
-  const confidence = editedReport?.issue_overview?.confidence || 0;
+  const confidence = editedReport?.issue_overview?.confidence || reportPreview?.confidence || 0;
   const isLowConfidence = confidence < 40;
   // If we have recommendations AND high confidence, show them.
   // If manual or low confidence, we hide recommendations initally to avoid bad AI data.
@@ -1321,10 +1369,10 @@ function UploadForm({ setStatus, fetchIssues }) {
                     <h4 className="flex items-center gap-2 text-lg font-bold text-blue-200 mb-6 pb-2 border-b border-white/5">
                       <ImageIcon className="w-5 h-5 text-blue-400" /> Evidence Analysis
                     </h4>
-                    {reportPreview.image_content ? (
+                    {(reportPreview.image_content || restoredImagePreview) ? (
                       <div className="relative rounded-xl overflow-hidden border border-gray-700 group max-w-md mx-auto">
                         <img
-                          src={`data:image/jpeg;base64,${reportPreview.image_content}`}
+                          src={reportPreview.image_content ? `data:image/jpeg;base64,${reportPreview.image_content}` : restoredImagePreview}
                           alt="Evidence"
                           className="w-full h-auto object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                         />

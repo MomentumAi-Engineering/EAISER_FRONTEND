@@ -43,6 +43,8 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
   // Compute confidence early as it's used in submit handlers
   let confidence = pick(issue, [
+    'confidence',              // top-level from IssueResponse
+    'report.confidence',       // nested in report object
     'report.report.unified_report.confidence_percent',
     'report.unified_report.confidence_percent',
     'report.report.issue_overview.confidence',
@@ -288,6 +290,13 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
     } catch (err) {
       console.error("Submit failed", err);
+      // If it's an auth error, trigger the login popup
+      if (err.status === 401) {
+        setIsGuest(true);
+        setShowAuthPopup(true);
+        setError("Your session has expired. Please log in again to submit your report.");
+        return;
+      }
       setError(err.message || "Failed to submit report. Please try again.");
     } finally {
       setSubmitting(false);
