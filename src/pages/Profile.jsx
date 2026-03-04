@@ -87,17 +87,34 @@ const ProfilePage = () => {
     navigate('/');
   };
 
-  const handleGeneralSave = async (e) => {
-    e.preventDefault();
+  const handleGeneralSave = async () => {
     setSaving(true);
     try {
       await apiClient.updateProfile(generalForm);
-      setUserInfo(prev => ({
-        ...prev,
+      const updatedUser = {
+        ...userInfo,
         first_name: generalForm.firstName,
         last_name: generalForm.lastName,
         username: generalForm.username
-      }));
+      };
+      setUserInfo(updatedUser);
+
+      // Update localStorage so Navbar picks up new name immediately
+      try {
+        const stored = JSON.parse(localStorage.getItem('userData') || localStorage.getItem('user') || '{}');
+        const merged = {
+          ...stored,
+          first_name: generalForm.firstName,
+          last_name: generalForm.lastName,
+          name: `${generalForm.firstName} ${generalForm.lastName}`.trim(),
+          username: generalForm.username
+        };
+        localStorage.setItem('userData', JSON.stringify(merged));
+        localStorage.setItem('user', JSON.stringify(merged));
+        // Trigger storage event so Navbar re-renders
+        window.dispatchEvent(new Event('storage'));
+      } catch (e) { /* ignore localStorage errors */ }
+
       setIsEditing(false);
       showStatus('success', 'Profile updated successfully');
     } catch (err) {
@@ -309,7 +326,7 @@ const ProfilePage = () => {
                     <p className="text-zinc-500 font-medium">Identity management and account synchronization</p>
                   </div>
 
-                  <form onSubmit={handleGeneralSave} className="space-y-8">
+                  <div className="space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-3">
                         <label className="text-xs font-black text-zinc-400 uppercase tracking-widest flex items-center gap-2">
@@ -384,7 +401,8 @@ const ProfilePage = () => {
                       ) : (
                         <>
                           <button
-                            type="submit"
+                            type="button"
+                            onClick={handleGeneralSave}
                             disabled={saving}
                             className="px-10 py-4 bg-yellow-500 text-black font-black rounded-2xl hover:bg-yellow-400 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2 group"
                           >
@@ -401,7 +419,7 @@ const ProfilePage = () => {
                         </>
                       )}
                     </div>
-                  </form>
+                  </div>
                 </div>
               )}
 

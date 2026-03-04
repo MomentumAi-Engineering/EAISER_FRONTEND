@@ -5,6 +5,7 @@ import apiClient from '../services/apiClient';
 import { Image as ImageIcon, MapPin, FileText, CheckCircle2, Clock, Check, AlertTriangle, ShieldAlert, Send, Edit2, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import Warning from './Warning';
 import confetti from 'canvas-confetti'; // Assuming it's installed, otherwise I will guide to install or use fallback.
 // Actually, to be safe, I'll use a dynamic import or checking.
 // But since I can't interactively check, I'll use a robust method: `npm install canvas-confetti` command? No, I should use what's available.
@@ -247,21 +248,17 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
     let finalAuths = selectedAuths;
 
-    // For Manual Reports or Low Confidence, allow submission to Internal Team
+    // For any issue with no mapped authorities (including 'other' / unknown types),
+    // automatically route to Admin Review Team.
+    // Admin will review via Mapping Review and route to correct department.
     if (finalAuths.length === 0) {
-      const originalType = pick(issue, ['issue_overview.issue_type', 'report.report.issue_overview.issue_type', 'report.unified_report.issue_type', 'issue_type'], 'Unknown');
-      const isManual = originalType === 'Manual Report' || (confidence !== null && Number(confidence) === 0);
-      if (isManual || confidence < 75) {
-        finalAuths = [{
-          name: "Internal Review Team",
-          email: "eaiser@momntumai.com",
-          type: "internal"
-        }];
-      } else {
-        setError("Please select at least one authority to submit the report.");
-        return;
-      }
+      finalAuths = [{
+        name: "EAiSER Admin Review Team",
+        email: "eaiser@momntumai.com",
+        type: "admin_review"
+      }];
     }
+
 
     setSubmitting(true);
     setError(null);
@@ -281,12 +278,6 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         origin: { y: 0.6 },
         colors: ['#4ade80', '#22c55e', '#ffffff']
       });
-
-      // Redirect to Dashboard after 6 seconds
-      setTimeout(() => {
-        if (onClearReport) onClearReport();
-        navigate('/dashboard');
-      }, 6000);
 
     } catch (err) {
       console.error("Submit failed", err);
@@ -398,10 +389,6 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
           colors: ['#facc15', '#eab308', '#ffffff']
         });
 
-        setTimeout(() => {
-          if (onClearReport) onClearReport();
-          navigate('/dashboard');
-        }, 6000);
       } catch (err) {
         console.error("Manual submit failed", err);
         setError(err.message || "Failed to submit manual report. Please try again.");
@@ -668,10 +655,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               >
                 Back to Dashboard
               </button>
-              <div className="flex items-center gap-2">
-                <div className="w-3.5 h-3.5 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Auto-redirecting...</p>
-              </div>
+
             </div>
           </motion.div>
         </motion.div>
@@ -793,7 +777,6 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   // Render a clean card with the report details
   return (
     <div className="mt-8 bg-gradient-to-br from-gray-900/60 to-black/60 backdrop-blur-xl rounded-2xl border border-gray-800 p-6">
-      {/* Authenticity Warning removed as requested */}
 
       {/* Top header and progress */}
       <div className="mb-6">
@@ -1080,7 +1063,24 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                 })}
               </div>
             ) : (
-              <p className="text-xs text-gray-400">No authorities found.</p>
+              // No authorities found → will go to Admin Review Team
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 flex items-start gap-3">
+                <div className="w-8 h-8 bg-yellow-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="w-4 h-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M12 3a9 9 0 110 18A9 9 0 0112 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-yellow-300 mb-1">No Specific Authority Mapped</p>
+                  <p className="text-xs text-yellow-200/70 leading-relaxed">
+                    This issue type doesn't have a mapped authority yet. Your report will be submitted to the <span className="font-semibold text-white">EAiSER Admin Review Team</span> who will review, classify, and route it to the correct department.
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+                    <p className="text-[10px] text-yellow-400 font-bold uppercase tracking-wider">Will be routed by Admin Team</p>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
@@ -1109,22 +1109,27 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               )}
               <button
                 onClick={handleSubmit}
-                disabled={submitting || (needsAuthorityRefresh && !isManualReport) || (selectedAuths.length === 0 && !isManualReport && confidence !== 0 && confidence !== null)}
-                className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${submitting || (needsAuthorityRefresh && !isManualReport) || (selectedAuths.length === 0 && !isManualReport && confidence !== 0 && confidence !== null)
+                disabled={submitting || (needsAuthorityRefresh && !isManualReport)}
+                className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${submitting || (needsAuthorityRefresh && !isManualReport)
                   ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                  : 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-lg hover:shadow-yellow-500/20'
+                  : allAuthoritiesState.length === 0
+                    ? 'bg-yellow-600 hover:bg-yellow-500 text-white shadow-lg hover:shadow-yellow-600/20'
+                    : 'bg-yellow-500 hover:bg-yellow-400 text-black shadow-lg hover:shadow-yellow-500/20'
                   }`}
               >
                 {submitting ? (
                   'Submitting...'
+                ) : allAuthoritiesState.length === 0 ? (
+                  <><Send className="w-4 h-4" /> Submit for Admin Review</>
                 ) : (
-                  <>
-                    <Send className="w-4 h-4" /> Submit Report
-                  </>
+                  <><Send className="w-4 h-4" /> Submit Report</>
                 )}
               </button>
             </div>
           )}
+          <div className="mt-8">
+            <Warning />
+          </div>
         </div> {/* Explicitly close the isGuest wrapper */}
       </div>
 

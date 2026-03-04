@@ -131,36 +131,40 @@ function AdminApp() {
  */
 function PublicApp() {
   return (
-    <Routes>
-      {/* public home with navbar */}
-      <Route
-        path="/"
-        element={
-          <>
-            <Navbar />
-            <Hero />
-          </>
-        }
-      />
+    <div className="flex flex-col min-h-screen">
+      <div className="flex-grow">
+        <Routes>
+          {/* public home with navbar */}
+          <Route
+            path="/"
+            element={
+              <>
+                <Navbar />
+                <Hero />
+              </>
+            }
+          />
 
-      {/* other app pages */}
-      <Route path="/report" element={<Report />} />
-      <Route path="/authority-action" element={<AuthorityAction />} />
+          {/* other app pages */}
+          <Route path="/report" element={<Report />} />
+          <Route path="/authority-action" element={<AuthorityAction />} />
 
-      {/* user dashboard */}
-      <Route path="/dashboard" element={<UserDash />} />
-      <Route path="/profile" element={<ProfilePage />} />
+          {/* user dashboard */}
+          <Route path="/dashboard" element={<UserDash />} />
+          <Route path="/profile" element={<ProfilePage />} />
 
-      {/* auth pages (no navbar) */}
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/verify-email" element={<VerifyEmail />} />
+          {/* auth pages (no navbar) */}
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
 
-      {/* catch-all -> redirect to home */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+          {/* catch-all -> redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+    </div>
   );
 }
 

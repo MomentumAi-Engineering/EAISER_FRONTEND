@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import apiClient from '../services/apiClient';
 import { useDialog } from '../context/DialogContext';
 import { ShieldAlert, CheckCircle2, XCircle, AlertTriangle, Loader2, Edit2, ShieldCheck, Mail, Save, X, Users, BarChart3, CheckSquare, Square, MapPin, Building, FileText, Clock, TrendingUp } from 'lucide-react';
+import Warning from './Warning';
 import { useNavigate } from 'react-router-dom';
 import { hasPermission, canActOnIssue, getCurrentAdmin } from '../utils/permissions';
 import { adminPath } from '../utils/adminPaths';
@@ -382,7 +383,7 @@ export default function AdminDashboard() {
       // Simple check for the warning message
       if (err.message && (err.message.includes("low AI confidence") || err.message.includes("Low confidence"))) {
         const force = await showConfirm(
-          "⚠️ SYSTEM WARNING:\n\nThe AI confidence for this report is LOW. Banning this user implies they submitted a fake report, but the AI is not sure.\n\nDo you want to FORCE deactivate anyway?",
+          "⚠️ AI Assistance Notice:\n\nThe AI confidence for this report is LOW. Banning this user implies they submitted a fake report, but the AI is not sure.\n\nDo you want to FORCE deactivate anyway?",
           { title: "Low Confidence Warning", confirmText: "Force Deactivate", variant: 'warning' }
         );
         if (force) {
@@ -463,6 +464,8 @@ export default function AdminDashboard() {
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
+
+        {/* Tab Navigation */}
 
 
 
@@ -613,44 +616,49 @@ export default function AdminDashboard() {
                   <p className="text-gray-400">No pending reports to review.</p>
                 </div>
               ) : (
-                <div className="h-[calc(100vh-340px)] min-h-[500px]">
-                  <VirtualizedList
-                    items={virtualizedItems}
-                    itemHeight={550} // Increased from 480 to 550 to fix overlapping/sticking rows
-                    renderItem={(rowItems) => (
-                      <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 gap-8 pb-8 pr-4"> {/* Increased gap and padding */}
-                        {rowItems.map((review) => {
-                          const id = review._id || review.issue_id;
-                          const statusLower = (review.status || '').toLowerCase();
-                          const isResolved = ['approved', 'rejected', 'declined', 'submitted', 'resolved'].includes(statusLower);
+                <>
+                  <div className="h-[calc(100vh-340px)] min-h-[500px]">
+                    <VirtualizedList
+                      items={virtualizedItems}
+                      itemHeight={550} // Increased from 480 to 550 to fix overlapping/sticking rows
+                      renderItem={(rowItems) => (
+                        <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 gap-8 pb-8 pr-4"> {/* Increased gap and padding */}
+                          {rowItems.map((review) => {
+                            const id = review._id || review.issue_id;
+                            const statusLower = (review.status || '').toLowerCase();
+                            const isResolved = ['approved', 'rejected', 'declined', 'submitted', 'resolved'].includes(statusLower);
 
-                          return (
-                            <ReviewCard
-                              key={id}
-                              review={review}
-                              isSelected={selectedIssues.has(id)}
-                              isProcessing={processingId === id}
-                              canSelect={hasPermission('assign_issue') && viewMode !== 'resolved'}
-                              canAct={canActOnIssue(review) && viewMode !== 'resolved'}
-                              isResolved={isResolved || viewMode === 'resolved'}
-                              viewMode={viewMode}
-                              onToggleSelect={toggleIssueSelection}
-                              onOpenDetail={openDetailModal}
-                              onOpenApprove={openApproveModal}
-                              onDecline={handleDecline}
-                              onOpenAssignment={openAssignmentModal}
-                              baseURL={apiClient.baseURL}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-                  />
-                </div>
-              )
-            }
+                            return (
+                              <ReviewCard
+                                key={id}
+                                review={review}
+                                isSelected={selectedIssues.has(id)}
+                                isProcessing={processingId === id}
+                                canSelect={hasPermission('assign_issue') && viewMode !== 'resolved'}
+                                canAct={canActOnIssue(review) && viewMode !== 'resolved'}
+                                isResolved={isResolved || viewMode === 'resolved'}
+                                viewMode={viewMode}
+                                onToggleSelect={toggleIssueSelection}
+                                onOpenDetail={openDetailModal}
+                                onOpenApprove={openApproveModal}
+                                onDecline={handleDecline}
+                                onOpenAssignment={openAssignmentModal}
+                                baseURL={apiClient.baseURL}
+                              />
+                            );
+                          })}
+                        </div>
+                      )}
+                    />
+                  </div>
+                </>
+              )}
           </div>
         )}
+
+        <div className="mt-8 pb-12">
+          <Warning />
+        </div>
       </div>
 
       {/* Bulk Action Bar - Sticky Bottom */}
@@ -1123,4 +1131,4 @@ export default function AdminDashboard() {
       }
     </DashboardLayout>
   );
-}
+};

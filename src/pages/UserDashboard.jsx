@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 import Navbar from '../components/Navbar';
+import Warning from '../components/Warning';
 import apiClient from '../services/apiClient';
 import API_BASE_URL from '../config';
 
@@ -466,6 +467,9 @@ export default function UserDashboard() {
                       <p className="text-gray-400 text-xs leading-relaxed">{selectedIssue.admin_note}</p>
                     </div>
                   )}
+                  <div className="mt-8">
+                    <Warning />
+                  </div>
                   <button onClick={() => setSelectedIssue(null)} className="w-full mt-8 py-3 bg-white/5 hover:bg-white/10 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all border border-white/5">Close File</button>
                 </div>
               </motion.div>

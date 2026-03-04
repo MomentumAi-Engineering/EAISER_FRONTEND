@@ -30,6 +30,7 @@ import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from "@react-google-m
 import Navbar from "../components/Navbar";
 import { useReportContext } from "../context/ReportContext";
 import { useDialog } from "../context/DialogContext";
+import Warning from "../components/Warning";
 
 const SERVICED_ZIP_CODES = ["37013", "37027", "37062", "37072", "37076", "37115", "37138", "37201", "37203", "37204", "37205", "37206", "37207", "37208", "37209", "37210", "37211", "37212", "37214", "37215", "37216", "37217", "37218", "37219", "37220", "37221", "37222", "37224", "37227", "37228", "37229", "37230", "37232", "37234", "37235", "37236", "37238", "37240", "37242", "37250"];
 
@@ -1279,7 +1280,7 @@ export default function SimpleReport() {
         </div >
 
         {/* Generate Report Button */}
-        < button
+        <button
           onClick={handleGenerateReport}
           disabled={loading || guestLimitReached}
           className={`w-full mt-6 py-3 font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 
@@ -1297,8 +1298,10 @@ export default function SimpleReport() {
                 <Zap className="w-4 h-4" /> Generate Report
               </>
             )}
-        </button >
-      </div >
-    </div >
+        </button>
+
+        <Warning />
+      </div>
+    </div>
   );
 }

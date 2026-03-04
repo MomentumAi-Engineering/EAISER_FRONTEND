@@ -6,22 +6,33 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userData, setUserData] = useState({});
 
   const navigate = useNavigate();
   const location = useLocation();
   const { showConfirm } = useDialog();
 
+  // Read user data from localStorage
+  const refreshUserData = () => {
+    try {
+      const data = JSON.parse(localStorage.getItem('userData') || localStorage.getItem('user') || '{}');
+      setUserData(data);
+    } catch { setUserData({}); }
+  };
+
   // Check token on mount & route change
   useEffect(() => {
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
+    refreshUserData();
   }, [location]);
 
-  // Cross-tab logout/login sync
+  // Cross-tab logout/login sync + profile update sync
   useEffect(() => {
     const handleStorageChange = () => {
       const token = localStorage.getItem("token");
       setIsLoggedIn(!!token);
+      refreshUserData();
     };
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
@@ -95,20 +106,10 @@ export default function Navbar() {
             <div className="flex items-center gap-4">
               <Link to="/profile" className="flex items-center gap-2 hover:bg-white/10 px-3 py-1.5 rounded-xl transition-all">
                 <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-black font-bold text-sm">
-                  {(() => {
-                    try {
-                      const user = JSON.parse(localStorage.getItem('userData') || localStorage.getItem('user') || '{}');
-                      return user.first_name ? user.first_name.charAt(0).toUpperCase() : (user.name ? user.name.charAt(0).toUpperCase() : 'U');
-                    } catch { return 'U'; }
-                  })()}
+                  {userData.first_name ? userData.first_name.charAt(0).toUpperCase() : (userData.name ? userData.name.charAt(0).toUpperCase() : 'U')}
                 </div>
                 <span className="text-sm font-medium text-yellow-100">
-                  {(() => {
-                    try {
-                      const user = JSON.parse(localStorage.getItem('userData') || localStorage.getItem('user') || '{}');
-                      return user.first_name || user.name?.split(' ')[0] || 'User';
-                    } catch { return 'User'; }
-                  })()}
+                  {userData.first_name || userData.name?.split(' ')[0] || 'User'}
                 </span>
               </Link>
 
@@ -172,12 +173,7 @@ export default function Navbar() {
                 className="flex items-center gap-3 w-full bg-zinc-800 text-yellow-400 py-2 px-4 rounded-xl font-semibold hover:bg-zinc-700 transition"
               >
                 <div className="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center text-black font-bold text-xs">
-                  {(() => {
-                    try {
-                      const user = JSON.parse(localStorage.getItem('userData') || localStorage.getItem('user') || '{}');
-                      return user.name ? user.name.charAt(0).toUpperCase() : 'U';
-                    } catch { return 'U'; }
-                  })()}
+                  {userData.first_name ? userData.first_name.charAt(0).toUpperCase() : (userData.name ? userData.name.charAt(0).toUpperCase() : 'U')}
                 </div>
                 My Profile
               </Link>

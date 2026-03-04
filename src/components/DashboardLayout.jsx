@@ -372,8 +372,10 @@ export default function DashboardLayout({ children, currentPage = 'dashboard' })
                 </header>
 
                 {/* Page Content Scrollable Area */}
-                <main className="flex-1 overflow-auto p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 to-black">
-                    {children}
+                <main className="flex-1 overflow-auto p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 to-black flex flex-col">
+                    <div className="flex-grow">
+                        {children}
+                    </div>
                 </main>
             </div>
 

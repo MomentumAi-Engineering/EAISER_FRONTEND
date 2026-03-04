@@ -697,7 +697,18 @@ class ApiClient {
     })
   }
 
-  // --- Authority Management (Zip Codes) ---
+  async rejectMapping(review_id, reason = '') {
+    return this.request(`/api/admin/review/mapping-review/${review_id}/reject`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: JSON.stringify({ reason })
+    });
+  }
+
+
 
   async getAuthorities() {
     return this.request('/api/admin/review/authorities', {
