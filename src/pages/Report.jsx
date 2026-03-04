@@ -18,7 +18,8 @@ import {
   Fingerprint,
   Globe,
   Activity,
-  AlertTriangle
+  AlertTriangle,
+  Send
 } from "lucide-react";
 import * as geolib from 'geolib';
 import EXIF from 'exif-js';
@@ -151,6 +152,7 @@ export default function SimpleReport() {
   const [guestLimitReached, setGuestLimitReached] = useState(false);
   const [locationMissing, setLocationMissing] = useState(false);
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const videoRef = useRef(null);
   const mapRef = useRef(null);
@@ -162,6 +164,8 @@ export default function SimpleReport() {
   const [facingMode, setFacingMode] = useState('environment');
   const [isShutterFlash, setIsShutterFlash] = useState(false);
   const [isOutsideServicedArea, setIsOutsideServicedArea] = useState(false);
+  const [showManualAddress, setShowManualAddress] = useState(false);
+
 
   // Reverse Geocode Helper
   const reverseGeocode = async (lat, lng) => {
@@ -178,7 +182,7 @@ export default function SimpleReport() {
 
         setFormData((prev) => ({
           ...prev,
-          streetAddress: place.formatted_address,
+          streetAddress: place.formatted_address || `${lat.toFixed(6)}, ${lng.toFixed(6)} (Coordinates Only)`,
           zipCode: zip || prev.zipCode,
         }));
 
@@ -507,7 +511,9 @@ export default function SimpleReport() {
       latitude: coords.lat,
       longitude: coords.lng,
       user_email: userEmail,
-      issue_type: isManualMode ? (formData.issueType || 'Manual Report') : 'other'
+      issue_type: isManualMode
+        ? (formData.issueType === 'other_issue' ? formData.customIssueType : (formData.issueType || 'Manual Report'))
+        : 'other'
     });
 
     // 2. Increment Guest Counter on Success
@@ -623,10 +629,6 @@ export default function SimpleReport() {
             <button
               onClick={() => {
                 setIsManualMode(true);
-                // Reset photo related data
-                setSelectedImage(null);
-                setSelectedFile(null);
-                setPhotoCoords(null);
               }}
               className="text-yellow-500 hover:text-yellow-400 text-sm font-semibold underline"
             >
@@ -708,6 +710,16 @@ export default function SimpleReport() {
           id="file-upload"
           type="file"
           accept=".png,.jpg,.jpeg,.webp,.bmp,.gif,.tiff,.heic"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+
+        <input
+          ref={cameraInputRef}
+          id="camera-capture"
+          type="file"
+          accept="image/*"
+          capture="environment"
           onChange={handleFileChange}
           className="hidden"
         />
@@ -895,8 +907,6 @@ export default function SimpleReport() {
                       <button
                         onClick={() => {
                           setIsManualMode(true);
-                          setSelectedImage(null);
-                          setSelectedFile(null);
                           setPhotoCoords(null);
                         }}
                         className="group/manual relative px-8 py-3 bg-gray-900/50 hover:bg-gray-800 border border-gray-800 rounded-2xl text-xs font-black text-gray-400 hover:text-yellow-500 transition-all overflow-hidden"
@@ -952,89 +962,127 @@ export default function SimpleReport() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Issue Type Selector */}
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">
-                      <AlertCircle className="w-3 h-3 text-yellow-500" /> Category of Issue
-                    </label>
-                    <div className="relative group/select">
-                      <select
-                        name="issueType"
-                        value={formData.issueType || 'other'}
-                        onChange={handleChange}
-                        className="w-full px-6 py-4 bg-gray-900/40 border border-gray-800 rounded-2xl text-sm text-white outline-none focus:border-yellow-500/50 focus:bg-gray-900/60 transition-all appearance-none cursor-pointer"
-                      >
-                        <option value="other">Select Issue Type...</option>
-                        <option value="pothole">Pothole / Road Hole</option>
-                        <option value="road_damage">Asphalt Degradation</option>
-                        <option value="broken_streetlight">Public Illumination Failure</option>
-                        <option value="garbage">Waste Accumulation</option>
-                        <option value="flood">Drainage Overload (Flood)</option>
-                        <option value="water_leakage">Utility Water Leak</option>
-                        <option value="fire">Thermal/Fire Hazard</option>
-                        <option value="dead_animal">Sanitation Response Req.</option>
-                        <option value="vandalism">Public Property Vandalism</option>
-                        <option value="other_issue">Add Manually</option>
-                      </select>
-                      <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600 transition-colors group-hover/select:text-yellow-500">
-                        <Zap className="w-4 h-4" />
-                      </div>
+                {/* Issue Type Selector */}
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">
+                    <AlertCircle className="w-3 h-3 text-yellow-500" /> Category of Issue
+                  </label>
+                  <div className="relative group/select">
+                    <select
+                      name="issueType"
+                      value={formData.issueType || 'other'}
+                      onChange={handleChange}
+                      className="w-full px-6 py-4 bg-gray-900/40 border border-gray-800 rounded-2xl text-sm text-white outline-none focus:border-yellow-500/50 focus:bg-gray-900/60 transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="other">Select Issue Type...</option>
+                      <option value="pothole">Pothole / Road Hole</option>
+                      <option value="road_damage">Asphalt Degradation</option>
+                      <option value="broken_streetlight">Public Illumination Failure</option>
+                      <option value="garbage">Waste Accumulation</option>
+                      <option value="flood">Drainage Overload (Flood)</option>
+                      <option value="water_leakage">Utility Water Leak</option>
+                      <option value="fire">Thermal/Fire Hazard</option>
+                      <option value="dead_animal">Sanitation Response Req.</option>
+                      <option value="vandalism">Public Property Vandalism</option>
+                      <option value="other_issue">Add Manually...</option>
+                    </select>
+                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600 transition-colors group-hover/select:text-yellow-500">
+                      <Zap className="w-4 h-4" />
                     </div>
                   </div>
 
-                  {/* Date/Time Picker - ULTRA ADVANCED LOOK */}
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">
-                      <Calendar className="w-3 h-3 text-blue-500" /> Incident Timeline
-                    </label>
-                    <div className="relative flex items-center group/date">
-                      <div className="absolute left-6 text-blue-500/50 group-focus-within/date:text-blue-500 transition-colors">
-                        <Clock className="w-4 h-4" />
-                      </div>
+                  {formData.issueType === 'other_issue' && (
+                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                      <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2">
+                        Specify Issue Type
+                      </label>
                       <input
-                        type="date"
-                        name="incidentDate"
-                        value={formData.incidentDate || ''}
+                        type="text"
+                        name="customIssueType"
+                        value={formData.customIssueType || ''}
                         onChange={handleChange}
-                        className="w-full pl-14 pr-6 py-4 bg-gray-900/40 border border-gray-800 rounded-2xl text-sm text-white outline-none focus:border-blue-500/50 focus:bg-gray-900/60 transition-all"
-                        style={{ colorScheme: 'dark' }}
+                        placeholder="e.g. Broken bench, Tree fallen..."
+                        className="w-full px-6 py-4 bg-gray-900/40 border border-gray-800 rounded-2xl text-sm text-white outline-none focus:border-yellow-500 focus:bg-gray-900/60 transition-all"
                       />
                     </div>
-                  </div>
+                  )}
+                </div>
 
-                  {/* Description Area */}
-                  <div className="md:col-span-2 space-y-3 mt-2">
-                    <label className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">
-                      <ClipboardList className="w-3 h-3 text-white/50" /> Analytical Description
-                    </label>
-                    <textarea
-                      name="description"
-                      value={formData.description || ''}
+                {/* Date/Time Picker - ULTRA ADVANCED LOOK */}
+                <div className="space-y-3 mt-8">
+                  <label className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">
+                    <Calendar className="w-3 h-3 text-blue-500" /> Incident Timeline
+                  </label>
+                  <div className="relative flex items-center group/date">
+                    <div className="absolute left-6 text-blue-500/50 group-focus-within/date:text-blue-500 transition-colors">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="date"
+                      name="incidentDate"
+                      value={formData.incidentDate || ''}
                       onChange={handleChange}
-                      rows={4}
-                      placeholder="Provide a detailed log of the observation for AI-assisted classification..."
-                      className="w-full px-6 py-5 bg-gray-900/40 border border-gray-800 rounded-3xl text-sm text-white outline-none focus:border-white/20 focus:bg-gray-900/60 transition-all resize-none shadow-inner"
+                      className="w-full pl-14 pr-6 py-4 bg-gray-900/40 border border-gray-800 rounded-2xl text-sm text-white outline-none focus:border-blue-500/50 focus:bg-gray-900/60 transition-all"
+                      style={{ colorScheme: 'dark' }}
                     />
-                    <div className="flex justify-between items-center px-2">
+                  </div>
+                </div>
+
+                {/* Description Area */}
+                <div className="md:col-span-2 space-y-3 mt-8">
+                  <label className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">
+                    <ClipboardList className="w-3 h-3 text-white/50" /> Analytical Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description || ''}
+                    onChange={handleChange}
+                    rows={4}
+                    placeholder="Provide a detailed log of the observation for AI-assisted classification..."
+                    className="w-full px-6 py-5 bg-gray-900/40 border border-gray-800 rounded-3xl text-sm text-white outline-none focus:border-white/20 focus:bg-gray-900/60 transition-all resize-none shadow-inner"
+                  />
+                  <div className="flex flex-col gap-4 mt-2">
+                    <div className="flex flex-wrap items-center gap-3">
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         type="button"
                         className="relative group overflow-hidden px-5 py-2.5 bg-gray-900 border border-blue-500/30 hover:border-blue-500 text-blue-400 hover:text-white font-bold uppercase rounded-xl text-[10px] tracking-widest transition-all duration-300 shadow-[0_0_15px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] flex items-center gap-2"
                       >
                         <div className="absolute inset-0 bg-blue-600/20 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                        <Camera className="w-4 h-4 relative z-10 group-hover:scale-110 transition-transform duration-300" />
-                        <span className="relative z-10">{selectedFile ? 'Change Attachment' : 'Add Attachment'}</span>
+                        <Upload className="w-4 h-4 relative z-10 group-hover:scale-110 transition-transform duration-300" />
+                        <span className="relative z-10">{selectedFile ? 'Change' : 'Add Attachment'}</span>
                       </button>
-                      <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest italic flex items-center gap-1">
-                        <Zap className="w-2.5 h-2.5" /> High Priority Log
-                      </p>
+
+                      <button
+                        onClick={() => cameraInputRef.current?.click()}
+                        type="button"
+                        className="relative group overflow-hidden px-5 py-2.5 bg-gray-900 border border-yellow-500/30 hover:border-yellow-500 text-yellow-400 hover:text-black font-bold uppercase rounded-xl text-[10px] tracking-widest transition-all duration-300 shadow-[0_0_15px_rgba(234,179,8,0.1)] hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] flex items-center gap-2"
+                      >
+                        <div className="absolute inset-0 bg-yellow-500 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                        <Camera className="w-4 h-4 relative z-10 group-hover:scale-110 transition-transform duration-300" />
+                        <span className="relative z-10">Take Photo</span>
+                      </button>
                     </div>
-                    {/* Show selected file name in manual mode if uploaded */}
-                    {selectedFile && (
-                      <p className="text-[10px] text-green-400 font-medium px-2 mt-1 truncate">
-                        Attached: {selectedFile.name}
-                      </p>
+
+                    {selectedImage && (
+                      <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-gray-800 shadow-lg group/thumb animate-in fade-in zoom-in duration-300">
+                        <img src={selectedImage} alt="attachment" className="w-full h-full object-cover" />
+                        <button
+                          onClick={() => {
+                            setSelectedImage(null);
+                            setSelectedFile(null);
+                            setPhotoCoords(null);
+                          }}
+                          className="absolute top-1 right-1 p-1 bg-red-600 rounded-lg shadow-lg opacity-0 group-hover/thumb:opacity-100 transition-opacity hover:scale-110 active:scale-95"
+                        >
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm py-0.5 px-2">
+                          <p className="text-[7px] font-bold text-white truncate uppercase tracking-tighter">
+                            {selectedFile?.name}
+                          </p>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1080,54 +1128,71 @@ export default function SimpleReport() {
 
             <div className="flex items-center gap-4 my-6">
               <div className="h-px flex-1 bg-gray-800" />
-              <span className="text-[10px] font-black text-gray-600 uppercase italic">Or Manual Entry</span>
+              <button
+                onClick={() => setShowManualAddress(!showManualAddress)}
+                className="text-[10px] font-black text-gray-400 hover:text-white uppercase tracking-widest px-4 py-2 bg-gray-900 border border-gray-800 rounded-full transition-all flex items-center gap-2"
+              >
+                {showManualAddress ? <X className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
+                {showManualAddress ? "Hide Manual Entry" : "Or Enter Address Manually"}
+              </button>
               <div className="h-px flex-1 bg-gray-800" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Street Address</label>
-                {isLoaded ? (
-                  <Autocomplete onLoad={onAutocompleteLoad} onPlaceChanged={onPlaceChanged}>
-                    <input
-                      type="text"
-                      name="streetAddress"
-                      value={formData.streetAddress}
-                      onChange={handleChange}
-                      placeholder="Enter street name..."
-                      className="w-full px-5 py-4 bg-gray-900/50 border border-gray-800 rounded-2xl text-sm focus:border-blue-500 transition-colors text-white outline-none"
-                    />
-                  </Autocomplete>
-                ) : (
-                  <div className="w-full px-5 py-4 bg-gray-900/50 border border-gray-800 rounded-2xl text-sm opacity-50 flex items-center gap-3">
-                    <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
-                    <span className="text-gray-500">Initializing Maps SDK...</span>
+            <AnimatePresence>
+              {showManualAddress && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">Street Address</label>
+                      {isLoaded ? (
+                        <Autocomplete onLoad={onAutocompleteLoad} onPlaceChanged={onPlaceChanged}>
+                          <input
+                            type="text"
+                            name="streetAddress"
+                            value={formData.streetAddress}
+                            onChange={handleChange}
+                            placeholder="Enter street name..."
+                            className="w-full px-5 py-4 bg-gray-900/50 border border-gray-800 rounded-2xl text-sm focus:border-blue-500 transition-colors text-white outline-none"
+                          />
+                        </Autocomplete>
+                      ) : (
+                        <div className="w-full px-5 py-4 bg-gray-900/50 border border-gray-800 rounded-2xl text-sm opacity-50 flex items-center gap-3">
+                          <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                          <span className="text-gray-500">Initializing Maps SDK...</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">ZIP Code</label>
+                      <input
+                        type="text"
+                        name="zipCode"
+                        value={formData.zipCode}
+                        onChange={handleChange}
+                        placeholder="1100XX"
+                        className="w-full px-5 py-4 bg-gray-900/50 border border-gray-800 rounded-2xl text-sm focus:border-blue-500 transition-colors text-white outline-none"
+                      />
+                    </div>
                   </div>
-                )}
-              </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest ml-1">ZIP Code</label>
-                <input
-                  type="text"
-                  name="zipCode"
-                  value={formData.zipCode}
-                  onChange={handleChange}
-                  placeholder="1100XX"
-                  className="w-full px-5 py-4 bg-gray-900/50 border border-gray-800 rounded-2xl text-sm focus:border-blue-500 transition-colors text-white outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => getCoordsFromAddress(`${formData.streetAddress} ${formData.zipCode}`)}
-                className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
-              >
-                <MapPin className="w-3.5 h-3.5" /> View Pin Location
-              </button>
-            </div>
+                  {/* Quick Actions */}
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      onClick={() => getCoordsFromAddress(`${formData.streetAddress} ${formData.zipCode}`)}
+                      className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+                    >
+                      <MapPin className="w-3.5 h-3.5" /> View Pin Location
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Verification Status Card */}
             {verification && (
@@ -1289,18 +1354,19 @@ export default function SimpleReport() {
           {
             loading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Generating...
+                <Loader2 className="w-4 h-4 animate-spin" /> {isManualMode ? "Submitting..." : "Generating..."}
               </>
             ) : guestLimitReached ? (
               "Guest Limit Reached - Login Required"
             ) : (
               <>
-                <Zap className="w-4 h-4" /> Generate Report
+                {isManualMode ? <Send className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+                {isManualMode ? "Submit Report" : "Generate Report"}
               </>
             )}
         </button>
 
-        <Warning />
+        {!isManualMode && <Warning />}
       </div>
     </div>
   );

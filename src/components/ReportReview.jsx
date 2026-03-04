@@ -1,4 +1,4 @@
-
+// HMR Force Update - Refined Description formatting
 
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/apiClient';
@@ -75,6 +75,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const [showManualForm, setShowManualForm] = useState(false);
   const [manualDescription, setManualDescription] = useState('');
   const [manualIssueType, setManualIssueType] = useState('other');
+  const [customManualIssueType, setCustomManualIssueType] = useState('');
 
   // Extract authorities
   const recommendedAuthorities = pick(issue, ['report.report.responsible_authorities_or_parties', 'responsible_authorities_or_parties'], []);
@@ -366,7 +367,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       }];
 
       const manualReportData = {
-        issue_type: manualIssueType,
+        issue_type: manualIssueType === 'other_issue' ? customManualIssueType : manualIssueType,
         severity: 'medium',
         summary: manualDescription.trim(),
         description: manualDescription.trim(),
@@ -504,11 +505,27 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                     <option value="vandalism">Public Property Vandalism</option>
                     <option value="car_accident">Car Accident</option>
                     <option value="abandoned_vehicle">Abandoned Vehicle</option>
-                    <option value="other_issue">Other</option>
+                    <option value="other_issue">Specify Manually...</option>
                   </select>
                 </div>
 
-                {/* Description */}
+                {manualIssueType === 'other_issue' && (
+                  <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Specify Issue</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Broken bench, Tree fallen..."
+                      className="w-full px-4 py-3 bg-black/40 border border-gray-700 rounded-xl text-sm text-white outline-none focus:border-blue-500 transition-colors"
+                      onChange={(e) => {
+                        // We use the input directly when submitting if manualIssueType is 'other_issue'
+                        // but to keep it simple, let's just make the manualSubmit use a ref or another state.
+                        // Actually, I'll update the manualSubmit logic to check this.
+                        setCustomManualIssueType(e.target.value);
+                      }}
+                    />
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Describe the Issue</label>
                   <textarea
@@ -706,18 +723,53 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
   const reportText = pick(aiReport, ['issue_overview.user_feedback', 'issue_overview.summary_explanation', 'additional_notes.summary', 'template_fields.formatted_text'], null);
 
-  // Enforce strictly the single formatted string for AI reports. For manual reports, keep user input.
-  const descriptionText = isManualReport
-    ? (analysisDescription || summaryExplanation || reportText || null)
-    : summaryExplanation;
-  const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
-  // recommendedAuthorities removed here as it was already declared above
+  // --- Advanced Location Parsing ---
+  let city = '—';
+  let state = '—';
+  let displayZip = userZip || zipCodeBase || '—';
 
+  if (typeof address === 'string' && address.length > 0) {
+    const parts = address.split(',').map(s => s.trim());
+    const stateZipPart = parts.find(p => /\b[A-Z]{2}\b\s+\d{5}/.test(p));
+    if (stateZipPart) {
+      const match = stateZipPart.match(/([A-Z]{2})\s+(\d{5,})/);
+      if (match) {
+        state = match[1];
+        if (displayZip === '—' || !displayZip) displayZip = match[2];
+      }
+      const stateZipIndex = parts.indexOf(stateZipPart);
+      if (stateZipIndex > 0) city = parts[stateZipIndex - 1];
+    } else if (parts.length >= 2) {
+      city = parts[parts.length - 3] || parts[0];
+      state = (parts[parts.length - 2] || '').split(' ')[0];
+    }
+  }
+
+  const isSpecificAddress = address && address !== '—' && /^\d+/.test(address);
+  const isCoordinatesOnly = typeof address === 'string' && address.includes('(Coordinates Only)');
+
+  const locCity = city && city !== '—' ? city : 'Unknown';
+  const locState = state && state !== '—' ? state : '';
+  const incidentTypeTitle = formatIssueType(hasEdited ? editForm.issue_type : issueType);
+
+  const locationHeader = isCoordinatesOnly
+    ? `${incidentTypeTitle} reported at ${address.replace('(Coordinates Only)', '').trim()}`
+    : `${incidentTypeTitle} reported in ${locCity}${locState ? `, ${locState}` : ''} ${displayZip !== '—' ? displayZip : ''}`.trim();
+
+  // Enforce strictly the single formatted string for AI reports. For manual reports, keep user input.
+  const baseDescription = isManualReport
+    ? (analysisDescription || summaryExplanation || reportText || '')
+    : (summaryExplanation || '');
+
+  const descriptionText = baseDescription.startsWith(incidentTypeTitle)
+    ? baseDescription
+    : `${locationHeader}\n\n${baseDescription}`;
+
+  const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
   const lat = typeof latitude === 'number' ? latitude : Number(latitude);
   const lon = typeof longitude === 'number' ? longitude : Number(longitude);
   const mapsLink = lat && lon ? `https://www.google.com/maps?q=${lat},${lon}` : (address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : null);
 
-  // Show Loader on Submission
   if (submitting) {
     return (
       <div className="flex flex-col items-center justify-center p-20 gap-4">
@@ -727,19 +779,10 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     );
   }
 
-  let city = '—';
-  let state = '—';
-  if (typeof address === 'string' && address.length > 0) {
-    const parts = address.split(',').map(s => s.trim());
-    if (parts.length >= 2) {
-      city = parts[0] || city;
-      const m = parts[1].match(/[A-Za-z]{2,}/);
-      if (m) state = m[0];
-    }
-  }
   const shortDesc = (typeof descriptionText === 'string' && descriptionText.length > 0)
     ? (descriptionText.split(/[.!?]/)[0] || descriptionText).slice(0, 160)
     : (Array.isArray(detectedProblems) && detectedProblems.length > 0 ? detectedProblems[0] : 'an incident');
+
   const hazardWords = ['danger', 'fire', 'smoke', 'collapse', 'crack', 'flood', 'leak', 'exposed', 'broken', 'damaged', 'accident', 'crash', 'collision', 'injury', 'emergency'];
   const baseWords = (String(descriptionText || '').toLowerCase() + ' ' + (Array.isArray(detectedProblems) ? detectedProblems.join(' ').toLowerCase() : ''));
   const hits = hazardWords.filter(w => baseWords.includes(w));
@@ -761,7 +804,6 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     return Array.from(set);
   })();
 
-  // 🛠️ Priority mapping: Respect AI severity first, fallback to heuristic
   let priorityLabel = 'Low';
   if (aiSeverity && String(aiSeverity).length > 1) {
     priorityLabel = String(aiSeverity).charAt(0).toUpperCase() + String(aiSeverity).slice(1).toLowerCase();
@@ -770,9 +812,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   } else if (hits.length >= 1) {
     priorityLabel = 'Medium';
   }
-  const locCity = city && city !== '—' ? city : (address && address !== '—' ? address.split(',')[0] : 'Unknown');
-  const locState = state && state !== '—' ? state : '—';
-  const templateSummary = `Our AI detected a ${String(issueType || 'Unknown')} in ${String(locCity)}, ${String(locState)} (ZIP ${String(zipCode || '—')}).\nThe image shows ${shortDesc}.`;
+
+  const locationText = `${locCity}${locState ? `, ${locState}` : ''} ${displayZip !== '—' ? displayZip : ''}`.trim();
+  const templateSummary = `${incidentTypeTitle} reported in ${locationText}.\n\nAI Analysis: ${shortDesc}.`;
 
   // Render a clean card with the report details
   return (
@@ -878,25 +920,44 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
             <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
               <p className="text-xs text-gray-400">Issue Type</p>
               {isEditing ? (
-                <select
-                  name="issue_type"
-                  value={editForm.issue_type}
-                  onChange={handleEditChange}
-                  className="w-full bg-black/40 text-white border border-gray-700/50 rounded-xl px-4 py-3 text-sm mt-2 focus:border-yellow-500/50 transition-all outline-none cursor-pointer hover:bg-black/60 shadow-sm"
-                >
-                  <option className="bg-gray-900 text-white" value="Manual Report">Manual Report</option>
-                  <option className="bg-gray-900 text-white" value="pothole">Pothole</option>
-                  <option className="bg-gray-900 text-white" value="road_damage">Road Damage</option>
-                  <option className="bg-gray-900 text-white" value="broken_streetlight">Broken Streetlight</option>
-                  <option className="bg-gray-900 text-white" value="garbage">Garbage / Trash</option>
-                  <option className="bg-gray-900 text-white" value="flood">Flooding</option>
-                  <option className="bg-gray-900 text-white" value="water_leakage">Water Leakage</option>
-                  <option className="bg-gray-900 text-white" value="fire">Fire Hazard</option>
-                  <option className="bg-gray-900 text-white" value="dead_animal">Dead Animal</option>
-                  <option className="bg-gray-900 text-white" value="car_accident">Car Accident</option>
-                  <option className="bg-gray-900 text-white" value="abandoned_vehicle">Abandoned Vehicle</option>
-                  <option className="bg-gray-900 text-white" value="other">Other</option>
-                </select>
+                <div className="space-y-2">
+                  <select
+                    name="issue_type"
+                    value={['Manual Report', 'pothole', 'road_damage', 'broken_streetlight', 'garbage', 'flood', 'water_leakage', 'fire', 'dead_animal', 'car_accident', 'abandoned_vehicle'].includes(editForm.issue_type) ? editForm.issue_type : 'other_issue'}
+                    onChange={(e) => {
+                      if (e.target.value === 'other_issue') {
+                        setEditForm(prev => ({ ...prev, issue_type: '' }));
+                      } else {
+                        handleEditChange(e);
+                      }
+                    }}
+                    className="w-full bg-black/40 text-white border border-gray-700/50 rounded-xl px-4 py-3 text-sm mt-2 focus:border-yellow-500/50 transition-all outline-none cursor-pointer hover:bg-black/60 shadow-sm"
+                  >
+                    <option className="bg-gray-900 text-white" value="Manual Report">Manual Report</option>
+                    <option className="bg-gray-900 text-white" value="pothole">Pothole</option>
+                    <option className="bg-gray-900 text-white" value="road_damage">Road Damage</option>
+                    <option className="bg-gray-900 text-white" value="broken_streetlight">Broken Streetlight</option>
+                    <option className="bg-gray-900 text-white" value="garbage">Garbage / Trash</option>
+                    <option className="bg-gray-900 text-white" value="flood">Flooding</option>
+                    <option className="bg-gray-900 text-white" value="water_leakage">Water Leakage</option>
+                    <option className="bg-gray-900 text-white" value="fire">Fire Hazard</option>
+                    <option className="bg-gray-900 text-white" value="dead_animal">Dead Animal</option>
+                    <option className="bg-gray-900 text-white" value="car_accident">Car Accident</option>
+                    <option className="bg-gray-900 text-white" value="abandoned_vehicle">Abandoned Vehicle</option>
+                    <option className="bg-gray-900 text-white" value="other_issue">Specify Manually...</option>
+                  </select>
+
+                  {(!['Manual Report', 'pothole', 'road_damage', 'broken_streetlight', 'garbage', 'flood', 'water_leakage', 'fire', 'dead_animal', 'car_accident', 'abandoned_vehicle'].includes(editForm.issue_type)) && (
+                    <input
+                      type="text"
+                      name="issue_type"
+                      value={editForm.issue_type}
+                      onChange={handleEditChange}
+                      placeholder="Type issue name..."
+                      className="w-full bg-black/60 text-white border border-yellow-500/30 rounded-xl px-4 py-3 text-sm focus:border-yellow-500 transition-all outline-none animate-in fade-in slide-in-from-top-1"
+                    />
+                  )}
+                </div>
               ) : (
                 <p className="text-sm font-semibold">{formatIssueType(hasEdited ? editForm.issue_type : issueType)}</p>
               )}
@@ -941,15 +1002,28 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
             )}
           </div>
 
-          {/* Location */}
           <div className="grid md:grid-cols-2 gap-4 mb-6">
             <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
-              <p className="text-xs text-gray-400">Address</p>
-              <p className="text-sm font-semibold">{String(address || '—')}</p>
+              <p className="text-xs text-gray-400">Street Address</p>
+              {isSpecificAddress ? (
+                <p className="text-sm font-semibold text-white">{String(address)}</p>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm font-semibold text-gray-400 italic">No specific home address detected</p>
+                  <p className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Using Precise Coordinates for Resolution</p>
+                </div>
+              )}
             </div>
             <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
-              <p className="text-xs text-gray-400">ZIP / Coordinates</p>
-              <p className="text-sm font-semibold">{String(zipCode || '—')} • {String(latitude || '—')}, {String(longitude || '—')}</p>
+              <p className="text-xs text-gray-400">Location Data (ZIP / GPS)</p>
+              <div className="flex flex-col gap-0.5">
+                <p className="text-sm font-semibold text-white">
+                  {String(displayZip || '—')}
+                </p>
+                <p className="text-[10px] text-gray-500 font-mono">
+                  {latitude && latitude !== '—' ? Number(latitude).toFixed(6) : '—'}, {longitude && longitude !== '—' ? Number(longitude).toFixed(6) : '—'}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -1128,7 +1202,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
             </div>
           )}
           <div className="mt-8">
-            <Warning />
+            {!isManualReport && !isManualMode && <Warning />}
           </div>
         </div> {/* Explicitly close the isGuest wrapper */}
       </div>

@@ -91,7 +91,7 @@ export default function EaiserAIHero() {
             </motion.div>
 
             <h1 className="text-7xl lg:text-8xl font-black leading-none">
-              <span className="block text-white mb-2">Eaiser AI</span>
+              <span className="block text-white mb-2">EAiSER AI</span>
               <span className="block bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 bg-clip-text text-transparent">
                 is here...
               </span>
@@ -118,7 +118,7 @@ export default function EaiserAIHero() {
                 className="group relative px-8 py-4 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl font-bold text-black overflow-hidden transition-all hover:shadow-2xl hover:shadow-yellow-500/50 hover:-translate-y-1"
               >
                 <span className="relative z-10 flex items-center gap-2">
-                  Report an Issue
+                  Send a Report
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </span>
               </button>
