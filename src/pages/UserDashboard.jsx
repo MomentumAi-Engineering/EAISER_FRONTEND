@@ -365,20 +365,33 @@ export default function UserDashboard() {
                           transition={{ delay: idx < 10 ? idx * 0.05 : 0 }}
                           className="bg-zinc-800/30 border border-white/5 rounded-xl p-4 hover:border-yellow-500/40 transition-all cursor-pointer group will-change-transform"
                         >
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h3 className="text-white font-bold text-sm tracking-wide group-hover:text-yellow-400 transition-colors uppercase">
-                                {formatIssueType(issue.issue_type)}
-                              </h3>
-                              <p className="text-gray-500 text-xs mt-1 line-clamp-1">{issue.address || 'Location analyzing...'}</p>
-                              <div className="flex items-center gap-3 mt-3">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${['resolved', 'completed', 'accepted', 'submitted', 'approved', 'dispatched'].includes(issue.status?.toLowerCase()) ? 'bg-green-500/10 text-green-400' : 'bg-orange-500/10 text-orange-400'}`}>
-                                  {issue.status}
-                                </span>
-                                <span className="text-[10px] text-zinc-600 font-bold">{timeAgo(issue.timestamp)}</span>
+                          <div className="flex items-start gap-4">
+                            {/* Thumbnail preview */}
+                            <div className="w-14 h-14 rounded-xl bg-zinc-900 overflow-hidden border border-white/5 flex-shrink-0 group-hover:border-yellow-500/30 transition-all">
+                              <img
+                                src={issue.image_url ? (issue.image_url.startsWith('http') ? issue.image_url : apiClient.url(issue.image_url)) : `https://placehold.co/100x100/18181b/FFD700?text=${issue.issue_type?.[0] || 'E'}`}
+                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                                onError={(e) => { e.target.src = 'https://placehold.co/100x100/18181b/444/white?text=EA'; }}
+                              />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between">
+                                <div className="min-w-0">
+                                  <h3 className="text-white font-bold text-sm tracking-wide group-hover:text-yellow-400 transition-colors uppercase truncate">
+                                    {formatIssueType(issue.issue_type)}
+                                  </h3>
+                                  <p className="text-gray-500 text-xs mt-1 truncate">{issue.address || 'Location analyzing...'}</p>
+                                  <div className="flex items-center gap-3 mt-3">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${['resolved', 'completed', 'accepted', 'submitted', 'approved', 'dispatched'].includes(issue.status?.toLowerCase()) ? 'bg-green-500/10 text-green-400' : 'bg-orange-500/10 text-orange-400'}`}>
+                                      {issue.status}
+                                    </span>
+                                    <span className="text-[10px] text-zinc-600 font-bold">{timeAgo(issue.timestamp)}</span>
+                                  </div>
+                                </div>
+                                <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-yellow-500 transition-all group-hover:translate-x-1 flex-shrink-0 ml-2" />
                               </div>
                             </div>
-                            <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-yellow-500 transition-all group-hover:translate-x-1" />
                           </div>
                         </motion.div>
                       ))
@@ -420,13 +433,22 @@ export default function UserDashboard() {
               >
                 <div className="h-60 md:h-auto md:w-1/2 bg-black relative">
                   <img
-                    src={selectedIssue.image_url ?
-                      (selectedIssue.image_url.startsWith('http') ? selectedIssue.image_url : `${API_BASE_URL.replace('/api', '')}${selectedIssue.image_url.startsWith('/') ? '' : '/'}${selectedIssue.image_url}`)
-                      : (selectedIssue.image_id ? `${API_BASE_URL}/issues/${selectedIssue._id || selectedIssue.id}/image` : `https://placehold.co/600x800/18181b/FFF?text=Digital+Evidence`)}
-                    className="w-full h-full object-cover opacity-80"
+                    src={(() => {
+                      if (selectedIssue.image_url) {
+                        return selectedIssue.image_url.startsWith('http')
+                          ? selectedIssue.image_url
+                          : apiClient.url(selectedIssue.image_url);
+                      }
+                      const id = selectedIssue._id || selectedIssue.id;
+                      if (selectedIssue.image_id) {
+                        return apiClient.url(`/api/issues/${id}/image`);
+                      }
+                      return `https://placehold.co/600x800/18181b/FFD700?text=No+Visual+Evidence&font=playfair`;
+                    })()}
+                    className="w-full h-full object-cover opacity-90 transition-opacity duration-500 group-hover:opacity-100"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = `https://placehold.co/600x800/18181b/FFF?text=Evidence+Feed+Error`;
+                      e.target.src = `https://placehold.co/600x800/18181b/FFD700?text=Evidence+Access+Error`;
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
@@ -435,42 +457,52 @@ export default function UserDashboard() {
                     <p className="text-yellow-400/80 text-[10px] font-bold uppercase tracking-widest">{selectedIssue.category || 'Environmental'}</p>
                   </div>
                 </div>
-                <div className="p-6 md:w-1/2 overflow-y-auto custom-scrollbar bg-zinc-900/50">
-                  <div className="mb-6">
-                    <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Status Report</h3>
-                    <span className="text-sm font-black text-white uppercase bg-zinc-800 px-3 py-1 rounded-lg border border-white/5">{selectedIssue.status}</span>
-                  </div>
-                  <div className="mb-6">
-                    <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Intel Summary</h3>
-                    <p className="text-gray-400 text-xs leading-relaxed italic">
-                      "Our AI analyzed the image and identified a potential <span className="text-yellow-400/80">{formatIssueType(selectedIssue.issue_type)}</span> showing <span className="text-white/90">{cleanAIReportText(selectedIssue.description || selectedIssue.report?.summary || 'an identified civic concern')}</span>. This issue is located at <span className="text-white/70">{selectedIssue.address?.split(',')[1]?.trim() || selectedIssue.address?.split(',')[0] || 'Unknown City'}</span> (ZIP {selectedIssue.zip_code || selectedIssue.location?.zip_code || 'N/A'})."
-                    </p>
+                <div className="p-6 md:w-1/2 flex flex-col bg-zinc-900/50 overflow-hidden">
+                  <div className="flex-grow overflow-y-auto custom-scrollbar pr-2">
+                    <div className="mb-6">
+                      <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Status Report</h3>
+                      <span className="text-sm font-black text-white uppercase bg-zinc-800 px-3 py-1 rounded-lg border border-white/5">{selectedIssue.status}</span>
+                    </div>
+                    <div className="mb-6">
+                      <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Intel Summary</h3>
+                      <p className="text-gray-400 text-xs leading-relaxed italic">
+                        "Our AI analyzed the image and identified a potential <span className="text-yellow-400/80">{formatIssueType(selectedIssue.issue_type)}</span> showing <span className="text-white/90">{cleanAIReportText(selectedIssue.description || selectedIssue.report?.summary || 'an identified civic concern')}</span>. This issue is located at <span className="text-white/70">{selectedIssue.address?.split(',')[1]?.trim() || selectedIssue.address?.split(',')[0] || 'Unknown City'}</span> (ZIP {selectedIssue.zip_code || selectedIssue.location?.zip_code || 'N/A'})."
+                      </p>
+                    </div>
+
+                    {/* Authorities Section */}
+                    {(selectedIssue.report?.responsible_authorities_or_parties?.length > 0 || selectedIssue.report?.report?.responsible_authorities_or_parties?.length > 0) && (
+                      <div className="mb-6">
+                        <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Dispatched Authorities</h3>
+                        <div className="space-y-2">
+                          {(selectedIssue.report?.responsible_authorities_or_parties || selectedIssue.report?.report?.responsible_authorities_or_parties).map((auth, idx) => (
+                            <div key={idx} className="flex items-center gap-2 bg-white/5 p-2 rounded-lg border border-white/5">
+                              <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
+                              <span className="text-[11px] text-gray-300 font-bold uppercase tracking-wider">{auth.name || auth.department || auth}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {selectedIssue.admin_note && (
+                      <div className="p-3 bg-yellow-500/5 border border-yellow-500/10 rounded-xl">
+                        <h3 className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-1">Admin Feedback</h3>
+                        <p className="text-gray-400 text-xs leading-relaxed">{selectedIssue.admin_note}</p>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Authorities Section */}
-                  {(selectedIssue.report?.responsible_authorities_or_parties?.length > 0 || selectedIssue.report?.report?.responsible_authorities_or_parties?.length > 0) && (
-                    <div className="mb-6">
-                      <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Dispatched Authorities</h3>
-                      <div className="space-y-2">
-                        {(selectedIssue.report?.responsible_authorities_or_parties || selectedIssue.report?.report?.responsible_authorities_or_parties).map((auth, idx) => (
-                          <div key={idx} className="flex items-center gap-2 bg-white/5 p-2 rounded-lg border border-white/5">
-                            <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
-                            <span className="text-[11px] text-gray-300 font-bold uppercase tracking-wider">{auth.name || auth.department || auth}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {selectedIssue.admin_note && (
-                    <div className="p-3 bg-yellow-500/5 border border-yellow-500/10 rounded-xl">
-                      <h3 className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-1">Admin Feedback</h3>
-                      <p className="text-gray-400 text-xs leading-relaxed">{selectedIssue.admin_note}</p>
-                    </div>
-                  )}
-                  <div className="mt-8">
-                    <Warning />
+                  {/* Modal Footer - Explicitly pinned to bottom */}
+                  <div className="mt-6 pt-6 border-t border-white/5 bg-zinc-900/50 backdrop-blur-xl relative z-20">
+                    <button
+                      onClick={() => setSelectedIssue(null)}
+                      className="w-full py-4 bg-red-600/10 hover:bg-red-600/30 text-red-400 rounded-2xl font-black transition-all border border-red-500/20 flex items-center justify-center gap-2 group shadow-lg shadow-red-900/10"
+                    >
+                      <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+                      CLOSE DIGITAL FILE
+                    </button>
+                    <p className="text-center text-[9px] text-zinc-600 mt-4 uppercase tracking-[0.3em] font-black">Official EAiSER Digital Evidence Access</p>
                   </div>
-                  <button onClick={() => setSelectedIssue(null)} className="w-full mt-8 py-3 bg-white/5 hover:bg-white/10 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all border border-white/5">Close File</button>
                 </div>
               </motion.div>
             </motion.div>
