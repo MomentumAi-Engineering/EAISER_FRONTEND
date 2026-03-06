@@ -81,3 +81,7 @@ export async function googleSignIn(idToken) {
 export async function verifyEmail(token) {
   return request('/api/auth/verify-email', { token });
 }
+
+export async function appleSignIn(appleData) {
+  return request('/api/auth/apple', appleData);
+}

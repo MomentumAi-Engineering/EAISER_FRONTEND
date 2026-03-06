@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/apiClient';
 import { Loader2, AlertTriangle, CheckCircle2, MapPin, Save, List, Edit2, Search, X, BarChart3, Activity, History, Check, XCircle, Send } from 'lucide-react';
-import Warning from './Warning';
 import { useNavigate } from 'react-router-dom';
 import { adminPath } from '../utils/adminPaths';
 
@@ -506,9 +505,7 @@ const MappingReview = () => {
                     </div>
                 )}
 
-                <div className="mt-12 pb-8">
-                    <Warning />
-                </div>
+
             </div>
         </div>
     );

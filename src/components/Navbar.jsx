@@ -89,7 +89,7 @@ export default function Navbar() {
               onClick={handleReportClick}
               className="hover:text-white transition-all duration-300 hover:scale-110 cursor-pointer"
             >
-              Report Issue
+              Send a Report
             </button>
           </li>
         </ul>

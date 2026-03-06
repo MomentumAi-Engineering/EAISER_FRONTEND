@@ -5,7 +5,6 @@ import apiClient from '../services/apiClient';
 import { Image as ImageIcon, MapPin, FileText, CheckCircle2, Clock, Check, AlertTriangle, ShieldAlert, Send, Edit2, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import Warning from './Warning';
 import confetti from 'canvas-confetti'; // Assuming it's installed, otherwise I will guide to install or use fallback.
 // Actually, to be safe, I'll use a dynamic import or checking.
 // But since I can't interactively check, I'll use a robust method: `npm install canvas-confetti` command? No, I should use what's available.
@@ -1201,9 +1200,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               </button>
             </div>
           )}
-          <div className="mt-8">
-            {!isManualReport && !isManualMode && <Warning />}
-          </div>
+
         </div> {/* Explicitly close the isGuest wrapper */}
       </div>
 

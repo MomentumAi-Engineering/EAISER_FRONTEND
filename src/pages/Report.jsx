@@ -31,7 +31,6 @@ import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from "@react-google-m
 import Navbar from "../components/Navbar";
 import { useReportContext } from "../context/ReportContext";
 import { useDialog } from "../context/DialogContext";
-import Warning from "../components/Warning";
 
 const SERVICED_ZIP_CODES = ["37013", "37027", "37062", "37072", "37076", "37115", "37138", "37201", "37203", "37204", "37205", "37206", "37207", "37208", "37209", "37210", "37211", "37212", "37214", "37215", "37216", "37217", "37218", "37219", "37220", "37221", "37222", "37224", "37227", "37228", "37229", "37230", "37232", "37234", "37235", "37236", "37238", "37240", "37242", "37250"];
 
@@ -1111,32 +1110,64 @@ export default function SimpleReport() {
           </div>
 
           <div className="space-y-6">
-            {/* PRIORITY ACTION: Current Location */}
-            <button
+            {/* ADVANCED ACTION: Current Location */}
+            <motion.button
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
               onClick={handleLocationPermission}
-              className={`w-full group/locbtn relative overflow-hidden flex items-center justify-center gap-4 px-6 py-5 rounded-2xl font-black text-sm transition-all duration-300 shadow-2xl ${locationPermission
-                ? "bg-green-500 text-black shadow-green-500/20"
-                : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"
+              className={`w-full group/locbtn relative overflow-hidden flex items-center justify-center gap-4 px-6 py-5 rounded-2xl font-black text-sm transition-all duration-500 shadow-2xl ${locationPermission
+                ? "bg-gradient-to-r from-emerald-500 to-green-400 text-black shadow-green-500/40"
+                : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/40"
                 }`}
             >
-              <div className="absolute inset-0 bg-white/10 translate-y-full group-hover/locbtn:translate-y-0 transition-transform" />
-              <div className="relative flex items-center gap-3 uppercase tracking-tighter">
-                {locationPermission ? <ShieldCheck className="w-5 h-5" /> : <LocateFixed className="w-5 h-5" />}
-                {locationPermission ? "Location Synced Successfully" : "Priority: Use My Current Location"}
-              </div>
-            </button>
+              {/* Shimmer Effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/locbtn:animate-shimmer" />
 
-            <div className="flex items-center gap-4 my-6">
-              <div className="h-px flex-1 bg-gray-800" />
-              <button
-                onClick={() => setShowManualAddress(!showManualAddress)}
-                className="text-[10px] font-black text-gray-400 hover:text-white uppercase tracking-widest px-4 py-2 bg-gray-900 border border-gray-800 rounded-full transition-all flex items-center gap-2"
-              >
-                {showManualAddress ? <X className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
-                {showManualAddress ? "Hide Manual Entry" : "Or Enter Address Manually"}
-              </button>
-              <div className="h-px flex-1 bg-gray-800" />
-            </div>
+              {/* Radial Glow */}
+              <div className={`absolute inset-0 opacity-0 group-hover/locbtn:opacity-100 transition-opacity duration-500 ${locationPermission ? "bg-[radial-gradient(circle,rgba(255,255,255,0.4)_0%,transparent_70%)]" : "bg-[radial-gradient(circle,rgba(255,255,255,0.2)_0%,transparent_70%)]"
+                }`} />
+
+              <div className="relative flex items-center gap-3 uppercase tracking-tighter">
+                <div className="relative">
+                  {locationPermission ? (
+                    <ShieldCheck className="w-6 h-6 animate-in zoom-in duration-300" />
+                  ) : (
+                    <>
+                      <LocateFixed className="w-6 h-6 relative z-10" />
+                      <div className="absolute inset-0 bg-white/40 rounded-full animate-ping scale-150 opacity-0 group-hover/locbtn:opacity-100" />
+                    </>
+                  )}
+                </div>
+                <span className="text-base">{locationPermission ? "Location Synced Successfully" : "Use My Current Location"}</span>
+              </div>
+            </motion.button>
+
+            {/* ADVANCED ACTION: Manual Entry */}
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              onClick={() => setShowManualAddress(!showManualAddress)}
+              className={`w-full group/manual relative overflow-hidden flex items-center justify-center gap-3 px-6 py-5 rounded-2xl font-black text-sm uppercase tracking-tighter transition-all duration-500 shadow-xl border ${showManualAddress
+                ? "bg-zinc-800 border-white/30 text-white shadow-white/5"
+                : "bg-zinc-900/90 border-white/10 text-gray-400 hover:text-white hover:border-white/30"
+                }`}
+            >
+              {/* Cyber Scanner Line Animation */}
+              <div className="absolute inset-0 opacity-0 group-hover/manual:opacity-100 transition-opacity pointer-events-none">
+                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-400/50 to-transparent animate-scan" />
+              </div>
+
+              <div className="relative flex items-center gap-3">
+                {showManualAddress ? (
+                  <X className="w-5 h-5 text-red-400 group-hover:rotate-90 transition-transform duration-300" />
+                ) : (
+                  <MapPin className="w-5 h-5 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                )}
+                <span className="tracking-widest text-xs">
+                  {showManualAddress ? "Hide Manual Entry" : "Or Enter Address Manually"}
+                </span>
+              </div>
+            </motion.button>
 
             <AnimatePresence>
               {showManualAddress && (
@@ -1366,8 +1397,26 @@ export default function SimpleReport() {
             )}
         </button>
 
-        {!isManualMode && <Warning />}
+
       </div>
     </div>
   );
 }
+
+<style>{`
+  @keyframes shimmer {
+    0% { transform: translateX(-100%) skewX(-15deg); }
+    100% { transform: translateX(200%) skewX(-15deg); }
+  }
+  @keyframes scan {
+    0% { top: 0; opacity: 0; }
+    50% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+  .animate-shimmer {
+    animation: shimmer 2.5s infinite;
+  }
+  .animate-scan {
+    animation: scan 2s linear infinite;
+  }
+`}</style>

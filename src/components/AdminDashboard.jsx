@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import apiClient from '../services/apiClient';
 import { useDialog } from '../context/DialogContext';
 import { ShieldAlert, CheckCircle2, XCircle, AlertTriangle, Loader2, Edit2, ShieldCheck, Mail, Save, X, Users, BarChart3, CheckSquare, Square, MapPin, Building, FileText, Clock, TrendingUp } from 'lucide-react';
-import Warning from './Warning';
 import { useNavigate } from 'react-router-dom';
 import { hasPermission, canActOnIssue, getCurrentAdmin } from '../utils/permissions';
 import { adminPath } from '../utils/adminPaths';
@@ -383,8 +382,8 @@ export default function AdminDashboard() {
       // Simple check for the warning message
       if (err.message && (err.message.includes("low AI confidence") || err.message.includes("Low confidence"))) {
         const force = await showConfirm(
-          "⚠️ AI Assistance Notice:\n\nThe AI confidence for this report is LOW. Banning this user implies they submitted a fake report, but the AI is not sure.\n\nDo you want to FORCE deactivate anyway?",
-          { title: "Low Confidence Warning", confirmText: "Force Deactivate", variant: 'warning' }
+          "The AI confidence for this report is LOW. Banning this user implies they submitted a fake report, but the AI is not sure.\n\nDo you want to FORCE deactivate anyway?",
+          { title: "Low Confidence Alert", confirmText: "Force Deactivate", variant: 'warning' }
         );
         if (force) {
           try {
@@ -656,9 +655,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <div className="mt-8 pb-12">
-          <Warning />
-        </div>
+
       </div>
 
       {/* Bulk Action Bar - Sticky Bottom */}

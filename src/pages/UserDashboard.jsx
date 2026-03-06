@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 import Navbar from '../components/Navbar';
-import Warning from '../components/Warning';
+
 import apiClient from '../services/apiClient';
 import API_BASE_URL from '../config';
 

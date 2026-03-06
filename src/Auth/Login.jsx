@@ -5,6 +5,13 @@ import axios from 'axios';
 import { googleSignIn } from '../api/auth';
 
 const GOOGLE_CLIENT_ID = import.meta?.env?.VITE_GOOGLE_CLIENT_ID || '194899266265-sopp3sj9bkdor1ufeghm1bclpphrjuk1.apps.googleusercontent.com';
+const APPLE_CLIENT_ID = import.meta.env.VITE_APPLE_CLIENT_ID || "";
+const APPLE_REDIRECT_URI = import.meta.env.VITE_APPLE_REDIRECT_URI || "";
+
+console.log("DEBUG: Apple Auth Config", {
+  clientId: APPLE_CLIENT_ID ? "PRESENT" : "MISSING",
+  redirectUri: APPLE_REDIRECT_URI ? "PRESENT" : "MISSING"
+});
 
 export default function EaiserLogin() {
   const [showPassword, setShowPassword] = useState(false);
@@ -151,6 +158,52 @@ export default function EaiserLogin() {
     }
   };
 
+  const loadAppleScript = () => {
+    return new Promise((resolve) => {
+      if (window.AppleID) return resolve();
+      const script = document.createElement('script');
+      script.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
+      script.async = true;
+      script.onload = () => resolve();
+      document.head.appendChild(script);
+    });
+  };
+
+  const handleAppleClick = async () => {
+    setError(null);
+    try {
+      await loadAppleScript();
+      if (!APPLE_CLIENT_ID || !APPLE_REDIRECT_URI) {
+        throw new Error("Apple configuration missing. Please fill APPLE_CLIENT_ID and APPLE_REDIRECT_URI in the code.");
+      }
+
+      window.AppleID.auth.init({
+        clientId: APPLE_CLIENT_ID,
+        scope: 'name email',
+        redirectURI: APPLE_REDIRECT_URI,
+        state: 'login',
+        usePopup: true
+      });
+
+      const response = await window.AppleID.auth.signIn();
+      setLoading(true);
+
+      const { appleSignIn } = await import('../api/auth');
+      const data = await appleSignIn(response);
+
+      localStorage.setItem('auth_token', data.access_token);
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('userData', JSON.stringify(data.user));
+
+      navigate(returnTo);
+    } catch (err) {
+      setError(err?.message || err?.error || "Apple authentication failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden relative flex items-center justify-center p-4">
       {/* Logo in top left corner */}
@@ -159,11 +212,9 @@ export default function EaiserLogin() {
         className="absolute top-6 left-6 z-50 group transition-transform hover:scale-105 duration-300"
       >
         <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm border border-yellow-500/30 rounded-xl px-4 py-2 hover:border-yellow-500/60 transition-all">
-          <img
-            src="/lat.png"
-            alt="Eaiser AI Logo"
-            className="h-8 w-auto drop-shadow-lg"
-          />
+          <span className="text-2xl font-black tracking-tighter text-yellow-400 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">
+            EAiSER
+          </span>
         </div>
       </Link>
 
@@ -200,8 +251,8 @@ export default function EaiserLogin() {
         <div className="relative bg-gradient-to-br from-gray-900/90 to-black/90 backdrop-blur-xl rounded-3xl border border-yellow-500/20 p-6">
           {/* Header */}
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl mb-3 shadow-md shadow-yellow-500/20">
-              <Sparkles className="w-7 h-7 text-black" />
+            <div className="inline-flex items-center justify-center w-20 h-20 mb-3 shadow-md shadow-yellow-500/20 rounded-full overflow-hidden p-0">
+              <img src="/newlogo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
 
             <h1 className="text-3xl font-black mb-1">
@@ -233,7 +284,9 @@ export default function EaiserLogin() {
 
             <button
               type="button"
-              className="flex items-center justify-center gap-2 p-3 bg-black border border-gray-800 hover:bg-zinc-900 rounded-xl transition-all hover:-translate-y-0.5 shadow-sm"
+              onClick={handleAppleClick}
+              disabled={loading}
+              className="flex items-center justify-center gap-2 p-3 bg-black border border-gray-800 hover:bg-zinc-900 rounded-xl transition-all hover:-translate-y-0.5 shadow-sm disabled:opacity-50"
               title="Continue with Apple"
             >
               <svg className="w-5 h-5 fill-white" viewBox="0 0 384 512">
