@@ -62,36 +62,11 @@ function UploadForm({ setStatus, fetchIssues }) {
   const [selectedAuthorities, setSelectedAuthorities] = useState([]);
   const [emailingAuthorities, setEmailingAuthorities] = useState(false);
   const [emailStatus, setEmailStatus] = useState('');
-  const [isGuest, setIsGuest] = useState(false);
-  // Restored image preview (from base64 in sessionStorage after login)
-  const [restoredImagePreview, setRestoredImagePreview] = useState(null);
-  const navigate = useNavigate(); // Assume useNavigate is available or add import
+  const [emailStatus, setEmailStatus] = useState('');
 
-  // 🔑 Guest Report Recovery: restore data from sessionStorage after login redirect
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-    if (!token) return; // Only restore for authenticated users
-    try {
-      const saved = sessionStorage.getItem('eaiser_guest_upload_report');
-      if (saved) {
-        const data = JSON.parse(saved);
-        setReportPreview(data.reportPreview);
-        setEditedReport(data.editedReport);
-        setIssueId(data.issueId);
-        setIsGuest(false); // Logged in now, lift the guest wall
-        if (data.address) setAddress(data.address);
-        if (data.zipCode) setZipCode(data.zipCode);
-        if (data.latitude && data.longitude) setCoordinates({ latitude: data.latitude, longitude: data.longitude });
-        if (data.image_content) {
-          setRestoredImagePreview(`data:image/jpeg;base64,${data.image_content}`);
-        }
-        setActiveStep(2); // Go straight to review step
-        sessionStorage.removeItem('eaiser_guest_upload_report');
-      }
-    } catch (e) {
-      console.warn('Could not restore guest report from sessionStorage:', e);
-    }
-  }, []); // Run once on mount
+  // Restored image preview
+  const [restoredImagePreview, setRestoredImagePreview] = useState(null);
+  const navigate = useNavigate();
 
   // NEW: Manual Report Mode State (Manual Trigger)
   const [isManualMode, setIsManualMode] = useState(false);
@@ -365,28 +340,7 @@ function UploadForm({ setStatus, fetchIssues }) {
       setReportPreview(result.report);
       setEditedReport(result.report.report);
       setIssueId(result.id);
-      setIsGuest(result.is_guest || false);
 
-      // 🔑 Guest Data Persistence: Save full result to sessionStorage so data survives login redirect
-      if (result.is_guest) {
-        try {
-          sessionStorage.setItem('eaiser_guest_upload_report', JSON.stringify({
-            reportPreview: result.report,
-            editedReport: result.report.report,
-            issueId: result.id,
-            isGuest: true,
-            address: result.address || address,
-            zipCode: result.zip_code || zipCode,
-            latitude: result.latitude || (coordinates?.latitude),
-            longitude: result.longitude || (coordinates?.longitude),
-            // Store image_content from top-level for recovery after login
-            image_content: result.image_content || result.report?.image_content || null,
-            confidence: result.confidence || 0,
-          }));
-        } catch (e) {
-          console.warn('Could not persist guest report to sessionStorage:', e);
-        }
-      }
 
       // Auto-enable edit mode for Manual Reports as they are "blank" template
       if (isManualMode) {
@@ -1155,61 +1109,7 @@ function UploadForm({ setStatus, fetchIssues }) {
             )}
 
             <div className="report-content p-8 space-y-8 relative overflow-hidden">
-              {/* GUEST WALL OVERLAY */}
-              {isGuest && (
-                <div className="absolute inset-0 z-[60] flex items-center justify-center bg-[#0a0f1e]/80 backdrop-blur-xl rounded-b-3xl p-8 text-center">
-                  <motion.div
-                    className="max-w-md space-y-8"
-                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ type: "spring", damping: 12 }}
-                  >
-                    <div className="w-24 h-24 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto border border-blue-500/30 relative">
-                      <Lock className="w-12 h-12 text-blue-400" />
-                      <motion.div
-                        className="absolute inset-0 rounded-full border-2 border-blue-500/50"
-                        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                      />
-                    </div>
-
-                    <div className="space-y-4">
-                      <h4 className="text-4xl font-extrabold text-white tracking-tight">
-                        Report <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Locked</span>
-                      </h4>
-                      <p className="text-gray-300 text-lg leading-relaxed">
-                        Your report has been generated successfully! 🚀 <br />
-                        To unlock the full AI analysis and submit this issue, please create an account or login.
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col gap-4 pt-6">
-                      <motion.button
-                        onClick={() => navigate('/signup')}
-                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-[0_10px_30px_rgba(59,130,246,0.3)] text-lg"
-                        whileHover={{ scale: 1.02, translateY: -2 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <UserPlus className="w-6 h-6" /> Create My Account
-                      </motion.button>
-                      <motion.button
-                        onClick={() => navigate('/login')}
-                        className="w-full py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold border border-white/10 flex items-center justify-center gap-3 backdrop-blur-md transition-all text-lg"
-                        whileHover={{ scale: 1.02, translateY: -2 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <LogIn className="w-6 h-6" /> Login to Account
-                      </motion.button>
-                    </div>
-
-                    <div className="flex items-center justify-center gap-2 text-blue-400/60 font-mono text-sm uppercase tracking-widest pt-4 animate-pulse">
-                      <Shield className="w-4 h-4" /> Progress Secured
-                    </div>
-                  </motion.div>
-                </div>
-              )}
-
-              <div className={isGuest ? 'filter blur-2xl pointer-events-none select-none grayscale scale-[0.98] transition-all duration-700' : 'transition-all duration-700'}>
+              <div className="transition-all duration-700">
                 {/* Issue Overview */}
                 <motion.div
                   className="report-section bg-black/20 rounded-2xl p-6 border border-white/5 hover:border-blue-500/30 transition-colors duration-300"

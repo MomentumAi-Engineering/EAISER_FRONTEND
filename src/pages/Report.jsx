@@ -148,7 +148,6 @@ export default function SimpleReport() {
   const [locationPermission, setLocationPermission] = useState(false);
   const [coords, setCoords] = useState(null);
   const [formData, setFormData] = useState({ streetAddress: "", zipCode: "" });
-  const [guestLimitReached, setGuestLimitReached] = useState(false);
   const [locationMissing, setLocationMissing] = useState(false);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -264,12 +263,7 @@ export default function SimpleReport() {
   };
 
   useEffect(() => {
-    // Immediate check on mount
-    const count = parseInt(localStorage.getItem("guest_report_count") || "0", 10);
-    const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
-    if (!token && count >= 1) {
-      setGuestLimitReached(true);
-    }
+    // Guest limit check removed
   }, []);
 
   const handleFileChange = (e) => {
@@ -415,49 +409,11 @@ export default function SimpleReport() {
   };
 
   /* 
-   * GUEST REPORT LIMIT LOGIC
+   * GUEST REPORTING LOGIC REMOVED
    * -------------------------
    */
-  const GUEST_LIMIT = 1;
-
-  const checkGuestLimit = () => {
-    const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token"); // Example key
-
-    if (authToken) {
-      return true; // Logged in users have no limit here
-    }
-
-    // Check if key exists and is >= 1
-    const currentCount = parseInt(localStorage.getItem("guest_report_count") || "0", 10);
-
-    // Strict check: if count is 1 or more, block.
-    if (currentCount >= 1) {
-      return false;
-    }
-    return true;
-  };
-
-  const incrementGuestCount = () => {
-    const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token");
-    if (!authToken) {
-      // Force set to 1 immediately after first successful report
-      localStorage.setItem("guest_report_count", "1");
-    }
-  };
 
   const handleGenerateReport = async () => {
-    // 1. Check Guest Limit
-    if (!checkGuestLimit()) {
-      const confirmLogin = await showConfirm(
-        "You have already submitted a free guest report.\n\nTo submit more reports and access your personal dashboard, you must Register or Login.",
-        { title: "Authentication Required", confirmText: "Login / Register", cancelText: "Cancel", variant: "warning" }
-      );
-      if (confirmLogin) {
-        navigate("/login"); // Redirect to login page
-      }
-      return;
-    }
-
     if (!selectedFile && !isManualMode) {
       await showAlert("Please upload an image first.", { variant: 'warning' });
       return;
@@ -518,21 +474,7 @@ export default function SimpleReport() {
     // 2. Increment Guest Counter on Success
     incrementGuestCount();
 
-    // Optional: Show message after 3rd report
-    const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token");
-    if (!authToken) {
-      const newCount = parseInt(localStorage.getItem("guest_report_count") || "0", 10);
-      if (newCount >= GUEST_LIMIT) {
-        await showAlert("You have used your free guest report. To track this issue and submit more, please Login or Register.", {
-          title: "Guest Limit Reached",
-          variant: "info",
-          confirmText: "Understand"
-        });
-      }
-    }
-  };
-
-  if (reportResult) {
+    // Handle successful report submission
     // 🔑 Guest Data Recovery: after login redirect, local state (image, address) is lost.
     // Fall back to data stored in the reportResult (now included by backend).
     const resolvedImagePreview =
@@ -1413,17 +1355,15 @@ export default function SimpleReport() {
         {/* Generate Report Button */}
         <button
           onClick={handleGenerateReport}
-          disabled={loading || guestLimitReached}
+          disabled={loading}
           className={`w-full mt-6 py-3 font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 
-            ${loading || guestLimitReached ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-400 text-black'}`}
+            ${loading ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-400 text-black'}`}
         >
           {
             loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" /> {isManualMode ? "Submitting..." : "Generating..."}
               </>
-            ) : guestLimitReached ? (
-              "Guest Limit Reached - Login Required"
             ) : (
               <>
                 {isManualMode ? <Send className="w-4 h-4" /> : <Zap className="w-4 h-4" />}

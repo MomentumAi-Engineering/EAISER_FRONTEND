@@ -173,10 +173,13 @@ export default function EaiserLogin() {
         throw new Error("Apple configuration missing. Please fill APPLE_CLIENT_ID and APPLE_REDIRECT_URI in the code.");
       }
 
+      // Dynamically use current origin so it works on both eaiser.ai AND www.eaiser.ai
+      const dynamicRedirectURI = `${window.location.origin}/login`;
+
       window.AppleID.auth.init({
         clientId: APPLE_CLIENT_ID,
         scope: 'name email',
-        redirectURI: 'https://eaiser.ai/login',
+        redirectURI: dynamicRedirectURI,
         state: 'login',
         usePopup: true
       });
