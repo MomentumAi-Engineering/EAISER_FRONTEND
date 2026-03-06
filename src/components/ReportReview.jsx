@@ -1204,6 +1204,73 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         </div> {/* Explicitly close the isGuest wrapper */}
       </div>
 
+      {/* AUTH POPUP - Shown when guest tries to submit */}
+      {showAuthPopup && (
+        <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-xl flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-950 border border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl shadow-blue-500/10">
+            {/* Header */}
+            <div className="p-8 text-center border-b border-white/5">
+              <div className="w-20 h-20 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-5 border border-yellow-500/30">
+                <svg className="w-10 h-10 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-extrabold text-white mb-2">
+                Almost There!
+              </h3>
+              <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
+                Your report has been generated successfully! To submit it to the authorities, please login or create an account.
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="p-6 space-y-3">
+              <button
+                onClick={() => {
+                  // Save pending report data to sessionStorage for recovery after login
+                  try {
+                    sessionStorage.setItem('eaiser_pending_report', JSON.stringify({
+                      issueId: issueId,
+                      timestamp: Date.now()
+                    }));
+                  } catch (e) { }
+                  navigate('/login');
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-black rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                Login to Submit
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem('eaiser_pending_report', JSON.stringify({
+                      issueId: issueId,
+                      timestamp: Date.now()
+                    }));
+                  } catch (e) { }
+                  navigate('/signup');
+                }}
+                className="w-full py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold text-sm border border-white/10 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Create Account
+              </button>
+              <button
+                onClick={() => setShowAuthPopup(false)}
+                className="w-full py-2.5 text-gray-500 hover:text-gray-300 text-xs font-medium transition-colors"
+              >
+                Continue Reviewing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Raw debug removed */}
     </div>
   );
