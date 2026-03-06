@@ -1019,9 +1019,21 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                 <p className="text-sm font-semibold text-white">
                   {String(displayZip || '—')}
                 </p>
-                <p className="text-[10px] text-gray-500 font-mono">
-                  {latitude && latitude !== '—' ? Number(latitude).toFixed(6) : '—'}, {longitude && longitude !== '—' ? Number(longitude).toFixed(6) : '—'}
-                </p>
+                <div className="flex items-center justify-between mt-0.5">
+                  <p className="text-[10px] text-gray-500 font-mono">
+                    {latitude && latitude !== '—' ? Number(latitude).toFixed(6) : '—'}, {longitude && longitude !== '—' ? Number(longitude).toFixed(6) : '—'}
+                  </p>
+                  {mapsLink && (
+                    <a
+                      href={mapsLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1 transition-colors"
+                    >
+                      <MapPin className="w-2.5 h-2.5" /> View on Map
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1077,11 +1089,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               </div>
             )}
           </div>
-          {mapsLink && (
-            <div className="mb-6">
-              <a href={mapsLink} target="_blank" rel="noreferrer" className="text-xs text-purple-300 hover:text-purple-200">View on Map</a>
-            </div>
-          )}
+
 
           {/* AI Generated Items merged into Description above as requested */}
 

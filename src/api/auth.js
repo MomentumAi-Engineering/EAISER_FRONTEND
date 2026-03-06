@@ -32,8 +32,10 @@ const getApiBase = () => {
     }
   }
 
-  // fallback to cloud api
-  return 'https://eaiser-backend-rf95.onrender.com';
+  // fallback to local api if on localhost, else cloud
+  return (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    ? 'http://localhost:8005'
+    : 'https://eaiser-backend-rf95.onrender.com';
 };
 
 const API_BASE = getApiBase();
