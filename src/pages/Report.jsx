@@ -470,11 +470,14 @@ export default function SimpleReport() {
         ? (formData.issueType === 'other_issue' ? formData.customIssueType : (formData.issueType || 'Manual Report'))
         : 'other'
     });
+    // Report generation is handled by context — after generateReport() completes,
+    // reportResult will be set and the component re-renders to show ReportReview.
+  }
 
-
-    // Handle successful report submission
-    // 🔑 Guest Data Recovery: after login redirect, local state (image, address) is lost.
-    // Fall back to data stored in the reportResult (now included by backend).
+  // ---------------------------------------------------------------
+  // REPORT REVIEW SCREEN - Shown when a report has been generated
+  // ---------------------------------------------------------------
+  if (reportResult) {
     const resolvedImagePreview =
       selectedImage ||
       (reportResult?.image_content ? `data:image/jpeg;base64,${reportResult.image_content}` : null) ||
