@@ -471,8 +471,6 @@ export default function SimpleReport() {
         : 'other'
     });
 
-    // 2. Increment Guest Counter on Success
-    incrementGuestCount();
 
     // Handle successful report submission
     // 🔑 Guest Data Recovery: after login redirect, local state (image, address) is lost.
