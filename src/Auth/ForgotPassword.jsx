@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, ArrowRight, Sparkles, ArrowLeft } from 'lucide-react';
+import { Mail, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
@@ -30,12 +30,10 @@ export default function ForgotPassword() {
         setMessage(null);
 
         try {
-            // Backend URL config - assuming same as login
             const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8005';
             const response = await axios.post(`${backendUrl}/api/auth/forgot-password`, { email });
             setMessage(response.data.message);
         } catch (err) {
-            // Generic message even on error to follow security best practices
             setMessage('If an account exists with this email, you will receive a password reset link shortly.');
         } finally {
             setLoading(false);
@@ -45,23 +43,20 @@ export default function ForgotPassword() {
     return (
         <div className="min-h-screen bg-black text-white overflow-hidden relative flex items-center justify-center p-4">
             {/* Logo in top left corner */}
-            <Link to="/" className="absolute top-6 left-6 z-50 transition-transform hover:scale-105">
-                <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm border border-yellow-500/30 rounded-xl px-4 py-2">
-                    <img src="/lat.png" alt="Logo" className="h-8 w-auto" />
+            <Link to="/" className="absolute top-6 left-6 z-50 group transition-transform hover:scale-105 duration-300">
+                <div className="flex items-center gap-2 transition-all">
+                    <img src="/lat.png" alt="Logo" className="w-10 h-10 object-contain rounded-xl bg-yellow-400 p-0.5 group-hover:scale-110 transition-transform" />
+                    <span className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow-md">
+                        EAiSER
+                    </span>
                 </div>
             </Link>
-
-            {/* Background Effect */}
-            <div
-                className="pointer-events-none fixed inset-0 z-0"
-                style={{ background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(234, 179, 8, 0.05), transparent 80%)` }}
-            />
 
             <div className="relative z-10 w-full max-w-md">
                 <div className="relative bg-gradient-to-br from-gray-900/90 to-black/90 backdrop-blur-xl rounded-3xl border border-yellow-500/20 p-8 shadow-2xl">
                     <div className="text-center mb-8">
-                        <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl mb-4 shadow-lg shadow-yellow-500/20">
-                            <Sparkles className="w-7 h-7 text-black" />
+                        <div className="inline-flex items-center justify-center w-20 h-20 mb-3 shadow-lg shadow-yellow-500/10 rounded-2xl overflow-hidden p-2 bg-yellow-400 border border-yellow-500/20">
+                            <img src="/lat.png" alt="Logo" className="w-full h-full object-contain" />
                         </div>
                         <h1 className="text-3xl font-black mb-2">Reset <span className="text-yellow-400">Password</span></h1>
                         <p className="text-gray-400 text-sm px-4">Enter your email and we'll send you a secure link to reset your password.</p>
@@ -105,7 +100,7 @@ export default function ForgotPassword() {
 
                     <div className="mt-8 text-center">
                         <Link to="/login" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-yellow-400 transition-colors">
-                            <ArrowLeft className="w-4 h-4" /> Back to Sign In
+                            <ArrowLeft className="w-4 h-4" /> Back to Log in
                         </Link>
                     </div>
                 </div>

@@ -211,8 +211,9 @@ export default function EaiserLogin() {
         to="/"
         className="absolute top-6 left-6 z-50 group transition-transform hover:scale-105 duration-300"
       >
-        <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm border border-yellow-500/30 rounded-xl px-4 py-2 hover:border-yellow-500/60 transition-all">
-          <span className="text-2xl font-black tracking-tighter text-yellow-400 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">
+        <div className="flex items-center gap-2 group cursor-pointer">
+          <img src="/lat.png" alt="Logo" className="w-10 h-10 object-contain rounded-xl bg-yellow-400 p-0.5 group-hover:scale-110 transition-transform" />
+          <span className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow-md">
             EAiSER
           </span>
         </div>
@@ -251,14 +252,14 @@ export default function EaiserLogin() {
         <div className="relative bg-gradient-to-br from-gray-900/90 to-black/90 backdrop-blur-xl rounded-3xl border border-yellow-500/20 p-6">
           {/* Header */}
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 mb-3 shadow-md shadow-yellow-500/20 rounded-full overflow-hidden p-0">
-              <img src="/newlogo.png" alt="Logo" className="w-full h-full object-contain" />
+            <div className="inline-flex items-center justify-center w-20 h-20 mb-3 shadow-lg shadow-yellow-500/10 rounded-2xl overflow-hidden p-0 border border-yellow-500/20">
+              <img src="/lat.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
 
             <h1 className="text-3xl font-black mb-1">
               Welcome to <span className="bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">Eaiser AI</span>
             </h1>
-            <p className="text-gray-400 text-sm">Sign in to continue</p>
+            <p className="text-gray-400 text-sm">Log in to continue</p>
           </div>
 
           {/* Social Auth Buttons */}
@@ -286,20 +287,20 @@ export default function EaiserLogin() {
               type="button"
               onClick={handleAppleClick}
               disabled={loading}
-              className="flex items-center justify-center gap-2 p-3 bg-black border border-gray-800 hover:bg-zinc-900 rounded-xl transition-all hover:-translate-y-0.5 shadow-sm disabled:opacity-50"
+              className="flex items-center justify-center gap-2 p-3 bg-white hover:bg-gray-100 border border-gray-200 rounded-xl transition-all hover:-translate-y-0.5 shadow-sm disabled:opacity-60"
               title="Continue with Apple"
             >
-              <svg className="w-5 h-5 fill-white" viewBox="0 0 384 512">
+              <svg className="w-5 h-5 fill-black" viewBox="0 0 384 512">
                 <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
               </svg>
-              <span className="text-white text-xs font-bold">Apple</span>
+              <span className="text-black text-xs font-bold">Apple</span>
             </button>
           </div>
 
           {/* Divider */}
           <div className="relative flex items-center my-5">
             <div className="flex-grow border-t border-gray-700"></div>
-            <span className="flex-shrink mx-3 text-gray-500 text-xs">or sign in with email</span>
+            <span className="flex-shrink mx-3 text-gray-500 text-xs">or log in with email</span>
             <div className="flex-grow border-t border-gray-700"></div>
           </div>
 
@@ -358,7 +359,7 @@ export default function EaiserLogin() {
               disabled={loading}
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
-                {loading ? 'Signing In...' : 'Sign In'}
+                {loading ? 'Logging In...' : 'Log In'}
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </span>
             </button>

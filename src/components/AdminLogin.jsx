@@ -80,11 +80,11 @@ export default function AdminLogin() {
         <div className="max-w-md w-full">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500/10 rounded-full mb-4">
-              <Shield className="w-8 h-8 text-blue-500" />
+            <div className="inline-flex items-center justify-center mb-4">
+              <img src="/lat.png" alt="EAiSER Logo" className="w-16 h-16 object-contain rounded-2xl bg-yellow-400 p-2 shadow-lg shadow-yellow-500/20" />
             </div>
-            <h1 className="text-3xl font-bold text-blue-500">
-              Admin Login
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+              Admin Log In
             </h1>
             <p className="text-gray-500 mt-2">Secure access to EAiSER Admin Dashboard</p>
           </div>
@@ -166,7 +166,7 @@ export default function AdminLogin() {
                     onClick={() => setIs2FARequired(false)}
                     className="text-sm text-gray-400 mt-4 hover:text-white transition-colors w-full text-center"
                   >
-                    ← Back to login
+                    ← Back to log in
                   </button>
                 </div>
               )}
@@ -210,7 +210,7 @@ export default function AdminLogin() {
                     {is2FARequired ? 'Verifying...' : 'Authenticating...'}
                   </>
                 ) : (
-                  is2FARequired ? 'Verify & Login' : 'Sign In Securely'
+                  is2FARequired ? 'Verify & Log In' : 'Log In Securely'
                 )}
               </button>
             </form>

@@ -45,8 +45,21 @@ export default function VerifyEmail() {
                 </svg>
             </div>
 
+            {/* Logo in top left corner */}
+            <Link to="/" className="absolute top-6 left-6 z-50 group transition-transform hover:scale-105 duration-300">
+                <div className="flex items-center gap-2 transition-all">
+                    <img src="/lat.png" alt="Logo" className="w-10 h-10 object-contain rounded-xl bg-yellow-400 p-0.5 group-hover:scale-110 transition-transform" />
+                    <span className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow-md">
+                        EAiSER
+                    </span>
+                </div>
+            </Link>
+
             <div className="relative z-10 w-full max-w-md">
                 <div className="bg-gradient-to-br from-gray-900/90 to-black/90 backdrop-blur-xl rounded-3xl border border-yellow-500/20 p-8 text-center shadow-2xl">
+                    <div className="inline-flex items-center justify-center w-20 h-20 mb-3 shadow-lg shadow-yellow-500/10 rounded-2xl overflow-hidden p-2 bg-yellow-400 border border-yellow-500/20">
+                        <img src="/lat.png" alt="Logo" className="w-full h-full object-contain" />
+                    </div>
 
                     {status === 'loading' && (
                         <div className="py-8">
@@ -73,7 +86,7 @@ export default function VerifyEmail() {
                                 onClick={() => navigate('/login')}
                                 className="w-full py-4 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-xl font-bold text-black flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-yellow-500/20 transition-all hover:-translate-y-0.5"
                             >
-                                Proceed to Login <ArrowRight className="w-5 h-5" />
+                                Proceed to Log in <ArrowRight className="w-5 h-5" />
                             </button>
                         </div>
                     )}

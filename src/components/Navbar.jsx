@@ -70,8 +70,11 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 
         {/* Logo */}
-        <Link to="/" className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow-md hover:scale-105 transition-transform cursor-pointer block">
-          EAiSER
+        <Link to="/" className="flex items-center gap-2 group transition-transform hover:scale-105 duration-300">
+          <img src="/lat.png" alt="Logo" className="w-10 h-10 object-contain rounded-xl bg-yellow-400 p-0.5 group-hover:scale-110 transition-transform" />
+          <span className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow-md">
+            EAiSER
+          </span>
         </Link>
 
         {/* Desktop Menu */}
@@ -95,13 +98,18 @@ export default function Navbar() {
         </ul>
 
         {/* Desktop Auth */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-6">
           {!isLoggedIn ? (
-            <Link to="/signup">
-              <button className="bg-yellow-400 text-black px-6 py-2 rounded-2xl font-bold shadow-md hover:bg-yellow-300 transition-all duration-300 hover:scale-105">
-                Sign Up
-              </button>
-            </Link>
+            <>
+              <Link to="/login" className="text-yellow-400 font-bold hover:text-white transition-colors">
+                Log in
+              </Link>
+              <Link to="/signup">
+                <button className="bg-yellow-400 text-black px-6 py-2 rounded-2xl font-bold shadow-md hover:bg-yellow-300 transition-all duration-300 hover:scale-105">
+                  Sign Up
+                </button>
+              </Link>
+            </>
           ) : (
             <div className="flex items-center gap-4">
               <Link to="/profile" className="flex items-center gap-2 hover:bg-white/10 px-3 py-1.5 rounded-xl transition-all">
@@ -160,11 +168,18 @@ export default function Navbar() {
 
           {/* Mobile Auth */}
           {!isLoggedIn ? (
-            <Link to="/signup" onClick={() => setOpen(false)}>
-              <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
-                Sign Up
-              </button>
-            </Link>
+            <div className="flex flex-col gap-3">
+              <Link to="/login" onClick={() => setOpen(false)}>
+                <button className="w-full bg-white/10 text-yellow-400 py-2 rounded-xl font-semibold border border-yellow-400/20 hover:bg-white/20 transition">
+                  Log in
+                </button>
+              </Link>
+              <Link to="/signup" onClick={() => setOpen(false)}>
+                <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
+                  Sign Up
+                </button>
+              </Link>
+            </div>
           ) : (
             <div className="space-y-3">
               <Link
