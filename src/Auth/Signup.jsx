@@ -193,7 +193,7 @@ export default function Signup() {
       window.AppleID.auth.init({
         clientId: APPLE_CLIENT_ID,
         scope: 'name email',
-        redirectURI: APPLE_REDIRECT_URI,
+        redirectURI: 'https://eaiser.ai/login', // Use the EXACT URI from portal
         state: 'signup',
         usePopup: true
       });

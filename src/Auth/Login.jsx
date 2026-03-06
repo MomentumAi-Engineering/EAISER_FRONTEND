@@ -176,7 +176,7 @@ export default function EaiserLogin() {
       window.AppleID.auth.init({
         clientId: APPLE_CLIENT_ID,
         scope: 'name email',
-        redirectURI: APPLE_REDIRECT_URI,
+        redirectURI: 'https://eaiser.ai/login',
         state: 'login',
         usePopup: true
       });
