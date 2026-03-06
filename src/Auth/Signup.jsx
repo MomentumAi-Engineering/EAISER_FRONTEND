@@ -8,11 +8,6 @@ const GOOGLE_CLIENT_ID = import.meta?.env?.VITE_GOOGLE_CLIENT_ID || '19489926626
 const APPLE_CLIENT_ID = import.meta.env.VITE_APPLE_CLIENT_ID || "";
 const APPLE_REDIRECT_URI = import.meta.env.VITE_APPLE_REDIRECT_URI || "";
 
-console.log("DEBUG: Apple Auth Config", {
-  clientId: APPLE_CLIENT_ID ? "PRESENT" : "MISSING",
-  redirectUri: APPLE_REDIRECT_URI ? "PRESENT" : "MISSING"
-});
-
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -120,6 +115,7 @@ export default function Signup() {
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('userData', JSON.stringify(data.user));
+      localStorage.setItem('auth_provider', 'google');
 
       navigate(returnTo);
 
@@ -212,6 +208,7 @@ export default function Signup() {
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('userData', JSON.stringify(data.user));
+      localStorage.setItem('auth_provider', 'apple');
 
       navigate(returnTo);
     } catch (err) {
