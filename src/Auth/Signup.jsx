@@ -132,7 +132,7 @@ export default function Signup() {
   const handleGoogleClick = async () => {
     setError(null);
     if (!tosAccepted) {
-      setError('Please agree to the Terms of Service to continue.');
+      setShowTOS(true);
       return;
     }
 
@@ -193,7 +193,7 @@ export default function Signup() {
   const handleAppleClick = async () => {
     setError(null);
     if (!tosAccepted) {
-      setError('Please agree to the Terms of Service to continue.');
+      setShowTOS(true);
       return;
     }
 
