@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mail, Lock, User, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react'; // Calendar removed
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { signup as signupApi, login, googleSignIn } from '../api/auth';
+import TermsOfService from '../components/TermsOfService';
 
 
 const GOOGLE_CLIENT_ID = import.meta?.env?.VITE_GOOGLE_CLIENT_ID || '194899266265-sopp3sj9bkdor1ufeghm1bclpphrjuk1.apps.googleusercontent.com';
@@ -12,6 +13,8 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [showTOS, setShowTOS] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -64,7 +67,7 @@ export default function Signup() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     setError(null);
     setMessage(null);
 
@@ -75,6 +78,10 @@ export default function Signup() {
     }
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match.');
+      return;
+    }
+    if (!tosAccepted) {
+      setError('Please agree to the Terms of Service to continue.');
       return;
     }
 
@@ -90,10 +97,6 @@ export default function Signup() {
       const res = await signupApi(payload);
       setMessage(res?.message || 'Verification email sent. Please check your inbox.');
 
-      // We don't auto-login anymore if we want to enforce verification, 
-      // but usually we can let them see a "Check Email" screen.
-      // Redirect to a Check Email page or just show message.
-      // For now, I'll just show the message and maybe wait or redirect to login.
       setTimeout(() => {
         navigate('/login', { state: { message: 'Please verify your email before logging in.', returnTo } });
       }, 5000);
@@ -128,6 +131,11 @@ export default function Signup() {
 
   const handleGoogleClick = async () => {
     setError(null);
+    if (!tosAccepted) {
+      setError('Please agree to the Terms of Service to continue.');
+      return;
+    }
+
     document.cookie = "g_state=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT";
 
     try {
@@ -184,6 +192,11 @@ export default function Signup() {
 
   const handleAppleClick = async () => {
     setError(null);
+    if (!tosAccepted) {
+      setError('Please agree to the Terms of Service to continue.');
+      return;
+    }
+
     try {
       await loadAppleScript();
       if (!APPLE_CLIENT_ID || !APPLE_REDIRECT_URI) {
@@ -219,6 +232,16 @@ export default function Signup() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTOSAccept = () => {
+    setShowTOS(false);
+    setTosAccepted(true);
+  };
+
+  const handleTOSDecline = () => {
+    setShowTOS(false);
+    setTosAccepted(false);
   };
 
   return (
@@ -434,6 +457,29 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* TOS Checkbox */}
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!tosAccepted) setShowTOS(true);
+                  else setTosAccepted(false);
+                }}
+                className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${tosAccepted ? 'bg-yellow-500 border-yellow-500' : 'bg-white/5 border-gray-600 hover:border-yellow-500'
+                  }`}
+              >
+                {tosAccepted && (
+                  <svg className="w-3.5 h-3.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+              <span className="text-xs text-gray-400">
+                I agree to the <button type="button" onClick={() => setShowTOS(true)} className="text-yellow-400 hover:text-yellow-300 hover:underline">Terms of Service</button>
+              </span>
+            </div>
+
             {/* Submit Button */}
             <button
               onClick={handleSubmit}
@@ -475,6 +521,14 @@ export default function Signup() {
           animation-delay: 2s;
         }
       `}</style>
+
+      {showTOS && (
+        <TermsOfService
+          isModal={true}
+          onAccept={handleTOSAccept}
+          onDecline={handleTOSDecline}
+        />
+      )}
     </div>
   );
 }
