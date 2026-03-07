@@ -164,6 +164,59 @@ export default function SimpleReport() {
   const [isOutsideServicedArea, setIsOutsideServicedArea] = useState(false);
   const [showManualAddress, setShowManualAddress] = useState(false);
 
+  // --- REPORT STATE PERSISTENCE ---
+  // Save state to local storage to survive login/signup redirect
+  useEffect(() => {
+    const stateToSave = {
+      formData,
+      coords,
+      isManualMode,
+      selectedImage, // Base64 string survives
+      isOutsideServicedArea,
+      timestamp: Date.now()
+    };
+    // Only save if there's actual data to save
+    if (formData.streetAddress || selectedImage || coords) {
+      localStorage.setItem('eaiser_report_state', JSON.stringify(stateToSave));
+    }
+  }, [formData, coords, isManualMode, selectedImage, isOutsideServicedArea]);
+
+  // Restore state on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('eaiser_report_state');
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        // Only restore if less than 1 hour old
+        if (Date.now() - parsed.timestamp < 3600000) {
+          if (parsed.formData) setFormData(parsed.formData);
+          if (parsed.coords) setCoords(parsed.coords);
+          if (parsed.isManualMode !== undefined) setIsManualMode(parsed.isManualMode);
+          if (parsed.selectedImage) setSelectedImage(parsed.selectedImage);
+          if (parsed.isOutsideServicedArea !== undefined) setIsOutsideServicedArea(parsed.isOutsideServicedArea);
+
+          // Reconstruct pseudo-file so validation doesn't block "Generate" if they want to click it again
+          if (parsed.selectedImage) {
+            fetch(parsed.selectedImage)
+              .then(res => res.blob())
+              .then(blob => {
+                const file = new File([blob], `restored_${Date.now()}.jpg`, { type: "image/jpeg" });
+                setSelectedFile(file);
+              });
+          }
+        } else {
+          localStorage.removeItem('eaiser_report_state');
+        }
+      } catch (e) {
+        console.error("Failed to restore report state", e);
+      }
+    }
+  }, []);
+
+  const clearPersistence = () => {
+    localStorage.removeItem('eaiser_report_state');
+  };
+
 
   // Reverse Geocode Helper
   const reverseGeocode = async (lat, lng) => {
@@ -511,7 +564,10 @@ export default function SimpleReport() {
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white p-6">
         <div className="max-w-4xl mx-auto">
           <button
-            onClick={clearReport}
+            onClick={() => {
+              clearReport();
+              clearPersistence();
+            }}
             className="mb-4 inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-sm font-semibold"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -520,12 +576,15 @@ export default function SimpleReport() {
           <ReportReview
             issue={reportResult}
             imagePreview={resolvedImagePreview}
-            imageName={selectedFile?.name}
+            imageName={selectedFile?.name || "restored_image.jpg"}
             userAddress={resolvedAddress}
             userZip={resolvedZip}
             userLat={resolvedLat}
             userLon={resolvedLon}
-            onClearReport={clearReport}
+            onClearReport={() => {
+              clearReport();
+              clearPersistence();
+            }}
             isManualMode={isManualMode}
             incidentDate={formData.incidentDate}
           />

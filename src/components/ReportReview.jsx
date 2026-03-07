@@ -1242,7 +1242,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                       timestamp: Date.now()
                     }));
                   } catch (e) { }
-                  navigate('/login');
+                  navigate('/login', { state: { returnTo: '/report' } });
                 }}
                 className="w-full py-3.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-black rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
@@ -1259,7 +1259,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                       timestamp: Date.now()
                     }));
                   } catch (e) { }
-                  navigate('/signup');
+                  navigate('/signup', { state: { returnTo: '/report' } });
                 }}
                 className="w-full py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold text-sm border border-white/10 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
