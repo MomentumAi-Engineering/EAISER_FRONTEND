@@ -365,6 +365,25 @@ class ApiClient {
     });
   }
 
+  async resendVerification() {
+    return this.request('/api/auth/resend-verification', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+  }
+
+  async uploadAvatar(file) {
+    const form = new FormData();
+    form.append('file', file);
+    return this.request('/api/auth/upload-avatar', {
+      method: 'POST',
+      headers: {},
+      body: form,
+    });
+  }
+
   // --- Admin Review API ---
 
   async getPendingReviews() {

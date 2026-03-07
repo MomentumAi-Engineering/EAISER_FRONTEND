@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo, useRef } from 'react';
-import { Activity, CheckCircle, Clock, AlertCircle, TrendingUp, BarChart3, Filter, Calendar, Download, RefreshCw, Bell, Search, Home, X, ArrowRight, MessageSquare, Send, Shield, Paperclip, Image, Video, File as FileIcon } from 'lucide-react';
+import { Activity, CheckCircle, Clock, AlertCircle, TrendingUp, BarChart3, Filter, Calendar, Download, RefreshCw, Bell, Search, Home, X, ArrowRight, MessageSquare, Send, Shield, Paperclip, Image, Video, File as FileIcon, AlertTriangle, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
@@ -54,6 +54,18 @@ export default function UserDashboard() {
   const [notificationList, setNotificationList] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
+  const [emailVerified, setEmailVerified] = useState(true);
+
+  // Check verification status
+  useEffect(() => {
+    const checkVerification = async () => {
+      try {
+        const data = await apiClient.getMe();
+        setEmailVerified(data.email_verified !== false);
+      } catch (e) { /* ignore */ }
+    };
+    checkVerification();
+  }, []);
 
   // Chat State
 
@@ -273,6 +285,43 @@ export default function UserDashboard() {
     <div className="min-h-screen bg-black relative font-sans">
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-24 pb-12 relative z-10">
+        {/* Unverified User Banner */}
+        <AnimatePresence>
+          {!emailVerified && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -20, height: 0 }}
+              className="mb-6"
+            >
+              <div className="flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-red-500/[0.08] to-orange-500/[0.06] border border-red-500/20 backdrop-blur-sm"
+                style={{ boxShadow: '0 0 20px rgba(239,68,68,0.06)' }}
+              >
+                <div className="p-2 bg-red-500/10 rounded-xl">
+                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-red-300">Unverified Account</p>
+                  <p className="text-xs text-red-400/60 mt-0.5">Please verify your email address to unlock full reporting features.</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      await apiClient.resendVerification();
+                      toast.success('Verification email sent! Please check your inbox.');
+                    } catch (e) {
+                      toast.error(e.message || 'Failed to resend verification email.');
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl text-xs font-bold text-red-300 transition-all whitespace-nowrap"
+                >
+                  <Mail className="w-3.5 h-3.5" /> Click here to resend email
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
@@ -456,10 +505,10 @@ export default function UserDashboard() {
                                           if (sev === 'low') return 'bg-blue-400';
                                           return 'bg-zinc-500';
                                         })()}`} />
-                                        {issue.severity === 'critical' ? 'High [RED]' :
-                                          issue.severity === 'high' ? 'Med High [ORANGE]' :
-                                            issue.severity === 'medium' ? 'Med [YELLOW]' :
-                                              issue.severity === 'low' ? 'Low [BLUE]' :
+                                        {issue.severity === 'critical' ? 'HIGH' :
+                                          issue.severity === 'high' ? 'HIGH' :
+                                            issue.severity === 'medium' ? 'MEDIUM' :
+                                              issue.severity === 'low' ? 'LOW' :
                                                 issue.severity}
                                       </span>
                                     )}
@@ -557,10 +606,10 @@ export default function UserDashboard() {
                           })()}`}>
                             {(() => {
                               const sev = String(selectedIssue.severity).toLowerCase();
-                              if (sev === 'critical') return 'HIGH PRIORITY [RED]';
-                              if (sev === 'high') return 'MEDIUM HIGH PRIORITY [ORANGE]';
-                              if (sev === 'medium') return 'MEDIUM PRIORITY [YELLOW]';
-                              if (sev === 'low') return 'LOW PRIORITY [BLUE]';
+                              if (sev === 'critical') return 'HIGH';
+                              if (sev === 'high') return 'HIGH';
+                              if (sev === 'medium') return 'MEDIUM';
+                              if (sev === 'low') return 'LOW';
                               return selectedIssue.severity;
                             })()}
                           </span>

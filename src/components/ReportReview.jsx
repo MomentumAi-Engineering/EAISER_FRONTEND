@@ -804,23 +804,23 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     return Array.from(set);
   })();
 
-  let priorityLabel = 'LOW PRIORITY [BLUE]';
+  let priorityLabel = 'LOW';
   const severityMap = {
-    'critical': 'HIGH PRIORITY [RED]',
-    'high': 'MEDIUM HIGH PRIORITY [ORANGE]',
-    'medium': 'MEDIUM PRIORITY [YELLOW]',
-    'low': 'LOW PRIORITY [BLUE]'
+    'critical': 'HIGH',
+    'high': 'HIGH',
+    'medium': 'MEDIUM',
+    'low': 'LOW'
   };
 
   const currentSeverity = String(aiSeverity || '').toLowerCase();
   if (severityMap[currentSeverity]) {
     priorityLabel = severityMap[currentSeverity];
   } else if (aiSeverity && String(aiSeverity).length > 1) {
-    priorityLabel = String(aiSeverity).toUpperCase() + ' PRIORITY';
+    priorityLabel = String(aiSeverity).toUpperCase();
   } else if (hits.length >= 3) {
-    priorityLabel = 'HIGH PRIORITY [RED]';
+    priorityLabel = 'HIGH';
   } else if (hits.length >= 1) {
-    priorityLabel = 'MEDIUM PRIORITY [YELLOW]';
+    priorityLabel = 'MEDIUM';
   }
 
   const locationText = `${locCity}${locState ? `, ${locState}` : ''} ${displayZip !== '—' ? displayZip : ''}`.trim();
@@ -990,10 +990,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               ) : (
                 <span className={`text-sm font-semibold uppercase ${(() => {
                   const sev = (hasEdited ? editForm.severity : priorityLabel).toLowerCase();
-                  if (sev.includes('[red]') || sev === 'critical' || sev.includes('high priority')) return 'text-red-500';
-                  if (sev.includes('[orange]') || sev.includes('medium high')) return 'text-orange-500';
-                  if (sev.includes('[yellow]') || sev.includes('medium priority')) return 'text-yellow-400';
-                  if (sev.includes('[blue]') || sev.includes('low priority')) return 'text-blue-400';
+                  if (sev === 'critical' || sev === 'high') return 'text-red-500';
+                  if (sev === 'medium') return 'text-yellow-400';
+                  if (sev === 'low') return 'text-blue-400';
                   return 'text-zinc-400';
                 })()}`}>
                   {hasEdited ? severityMap[editForm.severity] || editForm.severity : priorityLabel}
@@ -1220,6 +1219,29 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                 )}
               </button>
             </div>
+          )}
+
+          {/* AI generated report disclaimer — premium animated alert */}
+          {!isManualReport && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="mt-5 relative overflow-hidden"
+            >
+              <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-red-500/[0.06] border border-red-500/20 backdrop-blur-sm"
+                style={{ boxShadow: '0 0 15px rgba(239,68,68,0.05), inset 0 1px 0 rgba(255,255,255,0.03)' }}
+              >
+                {/* Pulsing dot */}
+                <span className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-60"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <p className="text-[11px] text-red-400/90 font-medium tracking-wide">
+                  Information may contain errors. Please verify details before reporting.
+                </p>
+              </div>
+            </motion.div>
           )}
 
         </div> {/* Explicitly close the isGuest wrapper */}

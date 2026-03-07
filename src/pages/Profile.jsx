@@ -238,7 +238,43 @@ const ProfilePage = () => {
 
               {/* Profile Card */}
               <div className="relative flex flex-col items-center p-8 bg-zinc-950/50 border border-zinc-800/50 rounded-[1.5rem] mb-6 shadow-inner">
-                <div className="relative group cursor-pointer">
+                <input
+                  type="file"
+                  id="avatar-upload"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 2 * 1024 * 1024) {
+                      showStatus('error', 'Image must be under 2MB');
+                      return;
+                    }
+                    try {
+                      setSaving(true);
+                      const res = await apiClient.uploadAvatar(file);
+                      setUserInfo({ ...userInfo, avatar: res.avatar_url });
+                      // Update localStorage
+                      try {
+                        const stored = JSON.parse(localStorage.getItem('userData') || localStorage.getItem('user') || '{}');
+                        stored.avatar = res.avatar_url;
+                        localStorage.setItem('userData', JSON.stringify(stored));
+                        localStorage.setItem('user', JSON.stringify(stored));
+                        window.dispatchEvent(new Event('storage'));
+                      } catch (_) { }
+                      showStatus('success', 'Profile photo updated!');
+                    } catch (err) {
+                      showStatus('error', err.message || 'Failed to upload photo');
+                    } finally {
+                      setSaving(false);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                <div
+                  className="relative group cursor-pointer"
+                  onClick={() => document.getElementById('avatar-upload')?.click()}
+                >
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-500 to-amber-600 p-1 flex items-center justify-center mb-4 transition-transform group-hover:scale-105 duration-300 shadow-xl shadow-yellow-500/10">
                     <div className="w-full h-full rounded-full bg-zinc-950 flex items-center justify-center text-3xl font-black text-white overflow-hidden uppercase">
                       {userInfo.avatar ? (
@@ -260,12 +296,21 @@ const ProfilePage = () => {
                   <div className="px-3 py-1 bg-yellow-500/10 text-yellow-500 text-[10px] rounded-full border border-yellow-500/20 uppercase tracking-widest font-black">
                     {userInfo.role || 'Member'}
                   </div>
-                  {userInfo.email_verified && (
+                  {userInfo.email_verified ? (
                     <div className="px-3 py-1 bg-green-500/10 text-green-500 text-[10px] rounded-full border border-green-500/20 uppercase tracking-widest font-black flex items-center gap-1">
-                      <CheckCircle className="w-2.5 h-2.5" /> Verified
+                      <CheckCircle className="w-2.5 h-2.5" /> Verified User
+                    </div>
+                  ) : (
+                    <div className="px-3 py-1 bg-red-500/10 text-red-400 text-[10px] rounded-full border border-red-500/20 uppercase tracking-widest font-black flex items-center gap-1 animate-pulse">
+                      <AlertTriangle className="w-2.5 h-2.5" /> Unverified
                     </div>
                   )}
                 </div>
+                {!userInfo.email_verified && (
+                  <div className="mt-3 px-4 py-2 bg-red-500/5 border border-red-500/15 rounded-xl text-center">
+                    <p className="text-[10px] text-red-400/80 font-medium">Please verify your email to unlock full access.</p>
+                  </div>
+                )}
               </div>
 
               {/* Menu Tabs */}

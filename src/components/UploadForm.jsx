@@ -62,7 +62,6 @@ function UploadForm({ setStatus, fetchIssues }) {
   const [selectedAuthorities, setSelectedAuthorities] = useState([]);
   const [emailingAuthorities, setEmailingAuthorities] = useState(false);
   const [emailStatus, setEmailStatus] = useState('');
-  const [emailStatus, setEmailStatus] = useState('');
 
   // Restored image preview
   const [restoredImagePreview, setRestoredImagePreview] = useState(null);

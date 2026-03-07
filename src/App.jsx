@@ -166,6 +166,21 @@ function PublicApp() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
 
+          {/* Admin routes on localhost (no subdomain needed) */}
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/team" element={<TeamManagement />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/stats" element={<StatsDashboard />} />
+          <Route path="/admin/change-password" element={<ChangePassword />} />
+          <Route path="/admin/security" element={<SecuritySettings />} />
+          <Route path="/admin/mapping" element={<MappingReview />} />
+          <Route path="/admin/authorities" element={<AuthorityManagement />} />
+          <Route path="/admin/users" element={<UserManagement />} />
+          <Route path="/admin/warroom" element={<WarRoom />} />
+          <Route path="/admin/audit" element={<AuditLog />} />
+
           {/* catch-all -> redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
