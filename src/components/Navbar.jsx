@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useDialog } from "../context/DialogContext";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User, LogOut, ChevronDown } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import apiClient from "../services/apiClient";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState({});
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -20,11 +24,35 @@ export default function Navbar() {
     } catch { setUserData({}); }
   };
 
+  // Fetch real user data from API
+  const fetchUserFromAPI = async () => {
+    try {
+      const data = await apiClient.getMe();
+      if (data) {
+        setUserData(data);
+        // Sync to localStorage
+        const stored = JSON.parse(localStorage.getItem('userData') || '{}');
+        const merged = {
+          ...stored,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          name: `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+          avatar: data.avatar,
+          email: data.email,
+          username: data.username,
+        };
+        localStorage.setItem('userData', JSON.stringify(merged));
+      }
+    } catch { /* ignore - user might not be logged in */ }
+  };
+
   // Check token on mount & route change
   useEffect(() => {
     const token = localStorage.getItem("token");
-    setIsLoggedIn(!!token);
+    const loggedIn = !!token;
+    setIsLoggedIn(loggedIn);
     refreshUserData();
+    if (loggedIn) fetchUserFromAPI();
   }, [location]);
 
   // Cross-tab logout/login sync + profile update sync
@@ -38,9 +66,20 @@ export default function Navbar() {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // Logout
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Logout
   const handleLogout = async () => {
+    setShowDropdown(false);
     const confirmed = await showConfirm("Are you sure you want to logout?", {
       title: "Logout Confirmation",
       confirmText: "Yes, Logout",
@@ -64,6 +103,10 @@ export default function Navbar() {
     navigate("/report");
     setOpen(false);
   };
+
+  const displayName = userData.first_name || userData.name?.split(' ')[0] || 'User';
+  const displayInitial = displayName.charAt(0).toUpperCase();
+  const avatarUrl = userData.avatar;
 
   return (
     <nav className="w-full bg-gradient-to-r from-black via-zinc-900 to-black text-yellow-400 shadow-xl fixed top-0 left-0 z-50 border-b border-yellow-400/30 backdrop-blur-md md:backdrop-blur-xl">
@@ -116,22 +159,79 @@ export default function Navbar() {
               </Link>
             </>
           ) : (
-            <div className="flex items-center gap-4">
-              <Link to="/profile" className="flex items-center gap-2 hover:bg-white/10 px-3 py-1.5 rounded-xl transition-all">
-                <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center text-black font-bold text-sm">
-                  {userData.first_name ? userData.first_name.charAt(0).toUpperCase() : (userData.name ? userData.name.charAt(0).toUpperCase() : 'U')}
-                </div>
-                <span className="text-sm font-medium text-yellow-100">
-                  {userData.first_name || userData.name?.split(' ')[0] || 'User'}
-                </span>
-              </Link>
-
-              <button
-                onClick={handleLogout}
-                className="bg-red-500/80 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-red-600 transition-all duration-300 hover:scale-105"
+            <div className="relative" ref={dropdownRef}>
+              {/* User Avatar Button */}
+              <motion.button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 hover:bg-yellow-500/10 transition-all duration-300 group"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
               >
-                Logout
-              </button>
+                {/* Avatar */}
+                <div className="relative">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 p-[2px] shadow-lg shadow-yellow-500/20 group-hover:shadow-yellow-500/40 transition-shadow">
+                    <div className="w-full h-full rounded-full bg-zinc-950 flex items-center justify-center overflow-hidden">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-yellow-400 font-black text-sm">{displayInitial}</span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Online indicator */}
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-zinc-950 shadow-lg shadow-green-400/50" />
+                </div>
+
+                {/* Name */}
+                <span className="text-sm font-bold text-yellow-100 group-hover:text-white transition-colors max-w-[100px] truncate">
+                  {displayName.toUpperCase()}
+                </span>
+
+                {/* Chevron */}
+                <motion.div
+                  animate={{ rotate: showDropdown ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="w-3.5 h-3.5 text-yellow-400/60" />
+                </motion.div>
+              </motion.button>
+
+              {/* Dropdown */}
+              <AnimatePresence>
+                {showDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    className="absolute right-0 mt-3 w-56 bg-zinc-900/95 backdrop-blur-xl border border-zinc-800/80 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden z-50"
+                  >
+                    {/* User Info */}
+                    <div className="px-4 py-3 border-b border-zinc-800/50">
+                      <p className="text-sm font-bold text-white truncate">{userData.first_name} {userData.last_name}</p>
+                      <p className="text-[11px] text-zinc-500 font-mono truncate">@{userData.username || userData.email?.split('@')[0] || 'user'}</p>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="py-1.5">
+                      <button
+                        onClick={() => { setShowDropdown(false); navigate('/profile'); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:text-white hover:bg-yellow-500/10 transition-all group"
+                      >
+                        <User className="w-4 h-4 text-yellow-500/70 group-hover:text-yellow-400 transition-colors" />
+                        <span className="font-medium">My Profile</span>
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400/80 hover:text-red-300 hover:bg-red-500/10 transition-all group"
+                      >
+                        <LogOut className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                        <span className="font-medium">Sign Out</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -143,79 +243,68 @@ export default function Navbar() {
       </div>
 
       {/* Mobile Menu */}
-      {open && (
-        <div className="md:hidden w-full bg-black/95 text-yellow-300 px-6 py-5 space-y-4 border-t border-yellow-400/20 animate-slide-down">
-
-          <Link
-            to="/"
-            onClick={() => setOpen(false)}
-            className="block hover:text-white transition"
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden w-full bg-black/95 text-yellow-300 px-6 py-5 space-y-4 border-t border-yellow-400/20 overflow-hidden"
           >
-            Home
-          </Link>
+            <Link to="/" onClick={() => setOpen(false)} className="block hover:text-white transition">Home</Link>
 
-          {isLoggedIn && (
-            <>
-              <Link
-                to="/dashboard"
-                onClick={() => setOpen(false)}
-                className="block hover:text-white transition"
-              >
-                Dashboard
-              </Link>
-              <Link
-                to="/chat-hub"
-                onClick={() => setOpen(false)}
-                className="block hover:text-white transition"
-              >
-                Chat Hub
-              </Link>
-            </>
-          )}
+            {isLoggedIn && (
+              <>
+                <Link to="/dashboard" onClick={() => setOpen(false)} className="block hover:text-white transition">Dashboard</Link>
+                <Link to="/chat-hub" onClick={() => setOpen(false)} className="block hover:text-white transition">Chat Hub</Link>
+              </>
+            )}
 
-          <button
-            onClick={handleReportClick}
-            className="block hover:text-white transition"
-          >
-            Report Issue
-          </button>
+            <button onClick={handleReportClick} className="block hover:text-white transition">Report Issue</button>
 
-          {/* Mobile Auth */}
-          {!isLoggedIn ? (
-            <div className="flex flex-col gap-3">
-              <Link to="/login" onClick={() => setOpen(false)}>
-                <button className="w-full bg-white/10 text-yellow-400 py-2 rounded-xl font-semibold border border-yellow-400/20 hover:bg-white/20 transition">
-                  Log in
+            {/* Mobile Auth */}
+            {!isLoggedIn ? (
+              <div className="flex flex-col gap-3">
+                <Link to="/login" onClick={() => setOpen(false)}>
+                  <button className="w-full bg-white/10 text-yellow-400 py-2 rounded-xl font-semibold border border-yellow-400/20 hover:bg-white/20 transition">
+                    Log in
+                  </button>
+                </Link>
+                <Link to="/signup" onClick={() => setOpen(false)}>
+                  <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
+                    Sign Up
+                  </button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Link
+                  to="/profile"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 w-full bg-zinc-800 text-yellow-400 py-2.5 px-4 rounded-xl font-semibold hover:bg-zinc-700 transition"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 p-[2px]">
+                    <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-yellow-400 font-bold text-xs">{displayInitial}</span>
+                      )}
+                    </div>
+                  </div>
+                  {displayName}
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="w-full bg-red-500 text-white py-2 rounded-xl font-semibold hover:bg-red-600 transition"
+                >
+                  Logout
                 </button>
-              </Link>
-              <Link to="/signup" onClick={() => setOpen(false)}>
-                <button className="w-full bg-yellow-400 text-black py-2 rounded-xl font-semibold hover:bg-yellow-300 transition">
-                  Sign Up
-                </button>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <Link
-                to="/profile"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 w-full bg-zinc-800 text-yellow-400 py-2 px-4 rounded-xl font-semibold hover:bg-zinc-700 transition"
-              >
-                <div className="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center text-black font-bold text-xs">
-                  {userData.first_name ? userData.first_name.charAt(0).toUpperCase() : (userData.name ? userData.name.charAt(0).toUpperCase() : 'U')}
-                </div>
-                My Profile
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="w-full bg-red-500 text-white py-2 rounded-xl font-semibold hover:bg-red-600 transition"
-              >
-                Logout
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }
