@@ -138,7 +138,8 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     issue_type: 'Other',
     severity: 'medium',
     summary: '',
-    description: ''
+    description: '',
+    returnTo: '/report'
   });
 
   // Initialize Edit Mode for Manual Reports
@@ -803,12 +804,12 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     return Array.from(set);
   })();
 
-  let priorityLabel = 'LOW PRIORITY';
+  let priorityLabel = 'LOW PRIORITY [BLUE]';
   const severityMap = {
-    'critical': 'HIGH PRIORITY',
-    'high': 'MEDIUM HIGH PRIORITY',
-    'medium': 'MEDIUM PRIORITY',
-    'low': 'LOW PRIORITY'
+    'critical': 'HIGH PRIORITY [RED]',
+    'high': 'MEDIUM HIGH PRIORITY [ORANGE]',
+    'medium': 'MEDIUM PRIORITY [YELLOW]',
+    'low': 'LOW PRIORITY [BLUE]'
   };
 
   const currentSeverity = String(aiSeverity || '').toLowerCase();
@@ -817,9 +818,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   } else if (aiSeverity && String(aiSeverity).length > 1) {
     priorityLabel = String(aiSeverity).toUpperCase() + ' PRIORITY';
   } else if (hits.length >= 3) {
-    priorityLabel = 'HIGH PRIORITY';
+    priorityLabel = 'HIGH PRIORITY [RED]';
   } else if (hits.length >= 1) {
-    priorityLabel = 'MEDIUM PRIORITY';
+    priorityLabel = 'MEDIUM PRIORITY [YELLOW]';
   }
 
   const locationText = `${locCity}${locState ? `, ${locState}` : ''} ${displayZip !== '—' ? displayZip : ''}`.trim();
@@ -989,11 +990,11 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               ) : (
                 <span className={`text-sm font-semibold uppercase ${(() => {
                   const sev = (hasEdited ? editForm.severity : priorityLabel).toLowerCase();
-                  if (sev.includes('high priority') || sev === 'critical') return 'text-red-400';
-                  if (sev.includes('medium high')) return 'text-orange-400';
-                  if (sev.includes('medium')) return 'text-yellow-400';
-                  if (sev.includes('low')) return 'text-blue-400';
-                  return 'text-blue-400';
+                  if (sev.includes('[red]') || sev === 'critical' || sev.includes('high priority')) return 'text-red-500';
+                  if (sev.includes('[orange]') || sev.includes('medium high')) return 'text-orange-500';
+                  if (sev.includes('[yellow]') || sev.includes('medium priority')) return 'text-yellow-400';
+                  if (sev.includes('[blue]') || sev.includes('low priority')) return 'text-blue-400';
+                  return 'text-zinc-400';
                 })()}`}>
                   {hasEdited ? severityMap[editForm.severity] || editForm.severity : priorityLabel}
                 </span>
@@ -1247,13 +1248,6 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
             <div className="p-6 space-y-3">
               <button
                 onClick={() => {
-                  // Save pending report data to sessionStorage for recovery after login
-                  try {
-                    sessionStorage.setItem('eaiser_pending_report', JSON.stringify({
-                      issueId: issueId,
-                      timestamp: Date.now()
-                    }));
-                  } catch (e) { }
                   navigate('/login', { state: { returnTo: '/report' } });
                 }}
                 className="w-full py-3.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-black rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -1265,12 +1259,6 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               </button>
               <button
                 onClick={() => {
-                  try {
-                    sessionStorage.setItem('eaiser_pending_report', JSON.stringify({
-                      issueId: issueId,
-                      timestamp: Date.now()
-                    }));
-                  } catch (e) { }
                   navigate('/signup', { state: { returnTo: '/report' } });
                 }}
                 className="w-full py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold text-sm border border-white/10 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"

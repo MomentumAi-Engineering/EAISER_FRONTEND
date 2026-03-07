@@ -13,6 +13,8 @@ const ResetPassword = lazy(() => import('./Auth/ResetPassword'));
 const Report = lazy(() => import('./pages/Report'));
 const AuthorityAction = lazy(() => import('./pages/AuthorityAction'));
 const VerifyEmail = lazy(() => import('./Auth/VerifyEmail'));
+const AuthorityDashboard = lazy(() => import('./pages/AuthorityDashboard'));
+const AuthorityChatHub = lazy(() => import('./pages/AuthorityChatHub'));
 
 // Admin Components
 const AdminLogin = lazy(() => import('./components/AdminLogin'));
@@ -31,6 +33,7 @@ const AuditLog = lazy(() => import('./components/AuditLog'));
 // User Components
 const UserDash = lazy(() => import('./pages/UserDashboard'));
 const ProfilePage = lazy(() => import('./pages/Profile'));
+const UserChatHub = lazy(() => import('./pages/UserChatHub'));
 
 /**
  * Detect if running on the admin subdomain.
@@ -148,10 +151,13 @@ function PublicApp() {
           {/* other app pages */}
           <Route path="/report" element={<Report />} />
           <Route path="/authority-action" element={<AuthorityAction />} />
+          <Route path="/authority/dashboard" element={<AuthorityDashboard />} />
+          <Route path="/authority/chat-hub" element={<AuthorityChatHub />} />
 
           {/* user dashboard */}
           <Route path="/dashboard" element={<UserDash />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/chat-hub" element={<UserChatHub />} />
 
           {/* auth pages (no navbar) */}
           <Route path="/signup" element={<Signup />} />

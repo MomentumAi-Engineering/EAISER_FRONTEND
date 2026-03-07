@@ -799,6 +799,51 @@ class ApiClient {
     });
   }
 
+  async getAuthorityDashboard(token) {
+    return this.request(`/api/authority-action/dashboard/${token}`, { method: 'GET' });
+  }
+
+  async sendAuthorityChat(token, issueId, text, mediaUrl = null, mediaType = null) {
+    return this.request(`/api/authority-action/chat/send/${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ issue_id: issueId, text, media_url: mediaUrl, media_type: mediaType })
+    });
+  }
+
+  async uploadChatMedia(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.request('/api/authority-action/chat/upload', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  async sendUserChat(issueId, text, mediaUrl = null, mediaType = null) {
+    return this.request(`/api/authority-action/chat/user/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ issue_id: issueId, text, media_url: mediaUrl, media_type: mediaType })
+    });
+  }
+
+  async getChatHistory(issueId) {
+    return this.request(`/api/authority-action/chat/history/${issueId}`, { method: 'GET' });
+  }
+
+  async updateUserStatusFeedback(issueId, status) {
+    return this.request(`/api/authority-action/user-feedback/${issueId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status })
+    });
+  }
+
   // --- System Settings ---
 
   async getMaintenanceStatus() {

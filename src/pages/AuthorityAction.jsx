@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import apiClient from '../services/apiClient';
-import { Loader2, CheckCircle2, XCircle, FileText, MapPin, Clock, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, FileText, MapPin, Clock, ShieldCheck, AlertTriangle, MessageSquare } from 'lucide-react';
 
 export default function AuthorityAction() {
     const [searchParams] = useSearchParams();
@@ -58,7 +58,7 @@ export default function AuthorityAction() {
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                <Loader2 className="w-8 h-8 animate-spin text-yellow-500" />
                 <span className="ml-3 text-lg font-medium">Verifying Secure Link...</span>
             </div>
         );
@@ -82,13 +82,20 @@ export default function AuthorityAction() {
 
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-                        <ShieldCheck className="w-6 h-6 text-white" />
+                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.2)] border border-white/10">
+                        <ShieldCheck className="w-6 h-6 text-black" />
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-white">Official Action Portal</h1>
-                        <p className="text-gray-400 text-sm">EAiSER Secure Authority Access</p>
+                        <p className="text-gray-400 text-sm italic font-medium tracking-tight">EAiSER Secure Authority Access</p>
                     </div>
+                    <button
+                        onClick={() => window.open(`/authority/chat-hub?token=${token}`, '_blank')}
+                        className="ml-auto px-6 py-3 bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600 hover:from-yellow-300 hover:via-amber-400 hover:to-amber-500 text-black rounded-xl font-black text-sm transition-all shadow-[0_8px_32px_rgba(245,158,11,0.25)] flex items-center gap-2 group border-t border-white/30 uppercase tracking-widest"
+                    >
+                        <MessageSquare className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        Open Secure Chat Hub
+                    </button>
                 </div>
 
                 {/* Status Card */}
@@ -104,7 +111,7 @@ export default function AuthorityAction() {
                         <div className={`px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${issue.status === 'resolved' || issue.status === 'completed'
                             ? 'bg-green-500/20 text-green-400 border-green-500/50'
                             : issue.status === 'in_progress'
-                                ? 'bg-blue-500/20 text-blue-400 border-blue-500/50'
+                                ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
                                 : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
                             }`}>
                             {issue.status?.replace('_', ' ')}
@@ -117,26 +124,31 @@ export default function AuthorityAction() {
                                 <label className="text-xs font-semibold text-gray-500 uppercase">Issue Type</label>
                                 <p className="text-white font-medium">{issue.issue_type || 'Unknown'}</p>
                             </div>
-                            <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase">Priority Level</label>
-                                <p className={`font-bold uppercase ${(() => {
+                            <p className={`font-bold uppercase text-xs tracking-[0.2em] flex items-center gap-2 ${(() => {
+                                const sev = (issue.severity || '').toLowerCase();
+                                if (sev === 'critical') return 'text-red-500';
+                                if (sev === 'high') return 'text-orange-500';
+                                if (sev === 'medium') return 'text-yellow-400';
+                                if (sev === 'low') return 'text-blue-400';
+                                return 'text-white';
+                            })()}`}>
+                                <div className={`w-2 h-2 rounded-full animate-pulse ${(() => {
                                     const sev = (issue.severity || '').toLowerCase();
-                                    if (sev === 'critical') return 'text-red-500';
-                                    if (sev === 'high') return 'text-orange-500';
-                                    if (sev === 'medium') return 'text-yellow-500';
-                                    if (sev === 'low') return 'text-blue-500';
-                                    return 'text-white';
-                                })()}`}>
-                                    {(() => {
-                                        const sev = (issue.severity || '').toLowerCase();
-                                        if (sev === 'critical') return 'HIGH PRIORITY';
-                                        if (sev === 'high') return 'MEDIUM HIGH PRIORITY';
-                                        if (sev === 'medium') return 'MEDIUM PRIORITY';
-                                        if (sev === 'low') return 'LOW PRIORITY';
-                                        return issue.severity || 'MEDIUM PRIORITY';
-                                    })()}
-                                </p>
-                            </div>
+                                    if (sev === 'critical') return 'bg-red-500 shadow-[0_0_8px_#ef4444]';
+                                    if (sev === 'high') return 'bg-orange-500 shadow-[0_0_8px_#f97316]';
+                                    if (sev === 'medium') return 'bg-yellow-400 shadow-[0_0_8px_#fbbf24]';
+                                    if (sev === 'low') return 'bg-amber-400 shadow-[0_0_8px_#fbbf24]';
+                                    return 'bg-white';
+                                })()}`} />
+                                {(() => {
+                                    const sev = (issue.severity || '').toLowerCase();
+                                    if (sev === 'critical') return 'HIGH PRIORITY [RED]';
+                                    if (sev === 'high') return 'MEDIUM HIGH PRIORITY [ORANGE]';
+                                    if (sev === 'medium') return 'MEDIUM PRIORITY [YELLOW]';
+                                    if (sev === 'low') return 'LOW PRIORITY [BLUE]';
+                                    return issue.severity || 'MEDIUM PRIORITY';
+                                })()}
+                            </p>
                             <div>
                                 <label className="text-xs font-semibold text-gray-500 uppercase">Location</label>
                                 <p className="text-white font-medium flex items-start gap-2">
@@ -177,8 +189,8 @@ export default function AuthorityAction() {
                                 onClick={() => handleUpdate('in_progress')}
                                 disabled={updating || issue.status === 'in_progress'}
                                 className={`p-4 rounded-xl border text-sm font-bold transition-all ${issue.status === 'in_progress'
-                                    ? 'bg-blue-600 border-blue-500 text-white cursor-default'
-                                    : 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700 hover:border-blue-500'
+                                    ? 'bg-amber-600 border-amber-500 text-black shadow-[0_4px_12px_rgba(217,119,6,0.2)] cursor-default'
+                                    : 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700 hover:border-amber-500'
                                     }`}
                             >
                                 In Progress
@@ -212,7 +224,7 @@ export default function AuthorityAction() {
                             <textarea
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white text-sm focus:border-blue-500 outline-none"
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white text-sm focus:border-amber-500 outline-none transition-all focus:shadow-[0_0_15px_rgba(217,119,6,0.1)]"
                                 rows={3}
                                 placeholder="Add comments about the resolution or status update..."
                             />

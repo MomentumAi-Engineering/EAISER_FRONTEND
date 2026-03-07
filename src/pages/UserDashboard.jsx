@@ -1,12 +1,13 @@
-import React, { useState, useEffect, memo } from 'react';
-import { Activity, CheckCircle, Clock, AlertCircle, TrendingUp, BarChart3, Filter, Calendar, Download, RefreshCw, Bell, Search, Home, X, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, memo, useRef } from 'react';
+import { Activity, CheckCircle, Clock, AlertCircle, TrendingUp, BarChart3, Filter, Calendar, Download, RefreshCw, Bell, Search, Home, X, ArrowRight, MessageSquare, Send, Shield, Paperclip, Image, Video, File as FileIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 import Navbar from '../components/Navbar';
-
 import apiClient from '../services/apiClient';
 import API_BASE_URL from '../config';
+import toast from 'react-hot-toast';
+import confetti from 'canvas-confetti';
 
 // Memoized StatCard moved outside to prevent re-creation
 const StatCard = memo(({ icon: Icon, label, value, color, delay }) => (
@@ -53,6 +54,58 @@ export default function UserDashboard() {
   const [notificationList, setNotificationList] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState(null);
+
+  // Chat State
+
+  // Check and update stats when issues change
+  useEffect(() => {
+    if (issues.length > 0) {
+      const resolved = issues.filter(i =>
+        ['resolved', 'completed', 'accepted', 'submitted', 'approved', 'dispatched'].includes(i.status?.toLowerCase())
+      ).length;
+      const pending = issues.filter(i =>
+        ['needs_review', 'under_review', 'pending'].includes(i.status?.toLowerCase())
+      ).length;
+      const total = issues.length;
+      const rate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+      setStats({ totalReported: total, resolved, pending, activeRate: rate });
+    }
+  }, [issues]);
+
+  const handleStatusUpdate = async (status) => {
+    if (!selectedIssue) return;
+    const issueId = selectedIssue._id || selectedIssue.id;
+
+    try {
+      await apiClient.updateUserStatusFeedback(issueId, status);
+
+      if (status === 'resolved') {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#fbbf24', '#f59e0b', '#ffffff']
+        });
+        toast.success("Issue marked as resolved! Thank you for your feedback.");
+      } else {
+        toast.success("Authority notified that the issue is still persistent.");
+      }
+
+      // Update local state
+      setIssues(prev => prev.map(i =>
+        (i._id === issueId || i.id === issueId) ? { ...i, user_feedback_status: status } : i
+      ));
+
+      // Close modal or update stats if needed
+      setTimeout(() => setSelectedIssue(null), 2000);
+
+      // Refresh issues in background
+      fetchIssues();
+    } catch (err) {
+      toast.error("Failed to update status: " + err.message);
+    }
+  };
+
 
   const zipCodes = React.useMemo(() => {
     const zips = new Set();
@@ -386,7 +439,37 @@ export default function UserDashboard() {
                                     <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${['resolved', 'completed', 'accepted', 'submitted', 'approved', 'dispatched'].includes(issue.status?.toLowerCase()) ? 'bg-green-500/10 text-green-400' : 'bg-orange-500/10 text-orange-400'}`}>
                                       {issue.status}
                                     </span>
+                                    {issue.severity && (
+                                      <span className={`flex items-center gap-1.5 text-[9px] font-black tracking-widest uppercase ${(() => {
+                                        const sev = String(issue.severity).toLowerCase();
+                                        if (sev === 'critical') return 'text-red-500';
+                                        if (sev === 'high') return 'text-orange-500';
+                                        if (sev === 'medium') return 'text-yellow-400';
+                                        if (sev === 'low') return 'text-blue-400';
+                                        return 'text-zinc-500';
+                                      })()}`}>
+                                        <div className={`w-1 h-1 rounded-full ${(() => {
+                                          const sev = String(issue.severity).toLowerCase();
+                                          if (sev === 'critical') return 'bg-red-500';
+                                          if (sev === 'high') return 'bg-orange-500';
+                                          if (sev === 'medium') return 'bg-yellow-400';
+                                          if (sev === 'low') return 'bg-blue-400';
+                                          return 'bg-zinc-500';
+                                        })()}`} />
+                                        {issue.severity === 'critical' ? 'High [RED]' :
+                                          issue.severity === 'high' ? 'Med High [ORANGE]' :
+                                            issue.severity === 'medium' ? 'Med [YELLOW]' :
+                                              issue.severity === 'low' ? 'Low [BLUE]' :
+                                                issue.severity}
+                                      </span>
+                                    )}
                                     <span className="text-[10px] text-zinc-600 font-bold">{timeAgo(issue.timestamp)}</span>
+                                    {issue.chat_active && (
+                                      <div className="flex items-center gap-1 ml-auto">
+                                        <MessageSquare className="w-3 h-3 text-blue-400" />
+                                        <span className="text-[9px] text-blue-400 font-black uppercase">Authority Active</span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                                 <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-yellow-500 transition-all group-hover:translate-x-1 flex-shrink-0 ml-2" />
@@ -460,11 +543,29 @@ export default function UserDashboard() {
                 <div className="p-6 md:w-1/2 flex flex-col bg-zinc-900/50 overflow-hidden">
                   <div className="flex-grow overflow-y-auto custom-scrollbar pr-2">
                     <div className="mb-6">
-                      <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Status Report</h3>
-                      <span className="text-sm font-black text-white uppercase bg-zinc-800 px-3 py-1 rounded-lg border border-white/5">{selectedIssue.status}</span>
-                    </div>
-                    <div className="mb-6">
-                      <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Intel Summary</h3>
+                      <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Impact Intelligence</h3>
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-sm font-black text-white uppercase bg-zinc-800 px-3 py-1 rounded-lg border border-white/5">{selectedIssue.status}</span>
+                        {selectedIssue.severity && (
+                          <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase border ${(() => {
+                            const sev = String(selectedIssue.severity).toLowerCase();
+                            if (sev === 'critical') return 'bg-red-500/10 text-red-500 border-red-500/20';
+                            if (sev === 'high') return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
+                            if (sev === 'medium') return 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20';
+                            if (sev === 'low') return 'bg-blue-400/10 text-blue-400 border-blue-400/20';
+                            return 'bg-zinc-800 text-zinc-400 border-white/5';
+                          })()}`}>
+                            {(() => {
+                              const sev = String(selectedIssue.severity).toLowerCase();
+                              if (sev === 'critical') return 'HIGH PRIORITY [RED]';
+                              if (sev === 'high') return 'MEDIUM HIGH PRIORITY [ORANGE]';
+                              if (sev === 'medium') return 'MEDIUM PRIORITY [YELLOW]';
+                              if (sev === 'low') return 'LOW PRIORITY [BLUE]';
+                              return selectedIssue.severity;
+                            })()}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-gray-400 text-xs leading-relaxed italic">
                         "Our AI analyzed the image and identified a potential <span className="text-yellow-400/80">{formatIssueType(selectedIssue.issue_type)}</span> showing <span className="text-white/90">{cleanAIReportText(selectedIssue.description || selectedIssue.report?.summary || 'an identified civic concern')}</span>. This issue is located at <span className="text-white/70">{selectedIssue.address?.split(',')[1]?.trim() || selectedIssue.address?.split(',')[0] || 'Unknown City'}</span> (ZIP {selectedIssue.zip_code || selectedIssue.location?.zip_code || 'N/A'})."
                       </p>
@@ -492,22 +593,40 @@ export default function UserDashboard() {
                     )}
                   </div>
 
+
+
                   {/* Modal Footer - Explicitly pinned to bottom */}
-                  <div className="mt-6 pt-6 border-t border-white/5 bg-zinc-900/50 backdrop-blur-xl relative z-20">
-                    <button
-                      onClick={() => setSelectedIssue(null)}
-                      className="w-full py-4 bg-red-600/10 hover:bg-red-600/30 text-red-400 rounded-2xl font-black transition-all border border-red-500/20 flex items-center justify-center gap-2 group shadow-lg shadow-red-900/10"
-                    >
-                      <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-                      CLOSE DIGITAL FILE
-                    </button>
-                    <p className="text-center text-[9px] text-zinc-600 mt-4 uppercase tracking-[0.3em] font-black">Official EAiSER Digital Evidence Access</p>
+                  <div className="mt-auto pt-6 border-t border-white/5 bg-zinc-900/50 backdrop-blur-xl relative z-20">
+                    <div className="flex gap-3 mb-4">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                          const issueId = selectedIssue._id || selectedIssue.id;
+                          navigate(`/chat-hub?issueId=${issueId}`);
+                        }}
+                        className="flex-1 py-4 bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600 hover:from-yellow-300 hover:via-amber-400 hover:to-amber-500 text-black rounded-2xl font-black transition-all shadow-[0_8px_32px_rgba(245,158,11,0.2)] flex items-center justify-center gap-3 border-t border-white/30 uppercase tracking-widest text-xs"
+                      >
+                        <MessageSquare className="w-5 h-5" />
+                        Chat with Authority
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.1)" }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelectedIssue(null)}
+                        className="px-6 py-4 bg-white/5 text-white/50 hover:text-white rounded-2xl transition-all border border-white/10 backdrop-blur-md"
+                      >
+                        <X className="w-5 h-5" />
+                      </motion.button>
+                    </div>
+                    <p className="text-center text-[9px] text-zinc-600 uppercase tracking-[0.3em] font-black">Official EAiSER Digital Evidence Access</p>
                   </div>
                 </div>
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
+
       </div>
 
       <style>{`
