@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Search, 
-  Filter, 
-  MapPin, 
-  Calendar, 
-  Eye, 
-  Edit, 
-  CheckCircle, 
-  Clock, 
-  XCircle, 
+import {
+  Search,
+  Filter,
+  MapPin,
+  Calendar,
+  Eye,
+  Edit,
+  CheckCircle,
+  Clock,
+  XCircle,
   AlertCircle,
   Inbox,
   ChevronDown,
@@ -32,7 +32,7 @@ function StatusDisplay({ issues }) {
   const [viewMode, setViewMode] = useState('grid');
   const [isLoading, setIsLoading] = useState(true);
   const [filteredIssues, setFilteredIssues] = useState([]);
-  
+
   // Simulate loading data
   useEffect(() => {
     setIsLoading(true);
@@ -42,25 +42,25 @@ function StatusDisplay({ issues }) {
     }, 800);
     return () => clearTimeout(timer);
   }, [issues, filter, searchTerm, sortBy]);
-  
+
   const applyFiltersAndSort = () => {
     let result = [...issues];
-    
+
     // Apply filter
     if (filter !== 'all') {
       result = result.filter(issue => issue.status === filter);
     }
-    
+
     // Apply search
     if (searchTerm) {
       const query = searchTerm.toLowerCase();
-      result = result.filter(issue => 
-        issue.id.toString().includes(query) || 
+      result = result.filter(issue =>
+        issue.id.toString().includes(query) ||
         (issue.address && issue.address.toLowerCase().includes(query)) ||
         (issue.issue_type && issue.issue_type.toLowerCase().includes(query))
       );
     }
-    
+
     // Apply sorting
     result.sort((a, b) => {
       if (sortBy === 'newest') {
@@ -73,15 +73,15 @@ function StatusDisplay({ issues }) {
       }
       return 0;
     });
-    
+
     setFilteredIssues(result);
   };
-  
+
   const statusCounts = issues.reduce((acc, issue) => {
     acc[issue.status] = (acc[issue.status] || 0) + 1;
     return acc;
   }, {});
-  
+
   const statusIcons = {
     'pending': <Clock className="w-4 h-4" />,
     'in-progress': <AlertCircle className="w-4 h-4" />,
@@ -89,7 +89,7 @@ function StatusDisplay({ issues }) {
     'rejected': <XCircle className="w-4 h-4" />,
     'new': <Inbox className="w-4 h-4" />
   };
-  
+
   const statusColors = {
     'pending': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
     'in-progress': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -97,21 +97,28 @@ function StatusDisplay({ issues }) {
     'rejected': 'bg-red-500/20 text-red-400 border-red-500/30',
     'new': 'bg-gray-500/20 text-gray-400 border-gray-500/30'
   };
-  
+
   const severityColors = {
-    'low': 'bg-green-500/20 text-green-400 border-green-500/30',
+    'low': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
     'medium': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
     'high': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
     'critical': 'bg-red-500/20 text-red-400 border-red-500/30'
   };
-  
+
+  const severityLabels = {
+    'low': 'LOW PRIORITY',
+    'medium': 'MEDIUM PRIORITY',
+    'high': 'MEDIUM HIGH PRIORITY',
+    'critical': 'HIGH PRIORITY'
+  };
+
   const severityIcons = {
     'low': <CheckCircle className="w-4 h-4" />,
     'medium': <Clock className="w-4 h-4" />,
     'high': <AlertCircle className="w-4 h-4" />,
     'critical': <XCircle className="w-4 h-4" />
   };
-  
+
   const statusOptions = [
     { value: 'all', label: 'All Issues', icon: <Inbox className="w-4 h-4" /> },
     { value: 'new', label: 'New', icon: <Inbox className="w-4 h-4" /> },
@@ -120,16 +127,16 @@ function StatusDisplay({ issues }) {
     { value: 'resolved', label: 'Resolved', icon: <CheckCircle className="w-4 h-4" /> },
     { value: 'rejected', label: 'Rejected', icon: <XCircle className="w-4 h-4" /> }
   ];
-  
+
   const sortOptions = [
     { value: 'newest', label: 'Newest First' },
     { value: 'oldest', label: 'Oldest First' },
     { value: 'severity', label: 'By Severity' }
   ];
-  
+
   // Skeleton loader for issues
   const SkeletonCard = () => (
-    <motion.div 
+    <motion.div
       className="issue-card skeleton"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -151,16 +158,16 @@ function StatusDisplay({ issues }) {
       </div>
     </motion.div>
   );
-  
+
   return (
-    <motion.div 
+    <motion.div
       className="status-display-container"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
       {/* Header Section */}
-      <motion.div 
+      <motion.div
         className="status-header"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -176,7 +183,7 @@ function StatusDisplay({ issues }) {
               <p className="header-subtitle">Track and manage all reported issues</p>
             </div>
           </div>
-          
+
           <div className="stats-container">
             <div className="stat-item">
               <div className="stat-value">{issues.length}</div>
@@ -192,17 +199,17 @@ function StatusDisplay({ issues }) {
             </div>
           </div>
         </div>
-        
+
         <div className="header-actions">
-          <motion.button 
+          <motion.button
             className="icon-button"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
             <RefreshCw className="w-5 h-5" />
           </motion.button>
-          
-          <motion.button 
+
+          <motion.button
             className="icon-button"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
@@ -211,9 +218,9 @@ function StatusDisplay({ issues }) {
           </motion.button>
         </div>
       </motion.div>
-      
+
       {/* Controls Section */}
-      <motion.div 
+      <motion.div
         className="controls-container"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -229,12 +236,12 @@ function StatusDisplay({ issues }) {
             className="search-input"
           />
         </div>
-        
+
         <div className="filter-controls">
           <div className="filter-dropdown">
             <Filter className="filter-icon" />
-            <select 
-              value={filter} 
+            <select
+              value={filter}
               onChange={(e) => setFilter(e.target.value)}
               className="filter-select"
             >
@@ -245,10 +252,10 @@ function StatusDisplay({ issues }) {
               ))}
             </select>
           </div>
-          
+
           <div className="sort-dropdown">
-            <select 
-              value={sortBy} 
+            <select
+              value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="sort-select"
             >
@@ -259,9 +266,9 @@ function StatusDisplay({ issues }) {
               ))}
             </select>
           </div>
-          
+
           <div className="view-toggle">
-            <motion.button 
+            <motion.button
               className={`view-button ${viewMode === 'grid' ? 'active' : ''}`}
               onClick={() => setViewMode('grid')}
               whileHover={{ scale: 1.1 }}
@@ -269,7 +276,7 @@ function StatusDisplay({ issues }) {
             >
               <Grid className="w-4 h-4" />
             </motion.button>
-            <motion.button 
+            <motion.button
               className={`view-button ${viewMode === 'list' ? 'active' : ''}`}
               onClick={() => setViewMode('list')}
               whileHover={{ scale: 1.1 }}
@@ -280,9 +287,9 @@ function StatusDisplay({ issues }) {
           </div>
         </div>
       </motion.div>
-      
+
       {/* Status Pills */}
-      <motion.div 
+      <motion.div
         className="status-pills-container"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -306,7 +313,7 @@ function StatusDisplay({ issues }) {
           </motion.button>
         ))}
       </motion.div>
-      
+
       {/* Issues Content */}
       {isLoading ? (
         <div className={`issues-container ${viewMode}`}>
@@ -315,22 +322,22 @@ function StatusDisplay({ issues }) {
           ))}
         </div>
       ) : filteredIssues.length === 0 ? (
-        <motion.div 
+        <motion.div
           className="empty-state"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <motion.div 
+          <motion.div
             className="empty-icon"
-            animate={{ 
+            animate={{
               y: [0, -10, 0],
               rotate: [0, 5, 0, -5, 0]
             }}
-            transition={{ 
-              duration: 4, 
+            transition={{
+              duration: 4,
               repeat: Infinity,
-              ease: "easeInOut" 
+              ease: "easeInOut"
             }}
           >
             <Inbox className="w-16 h-16 text-gray-400" />
@@ -339,7 +346,7 @@ function StatusDisplay({ issues }) {
           <p className="empty-description">
             {searchTerm ? 'Try a different search term' : 'No issues match the current filter'}
           </p>
-          <motion.button 
+          <motion.button
             className="empty-cta"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -373,8 +380,8 @@ function StatusDisplay({ issues }) {
                       <span>{issue.status.replace('-', ' ')}</span>
                     </div>
                   </div>
-                  
-                  <motion.button 
+
+                  <motion.button
                     className="icon-button"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
@@ -382,7 +389,7 @@ function StatusDisplay({ issues }) {
                     <MoreVertical className="w-4 h-4" />
                   </motion.button>
                 </div>
-                
+
                 <div className="card-body">
                   <div className="issue-row">
                     <div className="issue-property">
@@ -392,7 +399,7 @@ function StatusDisplay({ issues }) {
                       </div>
                       <span className="issue-type">{issue.issue_type || 'Not specified'}</span>
                     </div>
-                    
+
                     <div className="issue-property">
                       <div className="property-label">
                         <AlertCircle className="w-4 h-4" />
@@ -400,11 +407,11 @@ function StatusDisplay({ issues }) {
                       </div>
                       <div className={`severity-badge ${severityColors[issue.severity?.toLowerCase()] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
                         {severityIcons[issue.severity?.toLowerCase()]}
-                        <span>{issue.severity || 'Not specified'}</span>
+                        <span>{severityLabels[issue.severity?.toLowerCase()] || issue.severity || 'Not specified'}</span>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="issue-row">
                     <div className="issue-property">
                       <div className="property-label">
@@ -416,7 +423,7 @@ function StatusDisplay({ issues }) {
                       </span>
                     </div>
                   </div>
-                  
+
                   {issue.timestamp && (
                     <div className="issue-row">
                       <div className="issue-property">
@@ -431,9 +438,9 @@ function StatusDisplay({ issues }) {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="card-footer">
-                  <motion.button 
+                  <motion.button
                     className="action-btn view-btn"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -441,7 +448,7 @@ function StatusDisplay({ issues }) {
                     <Eye className="w-4 h-4" />
                     <span>View</span>
                   </motion.button>
-                  <motion.button 
+                  <motion.button
                     className="action-btn update-btn"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}

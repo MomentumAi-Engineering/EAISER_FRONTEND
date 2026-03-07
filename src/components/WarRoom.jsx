@@ -200,10 +200,11 @@ export default function WarRoom() {
                                     onChange={(e) => setSeverityFilter(e.target.value)}
                                     className="mt-1 block w-full bg-gray-800 border border-gray-600 text-white text-xs rounded-lg px-3 py-2 outline-none"
                                 >
-                                    <option value="all">All Severity</option>
-                                    <option value="high">High</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="low">Low</option>
+                                    <option value="all">All Priority</option>
+                                    <option value="critical">High Priority</option>
+                                    <option value="high">Medium High Priority</option>
+                                    <option value="medium">Medium Priority</option>
+                                    <option value="low">Low Priority</option>
                                 </select>
                             </div>
                         </div>
@@ -283,8 +284,22 @@ export default function WarRoom() {
                                                     {(issue.status || 'pending').replace(/_/g, ' ')}
                                                 </span>
                                                 <span className={`text-xs px-2 py-0.5 rounded text-white font-bold
-                                                    ${issue.severity === 'high' ? 'bg-red-500' : 'bg-orange-400'}`}>
-                                                    {issue.severity || 'Medium'}
+                                                    ${(() => {
+                                                        const sev = (issue.severity || '').toLowerCase();
+                                                        if (sev === 'critical') return 'bg-red-500';
+                                                        if (sev === 'high') return 'bg-orange-500';
+                                                        if (sev === 'medium') return 'bg-yellow-500';
+                                                        if (sev === 'low') return 'bg-blue-500';
+                                                        return 'bg-yellow-500';
+                                                    })()}`}>
+                                                    {(() => {
+                                                        const sev = (issue.severity || '').toLowerCase();
+                                                        if (sev === 'critical') return 'HIGH PRIORITY';
+                                                        if (sev === 'high') return 'MEDIUM HIGH PRIORITY';
+                                                        if (sev === 'medium') return 'MEDIUM PRIORITY';
+                                                        if (sev === 'low') return 'LOW PRIORITY';
+                                                        return issue.severity || 'MEDIUM PRIORITY';
+                                                    })()}
                                                 </span>
                                             </div>
                                         </div>

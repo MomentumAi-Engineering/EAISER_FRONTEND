@@ -1290,99 +1290,64 @@ export default function SimpleReport() {
                   <span className="text-[10px] font-bold text-gray-500 italic">Drag marker to refine exact spot</span>
                 </div>
                 <div className="h-96 rounded-3xl overflow-hidden border border-gray-800 shadow-2xl relative group">
-                  {/* Dynamic Map Provider Selection: Google for typical auth, Apple for Apple ID */}
-                  {(() => {
-                    const user = JSON.parse(localStorage.getItem('user') || '{}');
-                    const provider = localStorage.getItem('auth_provider') || user.auth_provider;
+                  <GoogleMap
+                    center={coords}
+                    zoom={mapZoom}
+                    onLoad={(map) => {
+                      mapRef.current = map;
 
-                    if (provider === 'apple') {
-                      return (
-                        <div className="absolute inset-0 bg-zinc-950 flex flex-col items-center justify-center p-8 text-center">
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="w-20 h-20 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-[2.5rem] flex items-center justify-center mb-6 border border-white/5 shadow-2xl shadow-blue-500/10"
-                          >
-                            <MapPin className="w-10 h-10 text-white" />
-                          </motion.div>
-                          <h3 className="text-white font-black uppercase tracking-[0.2em] text-sm mb-3">MapKit JS Integration</h3>
-                          <p className="text-gray-500 text-[11px] max-w-[240px] leading-relaxed font-medium">
-                            Authenticated via Apple ID. Initializing secure MapKit environment for privacy-focused location reporting...
-                          </p>
-                          <div className="mt-6 flex gap-1.5">
-                            {[0, 1, 2].map((i) => (
-                              <motion.div
-                                key={i}
-                                animate={{ opacity: [0.3, 1, 0.3] }}
-                                transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }}
-                                className="w-1.5 h-1.5 rounded-full bg-blue-500/80"
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })() || (
-                      <GoogleMap
-                        center={coords}
-                        zoom={mapZoom}
-                        onLoad={(map) => {
-                          mapRef.current = map;
+                      // Listeners to detect view changes
+                      map.addListener('maptypeid_changed', () => {
+                        const type = map.getMapTypeId();
+                        const isSat = type === 'satellite' || type === 'hybrid';
+                        const sv = map.getStreetView();
+                        setShowMapExit(isSat || (sv && sv.getVisible()));
+                      });
 
-                          // Listeners to detect view changes
-                          map.addListener('maptypeid_changed', () => {
-                            const type = map.getMapTypeId();
-                            const isSat = type === 'satellite' || type === 'hybrid';
-                            const sv = map.getStreetView();
-                            setShowMapExit(isSat || (sv && sv.getVisible()));
-                          });
+                      const sv = map.getStreetView();
+                      if (sv) {
+                        sv.addListener('visible_changed', () => {
+                          const type = map.getMapTypeId();
+                          const isSat = type === 'satellite' || type === 'hybrid';
+                          setShowMapExit(isSat || sv.getVisible());
+                        });
+                      }
+                    }}
+                    onZoomChanged={() => {
+                      if (mapRef.current) {
+                        setMapZoom(mapRef.current.getZoom());
+                      }
+                    }}
+                    mapContainerStyle={{ width: "100%", height: "100%" }}
+                    mapTypeId="terrain"
+                    options={{
+                      streetViewControl: true,
+                      mapTypeControl: true,
+                      mapTypeControlOptions: {
+                        style: 1, // HORIZONTAL_BAR
+                        position: 3, // TOP_RIGHT
+                        mapTypeIds: ['terrain', 'roadmap', 'satellite', 'hybrid']
+                      },
+                      fullscreenControl: true,
+                      rotateControl: true,
+                      tilt: 45, // Enable 45-degree imagery
+                    }}
+                  >
+                    <Marker
+                      position={coords}
+                      draggable={true}
+                      onDragEnd={async (e) => {
+                        const lat = e.latLng.lat();
+                        const lng = e.latLng.lng();
+                        setCoords({ lat, lng });
+                        setMapZoom(20);
+                        const newZip = await reverseGeocode(lat, lng);
 
-                          const sv = map.getStreetView();
-                          if (sv) {
-                            sv.addListener('visible_changed', () => {
-                              const type = map.getMapTypeId();
-                              const isSat = type === 'satellite' || type === 'hybrid';
-                              setShowMapExit(isSat || sv.getVisible());
-                            });
-                          }
-                        }}
-                        onZoomChanged={() => {
-                          if (mapRef.current) {
-                            setMapZoom(mapRef.current.getZoom());
-                          }
-                        }}
-                        mapContainerStyle={{ width: "100%", height: "100%" }}
-                        mapTypeId="terrain"
-                        options={{
-                          streetViewControl: true,
-                          mapTypeControl: true,
-                          mapTypeControlOptions: {
-                            style: 1, // HORIZONTAL_BAR
-                            position: 3, // TOP_RIGHT
-                            mapTypeIds: ['terrain', 'roadmap', 'satellite', 'hybrid']
-                          },
-                          fullscreenControl: true,
-                          rotateControl: true,
-                          tilt: 45, // Enable 45-degree imagery
-                        }}
-                      >
-                        <Marker
-                          position={coords}
-                          draggable={true}
-                          onDragEnd={async (e) => {
-                            const lat = e.latLng.lat();
-                            const lng = e.latLng.lng();
-                            setCoords({ lat, lng });
-                            setMapZoom(20);
-                            const newZip = await reverseGeocode(lat, lng);
-
-                            // Trigger Outside Fairview check
-                            setIsOutsideServicedArea(!isInsideFairview(lat, lng, newZip));
-                          }}
-                        />
-                      </GoogleMap>
-                    )}
+                        // Trigger Outside Fairview check
+                        setIsOutsideServicedArea(!isInsideFairview(lat, lng, newZip));
+                      }}
+                    />
+                  </GoogleMap>
                   {showMapExit && (
                     <button
                       type="button"

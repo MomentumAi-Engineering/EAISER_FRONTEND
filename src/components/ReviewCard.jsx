@@ -105,13 +105,40 @@ const ReviewCard = memo(({
             {/* Content */}
             <div className="p-4 flex-1 flex flex-col">
                 {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-base font-semibold text-white capitalize">
+                <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-base font-semibold text-white capitalize overflow-hidden text-ellipsis whitespace-nowrap max-w-[140px]">
                         {issueType.replace(/_/g, ' ')}
                     </h3>
-                    <span className="text-xs text-gray-500 bg-gray-800/50 px-2 py-1 rounded-full">
-                        {review.status}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                        <span className="text-[10px] text-gray-500 bg-gray-800/50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            {review.status?.replace(/_/g, ' ') || 'pending'}
+                        </span>
+                        {(() => {
+                            const sev = (review.severity || (review.issue_overview && review.issue_overview.severity) || 'medium').toLowerCase();
+                            let colorClass = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+                            let label = 'MEDIUM PRIORITY';
+
+                            if (sev === 'critical') {
+                                colorClass = 'bg-red-500/10 text-red-500 border-red-500/20';
+                                label = 'HIGH PRIORITY';
+                            } else if (sev === 'high') {
+                                colorClass = 'bg-orange-500/10 text-orange-500 border-orange-500/20';
+                                label = 'MEDIUM HIGH PRIORITY';
+                            } else if (sev === 'medium') {
+                                colorClass = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+                                label = 'MEDIUM PRIORITY';
+                            } else if (sev === 'low') {
+                                colorClass = 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+                                label = 'LOW PRIORITY';
+                            }
+
+                            return (
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded border font-bold ${colorClass}`}>
+                                    {label}
+                                </span>
+                            );
+                        })()}
+                    </div>
                 </div>
 
                 {/* Summary */}

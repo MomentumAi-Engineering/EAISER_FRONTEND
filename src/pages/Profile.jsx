@@ -588,9 +588,22 @@ const ProfilePage = () => {
                             <div>
                               <div className="flex items-center gap-3">
                                 <h4 className="font-black text-sm tracking-wide uppercase">{issue.issue_type?.replace('_', ' ')}</h4>
-                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest border ${issue.severity === 'High' ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-zinc-800 border-zinc-700 text-zinc-500'
-                                  }`}>
-                                  {issue.severity}
+                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest border ${(() => {
+                                  const sev = (issue.severity || '').toLowerCase();
+                                  if (sev === 'critical') return 'bg-red-500/10 border-red-500/20 text-red-500';
+                                  if (sev === 'high') return 'bg-orange-500/10 border-orange-500/20 text-orange-500';
+                                  if (sev === 'medium') return 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500';
+                                  if (sev === 'low') return 'bg-blue-500/10 border-blue-500/20 text-blue-500';
+                                  return 'bg-zinc-800 border-zinc-700 text-zinc-500';
+                                })()}`}>
+                                  {(() => {
+                                    const sev = (issue.severity || '').toLowerCase();
+                                    if (sev === 'critical') return 'HIGH PRIORITY';
+                                    if (sev === 'high') return 'MEDIUM HIGH PRIORITY';
+                                    if (sev === 'medium') return 'MEDIUM PRIORITY';
+                                    if (sev === 'low') return 'LOW PRIORITY';
+                                    return issue.severity || 'MEDIUM PRIORITY';
+                                  })()}
                                 </span>
                               </div>
                               <p className="text-xs text-zinc-500 mt-1 font-mono">{issue.address || 'Location Hidden'} • {issue.report_id || issue.id?.slice(-8)}</p>

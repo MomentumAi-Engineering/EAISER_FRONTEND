@@ -223,13 +223,13 @@ const IssueCard = ({ issue, index, expanded, toggleExpand }) => {
   const getSeverityColor = () => {
     switch (issue.severity?.toLowerCase()) {
       case 'critical':
-        return 'bg-error/15 text-error border-error/30 shadow-error/20';
+        return 'bg-red-500/15 text-red-600 border-red-500/30';
       case 'high':
-        return 'bg-warning/15 text-warning border-warning/30 shadow-warning/20';
+        return 'bg-orange-500/15 text-orange-600 border-orange-500/30';
       case 'medium':
-        return 'bg-primary/15 text-primary border-primary/30 shadow-primary/20';
+        return 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30';
       case 'low':
-        return 'bg-success/15 text-success border-success/30 shadow-success/20';
+        return 'bg-blue-500/15 text-blue-600 border-blue-500/30';
       default:
         return 'bg-neutral-200/50 text-neutral-600 border-neutral-300/50';
     }
@@ -238,15 +238,25 @@ const IssueCard = ({ issue, index, expanded, toggleExpand }) => {
   const getSeverityIcon = () => {
     switch (issue.severity?.toLowerCase()) {
       case 'critical':
-        return <FiZap className="w-3 h-3" />;
+        return <FiZap className="w-3 h-3 text-red-600" />;
       case 'high':
-        return <FiTrendingUp className="w-3 h-3" />;
+        return <FiTrendingUp className="w-3 h-3 text-orange-600" />;
       case 'medium':
-        return <FiActivity className="w-3 h-3" />;
+        return <FiActivity className="w-3 h-3 text-yellow-600" />;
       case 'low':
-        return <FiShield className="w-3 h-3" />;
+        return <FiShield className="w-3 h-3 text-blue-600" />;
       default:
         return <FiInfo className="w-3 h-3" />;
+    }
+  };
+
+  const getSeverityLabel = () => {
+    switch (issue.severity?.toLowerCase()) {
+      case 'critical': return 'HIGH PRIORITY';
+      case 'high': return 'MEDIUM HIGH PRIORITY';
+      case 'medium': return 'MEDIUM PRIORITY';
+      case 'low': return 'LOW PRIORITY';
+      default: return issue.severity || 'UNKNOWN';
     }
   };
 
@@ -314,7 +324,7 @@ const IssueCard = ({ issue, index, expanded, toggleExpand }) => {
               transition={{ delay: 0.4 }}
             >
               {getSeverityIcon()}
-              {issue.severity || 'Unknown'}
+              {getSeverityLabel()}
             </motion.span>
           </div>
         </div>

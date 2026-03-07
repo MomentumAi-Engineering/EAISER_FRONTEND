@@ -803,13 +803,23 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     return Array.from(set);
   })();
 
-  let priorityLabel = 'Low';
-  if (aiSeverity && String(aiSeverity).length > 1) {
-    priorityLabel = String(aiSeverity).charAt(0).toUpperCase() + String(aiSeverity).slice(1).toLowerCase();
+  let priorityLabel = 'LOW PRIORITY';
+  const severityMap = {
+    'critical': 'HIGH PRIORITY',
+    'high': 'MEDIUM HIGH PRIORITY',
+    'medium': 'MEDIUM PRIORITY',
+    'low': 'LOW PRIORITY'
+  };
+
+  const currentSeverity = String(aiSeverity || '').toLowerCase();
+  if (severityMap[currentSeverity]) {
+    priorityLabel = severityMap[currentSeverity];
+  } else if (aiSeverity && String(aiSeverity).length > 1) {
+    priorityLabel = String(aiSeverity).toUpperCase() + ' PRIORITY';
   } else if (hits.length >= 3) {
-    priorityLabel = 'High';
+    priorityLabel = 'HIGH PRIORITY';
   } else if (hits.length >= 1) {
-    priorityLabel = 'Medium';
+    priorityLabel = 'MEDIUM PRIORITY';
   }
 
   const locationText = `${locCity}${locState ? `, ${locState}` : ''} ${displayZip !== '—' ? displayZip : ''}`.trim();
@@ -971,19 +981,21 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                   onChange={handleEditChange}
                   className="w-full bg-black/40 text-white border border-gray-700/50 rounded-xl px-4 py-3 text-sm mt-2 focus:border-yellow-500/50 transition-all outline-none cursor-pointer hover:bg-black/60 shadow-sm"
                 >
-                  <option className="bg-gray-900 text-white" value="low">Low</option>
-                  <option className="bg-gray-900 text-white" value="medium">Medium</option>
-                  <option className="bg-gray-900 text-white" value="high">High</option>
-                  <option className="bg-gray-900 text-white" value="critical">Critical</option>
+                  <option className="bg-gray-900 text-white" value="low">LOW PRIORITY</option>
+                  <option className="bg-gray-900 text-white" value="medium">MEDIUM PRIORITY</option>
+                  <option className="bg-gray-900 text-white" value="high">MEDIUM HIGH PRIORITY</option>
+                  <option className="bg-gray-900 text-white" value="critical">HIGH PRIORITY</option>
                 </select>
               ) : (
-                <span className={`text-sm font-semibold uppercase ${((hasEdited ? editForm.severity : priorityLabel) || '').toLowerCase() === 'high' || ((hasEdited ? editForm.severity : priorityLabel) || '').toLowerCase() === 'critical'
-                  ? 'text-red-400'
-                  : ((hasEdited ? editForm.severity : priorityLabel) || '').toLowerCase() === 'medium'
-                    ? 'text-yellow-400'
-                    : 'text-green-400'
-                  }`}>
-                  {hasEdited ? editForm.severity : priorityLabel}
+                <span className={`text-sm font-semibold uppercase ${(() => {
+                  const sev = (hasEdited ? editForm.severity : priorityLabel).toLowerCase();
+                  if (sev.includes('high priority') || sev === 'critical') return 'text-red-400';
+                  if (sev.includes('medium high')) return 'text-orange-400';
+                  if (sev.includes('medium')) return 'text-yellow-400';
+                  if (sev.includes('low')) return 'text-blue-400';
+                  return 'text-blue-400';
+                })()}`}>
+                  {hasEdited ? severityMap[editForm.severity] || editForm.severity : priorityLabel}
                 </span>
               )}
             </div>

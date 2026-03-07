@@ -1143,14 +1143,31 @@ function UploadForm({ setStatus, fetchIssues }) {
                           onChange={(e) => handleEditChange('issue_overview', 'severity', e.target.value)}
                           className="w-full bg-black/40 border border-blue-500/30 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
                         >
-                          {severities.map((severity) => (
-                            <option key={severity.value} value={severity.value}>{severity.label}</option>
-                          ))}
+                          <option value="low">LOW PRIORITY</option>
+                          <option value="medium">MEDIUM PRIORITY</option>
+                          <option value="high">MEDIUM HIGH PRIORITY</option>
+                          <option value="critical">HIGH PRIORITY</option>
                         </select>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${severities.find(s => s.value === editedReport.issue_overview.severity)?.color || 'bg-gray-500'} shadow-[0_0_10px_currentColor]`}></div>
-                          <span className="text-lg font-medium text-white capitalize">{editedReport.issue_overview.severity}</span>
+                          <div className={`w-3 h-3 rounded-full ${(() => {
+                            const sev = (editedReport.issue_overview.severity || '').toLowerCase();
+                            if (sev === 'critical') return 'bg-red-500';
+                            if (sev === 'high') return 'bg-orange-500';
+                            if (sev === 'medium') return 'bg-yellow-500';
+                            if (sev === 'low') return 'bg-blue-500';
+                            return 'bg-gray-500';
+                          })()} shadow-[0_0_10px_currentColor]`}></div>
+                          <span className="text-lg font-medium text-white uppercase">
+                            {(() => {
+                              const sev = (editedReport.issue_overview.severity || '').toLowerCase();
+                              if (sev === 'critical') return 'HIGH PRIORITY';
+                              if (sev === 'high') return 'MEDIUM HIGH PRIORITY';
+                              if (sev === 'medium') return 'MEDIUM PRIORITY';
+                              if (sev === 'low') return 'LOW PRIORITY';
+                              return editedReport.issue_overview.severity;
+                            })()}
+                          </span>
                         </div>
                       )}
                     </div>

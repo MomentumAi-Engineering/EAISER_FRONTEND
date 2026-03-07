@@ -102,10 +102,10 @@ export default function AuthorityAction() {
                             </div>
                         </div>
                         <div className={`px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${issue.status === 'resolved' || issue.status === 'completed'
-                                ? 'bg-green-500/20 text-green-400 border-green-500/50'
-                                : issue.status === 'in_progress'
-                                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/50'
-                                    : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
+                            ? 'bg-green-500/20 text-green-400 border-green-500/50'
+                            : issue.status === 'in_progress'
+                                ? 'bg-blue-500/20 text-blue-400 border-blue-500/50'
+                                : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
                             }`}>
                             {issue.status?.replace('_', ' ')}
                         </div>
@@ -118,8 +118,24 @@ export default function AuthorityAction() {
                                 <p className="text-white font-medium">{issue.issue_type || 'Unknown'}</p>
                             </div>
                             <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase">Severity</label>
-                                <p className="text-white font-medium capitalize">{issue.severity || 'Medium'}</p>
+                                <label className="text-xs font-semibold text-gray-500 uppercase">Priority Level</label>
+                                <p className={`font-bold uppercase ${(() => {
+                                    const sev = (issue.severity || '').toLowerCase();
+                                    if (sev === 'critical') return 'text-red-500';
+                                    if (sev === 'high') return 'text-orange-500';
+                                    if (sev === 'medium') return 'text-yellow-500';
+                                    if (sev === 'low') return 'text-blue-500';
+                                    return 'text-white';
+                                })()}`}>
+                                    {(() => {
+                                        const sev = (issue.severity || '').toLowerCase();
+                                        if (sev === 'critical') return 'HIGH PRIORITY';
+                                        if (sev === 'high') return 'MEDIUM HIGH PRIORITY';
+                                        if (sev === 'medium') return 'MEDIUM PRIORITY';
+                                        if (sev === 'low') return 'LOW PRIORITY';
+                                        return issue.severity || 'MEDIUM PRIORITY';
+                                    })()}
+                                </p>
                             </div>
                             <div>
                                 <label className="text-xs font-semibold text-gray-500 uppercase">Location</label>
@@ -161,8 +177,8 @@ export default function AuthorityAction() {
                                 onClick={() => handleUpdate('in_progress')}
                                 disabled={updating || issue.status === 'in_progress'}
                                 className={`p-4 rounded-xl border text-sm font-bold transition-all ${issue.status === 'in_progress'
-                                        ? 'bg-blue-600 border-blue-500 text-white cursor-default'
-                                        : 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700 hover:border-blue-500'
+                                    ? 'bg-blue-600 border-blue-500 text-white cursor-default'
+                                    : 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700 hover:border-blue-500'
                                     }`}
                             >
                                 In Progress
@@ -172,8 +188,8 @@ export default function AuthorityAction() {
                                 onClick={() => handleUpdate('resolved')}
                                 disabled={updating || issue.status === 'resolved'}
                                 className={`p-4 rounded-xl border text-sm font-bold transition-all ${issue.status === 'resolved'
-                                        ? 'bg-green-600 border-green-500 text-white cursor-default'
-                                        : 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700 hover:border-green-500'
+                                    ? 'bg-green-600 border-green-500 text-white cursor-default'
+                                    : 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700 hover:border-green-500'
                                     }`}
                             >
                                 Resolved / Fixed
@@ -183,8 +199,8 @@ export default function AuthorityAction() {
                                 onClick={() => handleUpdate('rejected')}
                                 disabled={updating || issue.status === 'rejected'}
                                 className={`p-4 rounded-xl border text-sm font-bold transition-all ${issue.status === 'rejected'
-                                        ? 'bg-red-600 border-red-500 text-white cursor-default'
-                                        : 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700 hover:border-red-500'
+                                    ? 'bg-red-600 border-red-500 text-white cursor-default'
+                                    : 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700 hover:border-red-500'
                                     }`}
                             >
                                 Reject / Invalid
