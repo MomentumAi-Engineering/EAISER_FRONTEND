@@ -59,6 +59,10 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
   const formatIssueType = (type) => {
     if (!type || String(type).toLowerCase() === 'manual report') return type || 'Unknown';
+    if (type === 'garbage_or_trash') return 'Garbage / Trash';
+    if (type === 'fire_hazard') return 'Fire Hazard';
+    if (type === 'car_accident') return 'Car Accident';
+    if (type === 'fallen_tree') return 'Fallen Tree';
     return String(type)
       .replace(/_/g, ' ')
       .split(' ')
@@ -766,22 +770,58 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const isSpecificAddress = address && address !== '—' && address !== 'Unknown' && address.length >= 3;
   const isCoordinatesOnly = typeof address === 'string' && address.includes('(Coordinates Only)');
 
+  // --- DYNAMIC DISPATCHER PROTOCOLS (AUTO-RESOLUTION) ---
+  const getDispatcherProtocol = () => {
+    const type = String(hasEdited ? editForm.issue_type : issueType).toLowerCase();
+
+    if (type === 'fire_hazard' || type === 'fire') return {
+      title: "Fire Protection Protocol",
+      steps: "Fire department units have been alerted to this location. Nearby residents should stay alert and clear the surrounding area."
+    };
+    if (type === 'car_accident' || type === 'accident') return {
+      title: "Traffic Safety Protocol",
+      steps: "Traffic control units have been notified. Avoid slowing down near the site to prevent secondary incidents. Emergency crews are assessing response priority."
+    };
+    if (type === 'flooding' || type === 'flood') return {
+      title: "Hydraulic Hazard Protocol",
+      steps: "Drainage units are being dispatched to check blockages. Avoid driving through standing water as depth can be deceptive."
+    };
+    if (type === 'garbage_or_trash' || type === 'garbage' || type === 'trash') return {
+      title: "Sanitation Response Protocol",
+      steps: "The issue has been logged for municipal sanitation pickup. Teams will be routed for clearance based on high-priority zones."
+    };
+    if (type === 'fallen_tree' || type === 'tree_fallen') return {
+      title: "Infrastructure Clearance Protocol",
+      steps: "Public works tree crews have been alerted. Please keep a safe distance if power lines are potentially involved."
+    };
+    if (type === 'broken_streetlight') return {
+      title: "Lighting Restoration Protocol",
+      steps: "Maintenance request has been created for the utility team. Most lighting repairs are completed within 48-72 hours."
+    };
+    if (type === 'water_leakage') return {
+      title: "Utility Containment Protocol",
+      steps: "Water department has been notified of the pressure variance. Avoid the immediate area to prevent potential sinkhole hazards."
+    };
+
+    // Default
+    return {
+      title: "Civil Response Protocol Initiated",
+      steps: "Our team has cross-verified the data and correctly routed it to the relevant municipal department for further action."
+    };
+  };
+
+  const protocol = getDispatcherProtocol();
+
   const locCity = city && city !== '—' ? city : 'Unknown';
   const locState = state && state !== '—' ? state : '';
   const incidentTypeTitle = formatIssueType(hasEdited ? editForm.issue_type : issueType);
 
-  const locationHeader = isCoordinatesOnly
-    ? `${incidentTypeTitle} reported at ${address.replace('(Coordinates Only)', '').trim()}`
-    : `${incidentTypeTitle} reported in ${locCity}${locState ? `, ${locState}` : ''} ${displayZip !== '—' ? displayZip : ''}`.trim();
-
-  // Enforce strictly the single formatted string for AI reports. For manual reports, keep user input.
-  const baseDescription = isManualReport
+  // Prefix the AI description with the standardized incident header
+  const aiHeader = `Possible ${incidentTypeTitle} has been reported at ${address.replace('(Coordinates Only)', '').trim()}.`;
+  
+  const descriptionText = isManualReport
     ? (analysisDescription || summaryExplanation || reportText || '')
-    : (summaryExplanation || '');
-
-  const descriptionText = baseDescription.startsWith(incidentTypeTitle)
-    ? baseDescription
-    : `${locationHeader}\n\n${baseDescription}`;
+    : `${aiHeader}\n\n${(summaryExplanation || '')}`;
 
   const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
   const lat = typeof latitude === 'number' ? latitude : Number(latitude);
@@ -1001,7 +1041,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                 <div className="space-y-2">
                   <select
                     name="issue_type"
-                    value={['Manual Report', 'fire', 'car_accident', 'flood', 'broken_streetlight', 'road_damage', 'pothole', 'water_leakage', 'tree_fallen', 'garbage', 'dead_animal', 'abandoned_vehicle'].includes(editForm.issue_type) ? editForm.issue_type : 'other_issue'}
+                    value={['Manual Report', 'fire_hazard', 'car_accident', 'flooding', 'broken_streetlight', 'road_damage', 'pothole', 'water_leakage', 'fallen_tree', 'garbage_or_trash', 'dead_animal', 'abandoned_vehicle'].includes(editForm.issue_type) ? editForm.issue_type : 'other_issue'}
                     onChange={(e) => {
                       if (e.target.value === 'other_issue') {
                         setEditForm(prev => ({ ...prev, issue_type: '' }));
@@ -1012,21 +1052,21 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                     className="w-full bg-black/40 text-white border border-gray-700/50 rounded-xl px-4 py-3 text-sm mt-2 focus:border-yellow-500/50 transition-all outline-none cursor-pointer hover:bg-black/60 shadow-sm"
                   >
                     <option className="bg-gray-900 text-white" value="Manual Report">Manual Report Status</option>
-                    <option className="bg-gray-900 text-white" value="fire">Fire Hazard</option>
+                    <option className="bg-gray-900 text-white" value="fire_hazard">Fire Hazard</option>
                     <option className="bg-gray-900 text-white" value="car_accident">Car Accident</option>
-                    <option className="bg-gray-900 text-white" value="flood">Flooding</option>
+                    <option className="bg-gray-900 text-white" value="flooding">Flooding</option>
                     <option className="bg-gray-900 text-white" value="broken_streetlight">Broken Streetlight</option>
                     <option className="bg-gray-900 text-white" value="road_damage">Road Damage</option>
                     <option className="bg-gray-900 text-white" value="pothole">Pothole</option>
                     <option className="bg-gray-900 text-white" value="water_leakage">Water Leakage</option>
-                    <option className="bg-gray-900 text-white" value="tree_fallen">Fallen Tree</option>
-                    <option className="bg-gray-900 text-white" value="garbage">Garbage / Trash</option>
+                    <option className="bg-gray-900 text-white" value="fallen_tree">Fallen Tree</option>
+                    <option className="bg-gray-900 text-white" value="garbage_or_trash">Garbage / Trash</option>
                     <option className="bg-gray-900 text-white" value="dead_animal">Dead Animal</option>
                     <option className="bg-gray-900 text-white" value="abandoned_vehicle">Abandoned Vehicle</option>
                     <option className="bg-gray-900 text-white" value="other_issue">Specify Manually...</option>
                   </select>
 
-                  {(!['Manual Report', 'fire', 'car_accident', 'flood', 'broken_streetlight', 'road_damage', 'pothole', 'water_leakage', 'tree_fallen', 'garbage', 'dead_animal', 'abandoned_vehicle'].includes(editForm.issue_type)) && (
+                  {(!['Manual Report', 'fire_hazard', 'car_accident', 'flooding', 'broken_streetlight', 'road_damage', 'pothole', 'water_leakage', 'fallen_tree', 'garbage_or_trash', 'dead_animal', 'abandoned_vehicle'].includes(editForm.issue_type)) && (
                     <input
                       type="text"
                       name="issue_type"
@@ -1156,22 +1196,24 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                   </p>
                   <h4 className="text-lg font-bold text-white mb-3">
                     {(() => {
-                      const type = String(issueType || '').toLowerCase();
+                      const type = String(hasEdited ? editForm.issue_type : issueType || '').toLowerCase();
                       if (type.includes('fire')) return 'Emergency Fire Response Active';
                       if (type.includes('accident') || type.includes('car')) return 'Traffic Safety Protocol Initiated';
-                      if (type.includes('tree')) return 'Arboricultural Hazard Alert';
-                      if (type.includes('flood')) return 'Hydrological Event Logged';
+                      if (type.includes('tree')) return 'Infrastructure Clearance Protocol';
+                      if (type.includes('flood')) return 'Hydraulic Hazard Alert';
+                      if (type.includes('garbage') || type.includes('trash')) return 'Sanitation Response Protocol';
                       if (type.includes('road') || type.includes('pothole')) return 'Infrastructure Repair Queued';
                       return 'Official Action Plan Ready';
                     })()}
                   </h4>
                   <p className="text-sm text-blue-100/70 leading-relaxed max-w-2xl italic">
                     {(() => {
-                      const type = String(issueType || '').toLowerCase();
+                      const type = String(hasEdited ? editForm.issue_type : issueType || '').toLowerCase();
                       if (type.includes('fire')) return 'Emergency services have been briefed on this hazard. Please evacuate the immediate area and maintain a minimum distance of 50 meters until field teams arrive.';
                       if (type.includes('accident') || type.includes('car')) return 'Traffic control units have been notified. Avoid slowing down near the site to prevent secondary incidents. Emergency crews are currently assessing response priority.';
                       if (type.includes('tree')) return 'Municipal forestry teams will conduct a stability audit of this site. Caution is advised near leaning structures or branches, especially in wind-sensitive conditions.';
                       if (type.includes('flood')) return 'Hydraulic load reports are being updated for this zone. Use alternate routes and "Turn Around, Don\'t Drown" if water depth exceeds 6 inches on roadways.';
+                      if (type.includes('garbage') || type.includes('trash')) return 'The issue has been logged for municipal sanitation pickup. Teams will be routed for clearance based on high-priority zones.';
                       if (type.includes('road') || type.includes('pothole')) return 'Public works crews will prioritize safety markings and perimeter setup for this defect. Resolution is typically scheduled within 2-5 business days based on traffic volume.';
                       return 'Your report has been successfully encrypted and routed through our official municipal gateway. A field operator will review the evidence provided and update your tracking token as progress is made.';
                     })()}

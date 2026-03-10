@@ -1013,15 +1013,15 @@ export default function SimpleReport() {
                       className="w-full px-6 py-4 bg-gray-900/40 border border-gray-800 rounded-2xl text-sm text-white outline-none focus:border-yellow-500/50 focus:bg-gray-900/60 transition-all appearance-none cursor-pointer"
                     >
                       <option value="other">Select Issue Type...</option>
-                      <option value="fire">Fire Hazard</option>
+                      <option value="fire_hazard">Fire Hazard</option>
                       <option value="car_accident">Car Accident</option>
-                      <option value="flood">Flooding</option>
+                      <option value="flooding">Flooding</option>
                       <option value="broken_streetlight">Broken Streetlight</option>
                       <option value="road_damage">Road Damage</option>
                       <option value="pothole">Pothole</option>
                       <option value="water_leakage">Water Leakage</option>
-                      <option value="tree_fallen">Fallen Tree</option>
-                      <option value="garbage">Garbage / Trash</option>
+                      <option value="fallen_tree">Fallen Tree</option>
+                      <option value="garbage_or_trash">Garbage / Trash</option>
                       <option value="dead_animal">Dead Animal</option>
                       <option value="abandoned_vehicle">Abandoned Vehicle</option>
                       <option value="other_issue">Add Manually...</option>

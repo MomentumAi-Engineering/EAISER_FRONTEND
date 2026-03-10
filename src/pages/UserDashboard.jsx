@@ -181,23 +181,6 @@ export default function UserDashboard() {
       .join(' ');
   };
 
-  const cleanAIReportText = (text) => {
-    if (!text) return '';
-    let cleaned = text
-      .split('\n')[0] // Take only the first paragraph if there are multiple
-      .replace(/AI Analysis:/gi, '')
-      .replace(/\*\*.*?\*\*/g, '') // Remove bold markers
-      .replace(/has been reported at.*$/i, '.') // Remove location suffixes
-      .replace(/Zip:.*$/i, '.')
-      .replace(/priority:.*$/i, '.')
-      .replace(/confidence:.*$/i, '.')
-      .replace(/(\.){2,}/g, '.') // Fix double dots
-      .trim();
-
-    // Ensure it ends with a dot if it's a sentence
-    if (cleaned && !cleaned.endsWith('.')) cleaned += '.';
-    return cleaned;
-  };
 
   const fetchIssues = async (isBackground = false) => {
     // Only show full loader if we have NO data (cached or otherwise)
@@ -616,7 +599,7 @@ export default function UserDashboard() {
                         )}
                       </div>
                       <p className="text-gray-400 text-xs leading-relaxed italic">
-                        "Our AI analyzed the image and identified a potential <span className="text-yellow-400/80">{formatIssueType(selectedIssue.issue_type)}</span> showing <span className="text-white/90">{cleanAIReportText(selectedIssue.description || selectedIssue.report?.summary || 'an identified civic concern')}</span>. This issue is located at <span className="text-white/70">{selectedIssue.address?.split(',')[1]?.trim() || selectedIssue.address?.split(',')[0] || 'Unknown City'}</span> (ZIP {selectedIssue.zip_code || selectedIssue.location?.zip_code || 'N/A'})."
+                        {selectedIssue.description || selectedIssue.report?.summary || selectedIssue.report?.report?.issue_overview?.summary_explanation || 'No detailed analysis provided.'}
                       </p>
                     </div>
 
