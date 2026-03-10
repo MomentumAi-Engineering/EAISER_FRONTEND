@@ -452,7 +452,7 @@ const ProfilePage = () => {
                             className="px-10 py-4 bg-yellow-500 text-black font-black rounded-2xl hover:bg-yellow-400 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2 group"
                           >
                             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5 group-hover:scale-110 transition-transform" />}
-                            SAVE GLOBAL MODIFICATIONS
+                            SAVE CHANGES
                           </button>
                           <button
                             type="button"

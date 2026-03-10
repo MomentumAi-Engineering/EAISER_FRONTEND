@@ -133,24 +133,30 @@ export default function EaiserAIHero() {
 
             {/* Live Stats */}
             <motion.div
-              className="flex gap-8 pt-8"
+              className="flex flex-wrap gap-8 pt-8"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
             >
               <div>
-                <div className="text-3xl font-black text-yellow-400">12+</div>
-                <div className="text-sm text-gray-400">Issues Resolved</div>
+                <div className="text-3xl font-black text-yellow-400">&lt; 30s</div>
+                <div className="text-sm text-gray-400">Report an Issue</div>
               </div>
               <div className="w-px bg-gray-800" />
               <div>
-                <div className="text-3xl font-black text-yellow-400">18h</div>
-                <div className="text-sm text-gray-400">Avg Resolution</div>
+                <div className="text-3xl font-black text-yellow-400">Free</div>
+                <div className="text-sm text-gray-400">for Residents</div>
               </div>
               <div className="w-px bg-gray-800" />
               <div>
-                <div className="text-3xl font-black text-yellow-400">95%</div>
-                <div className="text-sm text-gray-400">Satisfaction</div>
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl font-black text-yellow-400">95%+</div>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 border border-green-500/20 rounded-full">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-[8px] font-black text-green-500 uppercase tracking-[0.2em]">Live</span>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-400">AI Detection Accuracy</div>
               </div>
             </motion.div>
           </motion.div>

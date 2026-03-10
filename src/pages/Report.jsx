@@ -19,7 +19,9 @@ import {
   Globe,
   Activity,
   AlertTriangle,
-  Send
+  Send,
+  RefreshCw,
+  ZapOff
 } from "lucide-react";
 import * as geolib from 'geolib';
 import EXIF from 'exif-js';
@@ -215,6 +217,18 @@ export default function SimpleReport() {
 
   const clearPersistence = () => {
     localStorage.removeItem('eaiser_report_state');
+  };
+
+  const handleReset = () => {
+    setSelectedImage(null);
+    setSelectedFile(null);
+    setFormData({ streetAddress: "", zipCode: "" });
+    setCoords(null);
+    setPhotoCoords(null);
+    setVerification(null);
+    setIsOutsideServicedArea(false);
+    clearPersistence();
+    clearReport();
   };
 
 
@@ -564,11 +578,8 @@ export default function SimpleReport() {
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white p-6">
         <div className="max-w-4xl mx-auto">
           <button
-            onClick={() => {
-              clearReport();
-              clearPersistence();
-            }}
-            className="mb-4 inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-sm font-semibold"
+            onClick={handleReset}
+            className="mb-4 inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-sm font-semibold transition-all hover:scale-105 active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Upload
@@ -581,10 +592,7 @@ export default function SimpleReport() {
             userZip={resolvedZip}
             userLat={resolvedLat}
             userLon={resolvedLon}
-            onClearReport={() => {
-              clearReport();
-              clearPersistence();
-            }}
+            onClearReport={handleReset}
             isManualMode={isManualMode}
             incidentDate={formData.incidentDate}
           />
@@ -828,78 +836,107 @@ export default function SimpleReport() {
                     </div>
 
                     {isCapturing && (
-                      <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center">
-                        <div className="relative w-full h-full max-w-4xl max-h-[90vh] bg-gray-900 overflow-hidden sm:rounded-3xl shadow-2xl border border-white/5">
-                          <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] bg-black overflow-hidden flex flex-col"
+                      >
+                        {/* iPhone Style Video Container */}
+                        <div className="relative flex-1 bg-black flex items-center justify-center">
+                          <video ref={videoRef} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover" />
 
                           {/* Shutter Flash Effect */}
-                          {isShutterFlash && <div className="absolute inset-0 bg-white z-[110] animate-pulse" />}
+                          <AnimatePresence>
+                            {isShutterFlash && (
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 bg-white z-[110]"
+                              />
+                            )}
+                          </AnimatePresence>
 
-                          {/* Target Guide / Level */}
+                          {/* Subtle HUD Overlay */}
+                          <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-black/80 to-transparent pointer-events-none p-6 flex justify-between items-start">
+                            <motion.button
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              onClick={stopCamera}
+                              className="w-10 h-10 bg-black/20 backdrop-blur-md rounded-full flex items-center justify-center text-white pointer-events-auto border border-white/10 hover:bg-white/10 transition-colors"
+                            >
+                              <X className="w-5 h-5" />
+                            </motion.button>
+
+                            <div className="bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                              <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Live Tracking</span>
+                            </div>
+
+                            <div className="w-10 h-10" /> {/* Spacer */}
+                          </div>
+
+                          {/* Minimalist Grid / Center Target */}
                           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                            <div className="w-64 h-64 border border-white/20 rounded-full flex items-center justify-center">
-                              <div className="w-1 h-8 bg-blue-500/50 absolute" />
-                              <div className="h-1 w-8 bg-blue-500/50 absolute" />
-                            </div>
-                            {/* HUD Corners */}
-                            <div className="absolute top-10 left-10 w-10 h-10 border-t-2 border-l-2 border-white/40" />
-                            <div className="absolute top-10 right-10 w-10 h-10 border-t-2 border-r-2 border-white/40" />
-                            <div className="absolute bottom-10 left-10 w-10 h-10 border-b-2 border-l-2 border-white/40" />
-                            <div className="absolute bottom-10 right-10 w-10 h-10 border-b-2 border-r-2 border-white/40" />
-                          </div>
-
-                          {/* Live Telemetry HUD */}
-                          <div className="absolute top-6 left-6 right-6 flex justify-between items-start pointer-events-none">
-                            <div className="bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-white/10 space-y-1">
-                              <p className="text-[10px] font-black text-blue-500 tracking-widest uppercase">Live GPS Telemetry</p>
-                              <div className="flex gap-4">
-                                <div>
-                                  <p className="text-[8px] text-gray-400 font-bold uppercase">Lat</p>
-                                  <p className="text-xs font-mono text-white">{coords?.lat.toFixed(6) || '---'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[8px] text-gray-400 font-bold uppercase">Lon</p>
-                                  <p className="text-xs font-mono text-white">{coords?.lng.toFixed(6) || '---'}</p>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="bg-black/60 backdrop-blur-md p-3 rounded-2xl border border-white/10 flex items-center gap-3">
-                              <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                              <p className="text-[10px] font-black text-white tracking-widest uppercase italic">Recording Buffer Active</p>
+                            <div className="w-full h-[1px] bg-white/10" />
+                            <div className="absolute h-full w-[1px] bg-white/10" />
+                            <div className="w-48 h-48 border border-white/20 rounded-full flex items-center justify-center">
+                              <div className="w-6 h-[1px] bg-white/40 absolute" />
+                              <div className="h-6 w-[1px] bg-white/40 absolute" />
                             </div>
                           </div>
 
-                          {/* Bottom Controls */}
-                          <div className="absolute bottom-10 left-0 right-0 flex flex-col items-center gap-6">
-                            <div className="flex items-center gap-12">
-                              <button
-                                onClick={stopCamera}
-                                className="w-14 h-14 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-all pointer-events-auto"
-                              >
-                                <X className="w-6 h-6" />
-                              </button>
-
-                              <button
-                                onClick={takePhoto}
-                                className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-2xl active:scale-95 transition-all pointer-events-auto group"
-                              >
-                                <div className="w-20 h-20 border-4 border-black/10 rounded-full flex items-center justify-center">
-                                  <div className="w-16 h-16 bg-gray-100 rounded-full border-2 border-white shadow-inner group-hover:bg-white transition-colors" />
-                                </div>
-                              </button>
-
-                              <button
-                                onClick={toggleCamera}
-                                className="w-14 h-14 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center text-white hover:bg-gray-800 transition-all pointer-events-auto"
-                              >
-                                <Navigation className="w-6 h-6 rotate-45" />
-                              </button>
-                            </div>
-                            <p className="text-white/60 text-[10px] uppercase font-black tracking-[4px]">Verified Evidence Channel</p>
+                          {/* Snapshot Telemetry (Bottom of Preview) */}
+                          <div className="absolute bottom-6 left-6 text-white/60 font-mono text-[8px] uppercase tracking-widest hidden sm:block">
+                            GPS: {coords?.lat.toFixed(4) || '---'}, {coords?.lng.toFixed(4) || '---'}
                           </div>
                         </div>
-                      </div>
+
+                        {/* iPhone Style Control Bar */}
+                        <div className="h-40 bg-black flex flex-col items-center justify-center relative">
+                          {/* Mode Selector */}
+                          <div className="absolute top-4 flex items-center gap-8">
+                            <span className="text-yellow-500 text-[10px] font-black tracking-widest uppercase">Photo</span>
+                          </div>
+
+                          <div className="flex items-center justify-between w-full max-w-sm px-8">
+                            {/* Gallery/X Placeholder */}
+                            <div className="w-12 h-12 rounded-full border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden">
+                              {selectedImage ? (
+                                <img src={selectedImage} className="w-full h-full object-cover" alt="last" />
+                              ) : (
+                                <Zap className="w-5 h-5 text-white/20" />
+                              )}
+                            </div>
+
+                            {/* Shutter Button (iPhone Style) */}
+                            <motion.button
+                              whileTap={{ scale: 0.85 }}
+                              onClick={takePhoto}
+                              className="relative w-24 h-24 flex items-center justify-center"
+                            >
+                              {/* Outer white ring */}
+                              <div className="absolute inset-0 border-4 border-white rounded-full" />
+                              {/* Inner solid white circle with gap */}
+                              <div className="w-[78px] h-[78px] bg-white rounded-full border-[6px] border-black shadow-inner" />
+                            </motion.button>
+
+                            {/* Flip Camera */}
+                            <button
+                              onClick={toggleCamera}
+                              className="w-12 h-12 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-all pointer-events-auto active:rotate-180 duration-500"
+                            >
+                              <RefreshCw className="w-5 h-5" />
+                            </button>
+                          </div>
+
+                          {/* Footer Message */}
+                          <div className="absolute bottom-4">
+                            <p className="text-white/30 text-[9px] uppercase font-black tracking-[8px]">EAiSER Evidence</p>
+                          </div>
+                        </div>
+                      </motion.div>
                     )}
 
                     {/* Manual Bypass Prompt */}
@@ -976,15 +1013,17 @@ export default function SimpleReport() {
                       className="w-full px-6 py-4 bg-gray-900/40 border border-gray-800 rounded-2xl text-sm text-white outline-none focus:border-yellow-500/50 focus:bg-gray-900/60 transition-all appearance-none cursor-pointer"
                     >
                       <option value="other">Select Issue Type...</option>
-                      <option value="pothole">Pothole / Road Hole</option>
-                      <option value="road_damage">Asphalt Degradation</option>
-                      <option value="broken_streetlight">Public Illumination Failure</option>
-                      <option value="garbage">Waste Accumulation</option>
-                      <option value="flood">Drainage Overload (Flood)</option>
-                      <option value="water_leakage">Utility Water Leak</option>
-                      <option value="fire">Thermal/Fire Hazard</option>
-                      <option value="dead_animal">Sanitation Response Req.</option>
-                      <option value="vandalism">Public Property Vandalism</option>
+                      <option value="fire">Fire Hazard</option>
+                      <option value="car_accident">Car Accident</option>
+                      <option value="flood">Flooding</option>
+                      <option value="broken_streetlight">Broken Streetlight</option>
+                      <option value="road_damage">Road Damage</option>
+                      <option value="pothole">Pothole</option>
+                      <option value="water_leakage">Water Leakage</option>
+                      <option value="tree_fallen">Fallen Tree</option>
+                      <option value="garbage">Garbage / Trash</option>
+                      <option value="dead_animal">Dead Animal</option>
+                      <option value="abandoned_vehicle">Abandoned Vehicle</option>
                       <option value="other_issue">Add Manually...</option>
                     </select>
                     <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600 transition-colors group-hover/select:text-yellow-500">

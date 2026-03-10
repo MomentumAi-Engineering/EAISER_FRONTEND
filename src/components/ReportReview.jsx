@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import apiClient from '../services/apiClient';
 import { Image as ImageIcon, MapPin, FileText, CheckCircle2, Clock, Check, AlertTriangle, ShieldAlert, Send, Edit2, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti'; // Assuming it's installed, otherwise I will guide to install or use fallback.
 // Actually, to be safe, I'll use a dynamic import or checking.
 // But since I can't interactively check, I'll use a robust method: `npm install canvas-confetti` command? No, I should use what's available.
@@ -139,6 +139,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     severity: 'medium',
     summary: '',
     description: '',
+    address: '',
     returnTo: '/report'
   });
 
@@ -154,7 +155,8 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       issue_type: type,
       severity: pick(issue, ['severity', 'priority'], 'medium'),
       summary: initialSummary,
-      description: initialSummary
+      description: initialSummary,
+      address: pick(issue, ['address', 'template_fields.address'], '')
     });
 
     // Auto-enter edit mode for manual reports
@@ -162,6 +164,17 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       setIsEditing(true);
     }
   }, [issue]);
+
+  const LOW_CONFIDENCE_THRESHOLD = 75;
+  const isLowConfidenceTrigger = confidence !== null && confidence > 0 && confidence < LOW_CONFIDENCE_THRESHOLD && !isManualMode && !hasEdited;
+  const [showLowConfidenceModal, setShowLowConfidenceModal] = useState(isLowConfidenceTrigger);
+
+  // Sync modal with trigger
+  useEffect(() => {
+    if (isLowConfidenceTrigger) {
+      setShowLowConfidenceModal(true);
+    }
+  }, [isLowConfidenceTrigger]);
 
   if (hasEdited) {
     confidence = null; // Auto remove confidence string if user manually edits
@@ -254,7 +267,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     // Admin will review via Mapping Review and route to correct department.
     if (finalAuths.length === 0) {
       finalAuths = [{
-        name: "EAiSER Admin Review Team",
+        name: "Mapping Department",
         email: "eaiser@momntumai.com",
         type: "admin_review"
       }];
@@ -342,11 +355,12 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const isNoIssue = (
     aiEval.issue_detected === false
     || status === 'manual_review_required'
+    || (confidence !== null && confidence > 0 && confidence < 40 && !isManualMode)
     || pick(issue, ['report.report._manual_review_required', 'report._manual_review_required', '_manual_review_required'], false) === true
   );
 
   if (isNoIssue && !submitSuccess) {
-    const noIssueSummary = "AI detection inconclusive. To ensure the city receives accurate info, please Request a Review or Manually Describe the issue to proceed.";
+    const noIssueSummary = "We were unable to detect an issue with sufficient confidence. Please click the button below to submit your report manually. Our team will review it and ensure it is sent to the appropriate authorities.";
 
     // Handler for manual report submission (forces Internal Review Team only)
     const handleManualSubmit = async () => {
@@ -361,7 +375,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
       }
 
       const internalTeam = [{
-        name: "Internal Review Team",
+        name: "Mapping Department",
         email: "eaiser@momntumai.com",
         type: "internal"
       }];
@@ -404,7 +418,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
           <AlertTriangle className="w-10 h-10 text-yellow-500" />
         </div>
 
-        <h2 className="text-2xl font-bold text-white mb-3">No Issue Detected</h2>
+        <h2 className="text-2xl font-bold text-white mb-3">
+          {confidence !== null && confidence < 40 ? "Low Confidence Detection" : "No Issue Detected"}
+        </h2>
         <p className="text-gray-400 text-sm mb-6 max-w-md mx-auto leading-relaxed">
           {String(noIssueSummary)}
         </p>
@@ -712,7 +728,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const aiSeverity = pick(aiOverview, ['severity'], pick(issue, ['severity', 'priority'], ''));
   const category = pick(issue, ['category'], '');
   const zipCodeBase = pick(issue, ['zip_code', 'location.zip_code'], '—');
-  const addressBase = pick(issue, ['address', 'location.address'], '—');
+  const addressBase = pick(issue, ['address', 'location.address', 'report.report.template_fields.address', 'report.template_fields.address'], '—');
   const latitudeBase = pick(issue, ['latitude', 'location.latitude'], '—');
   const longitudeBase = pick(issue, ['longitude', 'location.longitude'], '—');
   const zipCode = userZip || zipCodeBase;
@@ -730,22 +746,24 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
   if (typeof address === 'string' && address.length > 0) {
     const parts = address.split(',').map(s => s.trim());
-    const stateZipPart = parts.find(p => /\b[A-Z]{2}\b\s+\d{5}/.test(p));
+    // Look for ZIP/PIN: 5 digits (US) or 6 digits (India)
+    const stateZipPart = parts.find(p => /\b[A-Z]{0,2}\b\s*\d{5,6}/i.test(p));
     if (stateZipPart) {
-      const match = stateZipPart.match(/([A-Z]{2})\s+(\d{5,})/);
+      const match = stateZipPart.match(/([A-Z\s]+)?\s*(\d{5,6})/i);
       if (match) {
-        state = match[1];
+        state = (match[1] || '').trim();
         if (displayZip === '—' || !displayZip) displayZip = match[2];
       }
       const stateZipIndex = parts.indexOf(stateZipPart);
       if (stateZipIndex > 0) city = parts[stateZipIndex - 1];
-    } else if (parts.length >= 2) {
-      city = parts[parts.length - 3] || parts[0];
-      state = (parts[parts.length - 2] || '').split(' ')[0];
+    } else if (parts.length >= 1) {
+      // Very basic fallback: use what we have
+      city = parts[parts.length - 2] || parts[0] || 'Unknown';
+      state = parts[parts.length - 1] || '';
     }
   }
 
-  const isSpecificAddress = address && address !== '—' && /^\d+/.test(address);
+  const isSpecificAddress = address && address !== '—' && address !== 'Unknown' && address.length >= 3;
   const isCoordinatesOnly = typeof address === 'string' && address.includes('(Coordinates Only)');
 
   const locCity = city && city !== '—' ? city : 'Unknown';
@@ -828,7 +846,57 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
   // Render a clean card with the report details
   return (
-    <div className="mt-8 bg-gradient-to-br from-gray-900/60 to-black/60 backdrop-blur-xl rounded-2xl border border-gray-800 p-6">
+    <div className="mt-8 bg-gradient-to-br from-gray-900/60 to-black/60 backdrop-blur-xl rounded-2xl border border-gray-800 p-6 relative">
+
+      {/* LOW CONFIDENCE MODAL */}
+      <AnimatePresence>
+        {showLowConfidenceModal && !submitSuccess && !isEditing && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="max-w-md w-full bg-gradient-to-br from-gray-950 to-black border border-yellow-500/30 p-8 rounded-[2.5rem] shadow-[0_0_80px_rgba(234,179,8,0.2)] text-center relative overflow-hidden"
+            >
+              {/* Background Glow */}
+              <div className="absolute -top-20 -left-20 w-40 h-40 bg-yellow-500/10 rounded-full blur-[60px]" />
+
+              <div className="relative z-10">
+                <div className="w-20 h-20 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-yellow-500/20 shadow-[0_0_30px_rgba(234,179,8,0.1)]">
+                  <AlertTriangle className="w-10 h-10 text-yellow-500" />
+                </div>
+
+                <h3 className="text-2xl font-black text-white mb-4 tracking-tight">Confidence Level Low</h3>
+
+                <p className="text-gray-400 text-sm leading-relaxed mb-10 font-medium bg-white/5 p-5 rounded-2xl border border-white/5">
+                  We were unable to detect an issue with sufficient confidence. Please click the button below to submit your report manually. Our team will review it and ensure it is sent to the appropriate authorities.
+                </p>
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      setShowLowConfidenceModal(false);
+                      setIsEditing(true);
+                      setHasEdited(true);
+                    }}
+                    className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-black rounded-2xl transition-all shadow-xl shadow-yellow-500/20 active:scale-95 flex items-center justify-center gap-3 group"
+                  >
+                    <Edit2 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                    Submit Report Manually
+                  </button>
+
+                  <button
+                    onClick={() => setShowLowConfidenceModal(false)}
+                    className="w-full py-3 text-gray-500 hover:text-gray-300 text-xs font-black uppercase tracking-[0.2em] transition-colors"
+                  >
+                    Continue with AI Result
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Top header and progress */}
       <div className="mb-6">
@@ -933,7 +1001,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                 <div className="space-y-2">
                   <select
                     name="issue_type"
-                    value={['Manual Report', 'pothole', 'road_damage', 'broken_streetlight', 'garbage', 'flood', 'water_leakage', 'fire', 'dead_animal', 'car_accident', 'abandoned_vehicle'].includes(editForm.issue_type) ? editForm.issue_type : 'other_issue'}
+                    value={['Manual Report', 'fire', 'car_accident', 'flood', 'broken_streetlight', 'road_damage', 'pothole', 'water_leakage', 'tree_fallen', 'garbage', 'dead_animal', 'abandoned_vehicle'].includes(editForm.issue_type) ? editForm.issue_type : 'other_issue'}
                     onChange={(e) => {
                       if (e.target.value === 'other_issue') {
                         setEditForm(prev => ({ ...prev, issue_type: '' }));
@@ -943,21 +1011,22 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                     }}
                     className="w-full bg-black/40 text-white border border-gray-700/50 rounded-xl px-4 py-3 text-sm mt-2 focus:border-yellow-500/50 transition-all outline-none cursor-pointer hover:bg-black/60 shadow-sm"
                   >
-                    <option className="bg-gray-900 text-white" value="Manual Report">Manual Report</option>
-                    <option className="bg-gray-900 text-white" value="pothole">Pothole</option>
-                    <option className="bg-gray-900 text-white" value="road_damage">Road Damage</option>
-                    <option className="bg-gray-900 text-white" value="broken_streetlight">Broken Streetlight</option>
-                    <option className="bg-gray-900 text-white" value="garbage">Garbage / Trash</option>
-                    <option className="bg-gray-900 text-white" value="flood">Flooding</option>
-                    <option className="bg-gray-900 text-white" value="water_leakage">Water Leakage</option>
+                    <option className="bg-gray-900 text-white" value="Manual Report">Manual Report Status</option>
                     <option className="bg-gray-900 text-white" value="fire">Fire Hazard</option>
-                    <option className="bg-gray-900 text-white" value="dead_animal">Dead Animal</option>
                     <option className="bg-gray-900 text-white" value="car_accident">Car Accident</option>
+                    <option className="bg-gray-900 text-white" value="flood">Flooding</option>
+                    <option className="bg-gray-900 text-white" value="broken_streetlight">Broken Streetlight</option>
+                    <option className="bg-gray-900 text-white" value="road_damage">Road Damage</option>
+                    <option className="bg-gray-900 text-white" value="pothole">Pothole</option>
+                    <option className="bg-gray-900 text-white" value="water_leakage">Water Leakage</option>
+                    <option className="bg-gray-900 text-white" value="tree_fallen">Fallen Tree</option>
+                    <option className="bg-gray-900 text-white" value="garbage">Garbage / Trash</option>
+                    <option className="bg-gray-900 text-white" value="dead_animal">Dead Animal</option>
                     <option className="bg-gray-900 text-white" value="abandoned_vehicle">Abandoned Vehicle</option>
                     <option className="bg-gray-900 text-white" value="other_issue">Specify Manually...</option>
                   </select>
 
-                  {(!['Manual Report', 'pothole', 'road_damage', 'broken_streetlight', 'garbage', 'flood', 'water_leakage', 'fire', 'dead_animal', 'car_accident', 'abandoned_vehicle'].includes(editForm.issue_type)) && (
+                  {(!['Manual Report', 'fire', 'car_accident', 'flood', 'broken_streetlight', 'road_damage', 'pothole', 'water_leakage', 'tree_fallen', 'garbage', 'dead_animal', 'abandoned_vehicle'].includes(editForm.issue_type)) && (
                     <input
                       type="text"
                       name="issue_type"
@@ -1000,24 +1069,26 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               )}
             </div>
 
-            {!isManualReport && confidence !== null && !isEditing ? (
-              <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
-                <p className="text-xs text-gray-400">Confidence</p>
-                <p className="text-sm font-semibold">{String(confidence)}%</p>
-              </div>
-            ) : (
-              <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
-                <p className="text-xs text-gray-400">Report Date</p>
-                <p className="text-sm font-semibold">{String(incidentDate || pick(issue, ['timestamp_formatted', 'report.timestamp_formatted'], new Date().toLocaleDateString())).split(' ')[0]}</p>
-              </div>
-            )}
+            <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
+              <p className="text-xs text-gray-400">Reported Date</p>
+              <p className="text-sm font-semibold mt-1">{String(incidentDate || pick(issue, ['timestamp_formatted', 'report.timestamp_formatted'], new Date().toLocaleDateString())).split(' ')[0]}</p>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4 mb-6">
             <div className="bg-white/5 border border-gray-700 rounded-xl p-4">
               <p className="text-xs text-gray-400">Street Address</p>
-              {isSpecificAddress ? (
-                <p className="text-sm font-semibold text-white">{String(address)}</p>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="address"
+                  value={editForm.address}
+                  onChange={handleEditChange}
+                  className="w-full bg-black/40 text-white border border-gray-700/50 rounded-xl px-4 py-3 text-sm mt-2 focus:border-yellow-500/50 transition-all outline-none cursor-pointer"
+                  placeholder="Street Address..."
+                />
+              ) : isSpecificAddress ? (
+                <p className="text-sm font-semibold text-white">{String(hasEdited ? editForm.address : address)}</p>
               ) : (
                 <div className="flex flex-col gap-1">
                   <p className="text-sm font-semibold text-gray-400 italic">No specific home address detected</p>
@@ -1074,30 +1145,38 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                 <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs text-gray-400">No summary provided.</div>
               )
             )}
-            {!isManualReport && confidence !== null && (
-              <div className="mt-3">
-                <p className="text-xs text-gray-400 mb-1">Confidence</p>
-                <div className="h-2 rounded-full overflow-hidden"
-                  style={{
-                    background: (() => {
-                      const val = Math.max(0, Math.min(100, Number(confidence) || 0));
-                      let color = '#ef4444'; // red-500
-                      if (val >= 80) color = '#4ade80'; // green-400
-                      else if (val >= 50) color = '#facc15'; // yellow-400
-                      return `linear-gradient(to right, ${color} 0%, ${color} ${val}%, #374151 ${val}%, #374151 100%)`;
-                    })()
-                  }}
-                />
-                <p className="text-xs mt-1" style={{
-                  color: (() => {
-                    const val = Math.max(0, Math.min(100, Number(confidence) || 0));
-                    if (val >= 80) return '#4ade80';
-                    if (val >= 50) return '#facc15';
-                    return '#ef4444';
-                  })()
-                }}>
-                  {Math.max(0, Math.min(100, Number(confidence) || 0))}%
-                </p>
+            {!isEditing && (
+              <div className="mt-8 bg-blue-500/5 border border-blue-500/20 rounded-2xl p-6 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <ShieldAlert className="w-16 h-16 text-blue-400" />
+                </div>
+                <div className="relative z-10">
+                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+                    <div className="w-1 h-1 bg-blue-400 rounded-full" /> Dispatcher Protocol / Next Steps
+                  </p>
+                  <h4 className="text-lg font-bold text-white mb-3">
+                    {(() => {
+                      const type = String(issueType || '').toLowerCase();
+                      if (type.includes('fire')) return 'Emergency Fire Response Active';
+                      if (type.includes('accident') || type.includes('car')) return 'Traffic Safety Protocol Initiated';
+                      if (type.includes('tree')) return 'Arboricultural Hazard Alert';
+                      if (type.includes('flood')) return 'Hydrological Event Logged';
+                      if (type.includes('road') || type.includes('pothole')) return 'Infrastructure Repair Queued';
+                      return 'Official Action Plan Ready';
+                    })()}
+                  </h4>
+                  <p className="text-sm text-blue-100/70 leading-relaxed max-w-2xl italic">
+                    {(() => {
+                      const type = String(issueType || '').toLowerCase();
+                      if (type.includes('fire')) return 'Emergency services have been briefed on this hazard. Please evacuate the immediate area and maintain a minimum distance of 50 meters until field teams arrive.';
+                      if (type.includes('accident') || type.includes('car')) return 'Traffic control units have been notified. Avoid slowing down near the site to prevent secondary incidents. Emergency crews are currently assessing response priority.';
+                      if (type.includes('tree')) return 'Municipal forestry teams will conduct a stability audit of this site. Caution is advised near leaning structures or branches, especially in wind-sensitive conditions.';
+                      if (type.includes('flood')) return 'Hydraulic load reports are being updated for this zone. Use alternate routes and "Turn Around, Don\'t Drown" if water depth exceeds 6 inches on roadways.';
+                      if (type.includes('road') || type.includes('pothole')) return 'Public works crews will prioritize safety markings and perimeter setup for this defect. Resolution is typically scheduled within 2-5 business days based on traffic volume.';
+                      return 'Your report has been successfully encrypted and routed through our official municipal gateway. A field operator will review the evidence provided and update your tracking token as progress is made.';
+                    })()}
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -1212,6 +1291,8 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
               >
                 {submitting ? (
                   'Submitting...'
+                ) : isGuest ? (
+                  <><LogIn className="w-4 h-4" /> Sign up / Login to Submit</>
                 ) : allAuthoritiesState.length === 0 ? (
                   <><Send className="w-4 h-4" /> Submit for Admin Review</>
                 ) : (
@@ -1224,20 +1305,28 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
           {/* AI generated report disclaimer — premium animated alert */}
           {!isManualReport && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                scale: [1, 1.01, 1]
+              }}
+              transition={{
+                duration: 0.5,
+                delay: 0.3,
+                scale: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+              }}
               className="mt-5 relative overflow-hidden"
             >
-              <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-red-500/[0.06] border border-red-500/20 backdrop-blur-sm"
-                style={{ boxShadow: '0 0 15px rgba(239,68,68,0.05), inset 0 1px 0 rgba(255,255,255,0.03)' }}
+              <div className="flex items-center justify-center gap-2.5 px-6 py-3 rounded-2xl bg-red-500/[0.06] border border-red-500/20 backdrop-blur-md"
+                style={{ boxShadow: '0 0 30px rgba(239,68,68,0.05), inset 0 1px 0 rgba(255,255,255,0.03)' }}
               >
-                {/* Pulsing dot */}
+                {/* Pulsing dot with enhanced shadow */}
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-60"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></span>
                 </span>
-                <p className="text-[11px] text-red-400/90 font-medium tracking-wide">
+                <p className="text-[11px] text-red-400 font-bold tracking-wider uppercase text-center">
                   Information may contain errors. Please verify details before reporting.
                 </p>
               </div>
