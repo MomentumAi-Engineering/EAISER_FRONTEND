@@ -498,8 +498,8 @@ export default function UserDashboard() {
                                     <span className="text-[10px] text-zinc-600 font-bold">{timeAgo(issue.timestamp)}</span>
                                     {issue.chat_active && (
                                       <div className="flex items-center gap-1 ml-auto">
-                                        <MessageSquare className="w-3 h-3 text-blue-400" />
-                                        <span className="text-[9px] text-blue-400 font-black uppercase">Authority Active</span>
+                                        <Mail className="w-3 h-3 text-blue-400" />
+                                        <span className="text-[9px] text-blue-400 font-black uppercase">Email Routing Active</span>
                                       </div>
                                     )}
                                   </div>
@@ -630,18 +630,10 @@ export default function UserDashboard() {
                   {/* Modal Footer - Explicitly pinned to bottom */}
                   <div className="mt-auto pt-6 border-t border-white/5 bg-zinc-900/50 backdrop-blur-xl relative z-20">
                     <div className="flex gap-3 mb-4">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => {
-                          const issueId = selectedIssue._id || selectedIssue.id;
-                          navigate(`/chat-hub?issueId=${issueId}`);
-                        }}
-                        className="flex-1 py-4 bg-gradient-to-r from-yellow-400 via-amber-500 to-amber-600 hover:from-yellow-300 hover:via-amber-400 hover:to-amber-500 text-black rounded-2xl font-black transition-all shadow-[0_8px_32px_rgba(245,158,11,0.2)] flex items-center justify-center gap-3 border-t border-white/30 uppercase tracking-widest text-xs"
-                      >
-                        <MessageSquare className="w-5 h-5" />
-                        Chat with Authority
-                      </motion.button>
+                      <div className="flex-1 py-4 bg-zinc-800 text-yellow-400 rounded-2xl font-black flex items-center justify-center gap-3 border border-yellow-500/20 uppercase tracking-widest text-[10px]">
+                        <Mail className="w-4 h-4" />
+                        Email Routing Active
+                      </div>
                       <motion.button
                         whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.1)" }}
                         whileTap={{ scale: 0.95 }}

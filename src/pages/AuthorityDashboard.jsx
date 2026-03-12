@@ -54,47 +54,6 @@ export default function AuthorityDashboard() {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
 
-    // Chat State
-    const [showChat, setShowChat] = useState(false);
-    const [messages, setMessages] = useState([]);
-    const [newMessage, setNewMessage] = useState('');
-    const [sendingMessage, setSendingMessage] = useState(false);
-    const messagesEndRef = React.useRef(null);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    React.useEffect(() => {
-        if (showChat) {
-            scrollToBottom();
-        }
-    }, [messages, showChat]);
-
-    // Chat Polling Effect
-    useEffect(() => {
-        let interval;
-        if (showChat && selectedIssue) {
-            const issueId = selectedIssue._id || selectedIssue.id;
-            // Initial fetch
-            fetchChatHistory(issueId);
-            // Setup interval
-            interval = setInterval(() => {
-                apiClient.getChatHistory(issueId).then(res => {
-                    if (res.messages) {
-                        setMessages(prev => {
-                            if (prev.length !== res.messages.length) {
-                                return res.messages;
-                            }
-                            return prev;
-                        });
-                    }
-                }).catch(err => console.error("Chat poll error:", err));
-            }, 3000);
-        }
-        return () => clearInterval(interval);
-    }, [showChat, selectedIssue]);
-
     // Stats
     const [stats, setStats] = useState({
         pending: 0,
@@ -159,38 +118,6 @@ export default function AuthorityDashboard() {
             }
         } catch (err) {
             alert("Failed to update status: " + err.message);
-        }
-    };
-
-    const fetchChatHistory = async (issueId) => {
-        try {
-            const res = await apiClient.getChatHistory(issueId || (selectedIssue?._id || selectedIssue?.id));
-            if (res.messages) setMessages(res.messages);
-        } catch (err) {
-            console.error("Failed to fetch chat:", err);
-        }
-    };
-
-    const sendMessage = async () => {
-        if (!newMessage.trim() || !selectedIssue) return;
-        setSendingMessage(true);
-        try {
-            const issueId = selectedIssue._id || selectedIssue.id;
-            await apiClient.sendAuthorityChat(token, issueId, newMessage);
-
-            const msg = {
-                id: Date.now(),
-                sender: 'authority',
-                text: newMessage,
-                timestamp: new Date().toISOString()
-            };
-
-            setMessages(prev => [...prev, msg]);
-            setNewMessage('');
-        } catch (err) {
-            alert("Failed to send message: " + err.message);
-        } finally {
-            setSendingMessage(false);
         }
     };
 
@@ -291,7 +218,6 @@ export default function AuthorityDashboard() {
                             key={issue.id}
                             onClick={() => {
                                 setSelectedIssue(issue);
-                                if (showChat) fetchChatHistory(issue.id);
                             }}
                             whileHover={{ x: 4 }}
                             className={`p-4 rounded-3xl border transition-all cursor-pointer group ${selectedIssue?.id === issue.id ? 'bg-zinc-800 border-blue-500/30 shadow-[0_0_30px_rgba(0,0,0,0.5)]' : 'bg-zinc-900/30 border-white/5 hover:border-white/10'}`}
@@ -379,13 +305,10 @@ export default function AuthorityDashboard() {
                                         </div>
 
                                         <div className="flex gap-2">
-                                            <button
-                                                onClick={() => { setShowChat(true); fetchChatHistory(selectedIssue.id); }}
-                                                className="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl border border-white/5 transition-all text-white relative"
-                                            >
-                                                <MessageSquare className="w-6 h-6" />
-                                                <span className="absolute top-0 right-0 w-3 h-3 bg-blue-500 border-2 border-zinc-800 rounded-full" />
-                                            </button>
+                                            <div className="p-4 bg-zinc-800 border border-blue-500/20 rounded-2xl flex items-center gap-3">
+                                                 <Mail className="w-5 h-5 text-blue-500" />
+                                                 <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">Email Routing Active</span>
+                                            </div>
                                             <button className="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl border border-white/5 transition-all text-white">
                                                 <Maximize2 className="w-6 h-6" />
                                             </button>
@@ -397,21 +320,11 @@ export default function AuthorityDashboard() {
                                             <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-3">Field Report</h4>
                                             <p className="text-zinc-300 text-sm leading-relaxed">{selectedIssue.description || "No manual evidence reported. Visual AI has confirmed the structural damage."}</p>
                                         </div>
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between p-4 bg-zinc-800/30 rounded-2xl border border-white/5">
-                                                <div className="flex items-center gap-3">
-                                                    <Clock className="w-4 h-4 text-zinc-500" />
-                                                    <span className="text-xs text-zinc-300">Reporting Time</span>
-                                                </div>
-                                                <span className="text-xs font-bold">{issue.timestamp_formatted || '2 hours ago'}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between p-4 bg-zinc-800/30 rounded-2xl border border-white/5">
-                                                <div className="flex items-center gap-3">
-                                                    <UserIcon className="w-4 h-4 text-zinc-500" />
-                                                    <span className="text-xs text-zinc-300">Identity Guard</span>
-                                                </div>
-                                                <span className="text-sm font-black text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.3)]">USER_{selectedIssue.id?.slice(-4) || 'ABCD'}</span>
-                                            </div>
+                                        <div className="p-6 bg-blue-600/5 rounded-3xl border border-blue-500/10">
+                                            <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3">Communication Protocol</h4>
+                                            <p className="text-zinc-300 text-sm leading-relaxed">
+                                                To coordinate with the reporter, please <strong>reply directly to the official email</strong> you received for this issue. Communications are automatically routed.
+                                            </p>
                                         </div>
                                     </div>
 
@@ -462,95 +375,6 @@ export default function AuthorityDashboard() {
                 </AnimatePresence>
             </div>
 
-            {/* --- Overlay Chat Sidebar --- */}
-            <AnimatePresence>
-                {showChat && selectedIssue && (
-                    <motion.div
-                        initial={{ x: '100%' }}
-                        animate={{ x: 0 }}
-                        exit={{ x: '100%' }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed right-0 top-0 bottom-0 w-full max-w-sm md:max-w-md bg-zinc-900 border-l border-white/10 z-[100] shadow-[0_0_100px_rgba(0,0,0,0.8)] flex flex-col"
-                    >
-                        <div className="p-6 border-b border-white/10 flex items-center justify-between bg-zinc-800/50">
-                            <div className="flex items-center gap-3">
-                                <MessageSquare className="w-5 h-5 text-blue-500" />
-                                <h3 className="font-black text-sm uppercase tracking-widest">Operations Chat</h3>
-                            </div>
-                            <button
-                                onClick={() => setShowChat(false)}
-                                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="p-4 bg-zinc-800/30 border-b border-white/5">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center font-black text-blue-500">U</div>
-                                <div>
-                                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">User #{selectedIssue.id?.slice(-4)}</h4>
-                                    <p className="text-[10px] text-zinc-500">Citizen Identity Anonymized</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                            {messages.map((msg, i) => (
-                                <div key={i} className={`flex ${msg.sender === 'authority' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] p-4 rounded-2xl text-sm ${msg.sender === 'authority' ? 'bg-blue-600 text-white rounded-tr-none shadow-lg' : 'bg-zinc-800 text-zinc-300 rounded-tl-none border border-white/5'}`}>
-                                        {msg.media_url && (
-                                            <div className="mb-2 rounded-lg overflow-hidden border border-white/10 bg-black/50">
-                                                {msg.media_type === 'video' ? (
-                                                    <video
-                                                        src={msg.media_url.startsWith('http') ? msg.media_url : apiClient.url(msg.media_url)}
-                                                        controls
-                                                        className="max-w-full"
-                                                        style={{ maxHeight: '200px' }}
-                                                    />
-                                                ) : (
-                                                    <img
-                                                        src={msg.media_url.startsWith('http') ? msg.media_url : apiClient.url(msg.media_url)}
-                                                        alt="Attachment"
-                                                        className="max-w-full h-auto cursor-zoom-in hover:opacity-90 transition-opacity"
-                                                        style={{ maxHeight: '200px' }}
-                                                        onClick={() => window.open(msg.media_url.startsWith('http') ? msg.media_url : apiClient.url(msg.media_url), '_blank')}
-                                                    />
-                                                )}
-                                            </div>
-                                        )}
-                                        {msg.text}
-                                        <div className="mt-1 text-[9px] opacity-40 uppercase font-mono">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                    </div>
-                                </div>
-                            ))}
-                            <div className="py-2 text-center text-[10px] text-zinc-600 uppercase font-bold tracking-[0.2em]">End of Transmission</div>
-                            <div ref={messagesEndRef} />
-                        </div>
-
-                        <div className="p-6 bg-zinc-900 border-t border-white/10">
-                            <div className="relative flex items-center">
-                                <input
-                                    type="text"
-                                    value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                                    placeholder="Send Instructions..."
-                                    className="w-full bg-zinc-800 border-2 border-white/5 rounded-2xl py-4 pl-6 pr-16 text-sm focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-zinc-600"
-                                />
-                                <button
-                                    onClick={sendMessage}
-                                    disabled={sendingMessage || !newMessage.trim()}
-                                    className="absolute right-3 p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all disabled:opacity-30"
-                                >
-                                    <Send className="w-5 h-5" />
-                                </button>
-                            </div>
-                            <p className="text-[9px] text-center text-zinc-600 mt-4 uppercase tracking-widest">Satellite Link Protocol 4.2 Enabled</p>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }

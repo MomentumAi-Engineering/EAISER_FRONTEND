@@ -130,9 +130,6 @@ export default function Navbar() {
               <li className="hover:text-white transition-all duration-300 hover:scale-110">
                 <Link to="/dashboard">Dashboard</Link>
               </li>
-              <li className="hover:text-white transition-all duration-300 hover:scale-110">
-                <Link to="/chat-hub">Chat Hub</Link>
-              </li>
             </>
           )}
           <li>
@@ -256,7 +253,6 @@ export default function Navbar() {
             {isLoggedIn && (
               <>
                 <Link to="/dashboard" onClick={() => setOpen(false)} className="block hover:text-white transition">Dashboard</Link>
-                <Link to="/chat-hub" onClick={() => setOpen(false)} className="block hover:text-white transition">Chat Hub</Link>
               </>
             )}
 
