@@ -19,7 +19,8 @@ import {
     RefreshCw,
     LayoutDashboard,
     Navigation,
-    ExternalLink
+    ExternalLink,
+    Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';

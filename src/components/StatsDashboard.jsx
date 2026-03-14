@@ -300,7 +300,7 @@ export default function StatsDashboard() {
                                 <div className="w-2 h-2 bg-blue-500 rounded-full" />
                                 <div className="flex-1">
                                     <p className="text-gray-300">{activity.description}</p>
-                                    <p className="text-gray-500 text-xs">{new Date(activity.timestamp).toLocaleString()}</p>
+                                    <p className="text-gray-500 text-xs">{new Date(activity.timestamp).toLocaleString('en-US')}</p>
                                 </div>
                             </div>
                         ))}

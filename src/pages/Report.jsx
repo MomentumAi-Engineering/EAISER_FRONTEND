@@ -31,6 +31,7 @@ import ReportReview from "../components/ReportReview";
 import AILoader from "../components/AILoader";
 import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 import Navbar from "../components/Navbar";
+import imageCompression from 'browser-image-compression'; // Added for performance
 import { useReportContext } from "../context/ReportContext";
 import { useDialog } from "../context/DialogContext";
 
@@ -522,9 +523,27 @@ export default function SimpleReport() {
       console.error("Failed to retrieve user email", e);
     }
 
+    // ---------------------------------------------------------------
+    // IMAGE COMPRESSION (For Speed Optimization)
+    // ---------------------------------------------------------------
+    let fileToUpload = selectedFile;
+    if (selectedFile && !isManualMode) {
+      try {
+        const options = {
+          maxSizeMB: 1, // Max 1MB for speed
+          maxWidthOrHeight: 1280,
+          useWebWorker: true,
+        };
+        fileToUpload = await imageCompression(selectedFile, options);
+        console.log(`Original: ${selectedFile.size / 1024}kb, Compressed: ${fileToUpload.size / 1024}kb`);
+      } catch (e) {
+        console.warn("Compression failed, using original file", e);
+      }
+    }
+
     // Use Context Action
     await generateReport({
-      imageFile: isManualMode ? null : selectedFile,
+      imageFile: isManualMode ? null : fileToUpload,
       description: isManualMode
         ? (formData.description || '')
         : "User reported issue via web interface",
@@ -620,7 +639,7 @@ export default function SimpleReport() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white">
       <Navbar />
-      <div className="max-w-3xl mx-auto space-y-8 p-4 md:p-6 pt-20 md:pt-24">
+      <div className="max-w-3xl mx-auto space-y-8 p-4 md:p-6 pt-16 md:pt-20">
         <h1 className="text-3xl font-black text-white flex items-center gap-3">
           Report an Issue
         </h1>
@@ -766,6 +785,19 @@ export default function SimpleReport() {
 
                 {selectedImage ? (
                   <div className="relative rounded-2xl overflow-hidden border border-gray-700 aspect-video bg-black/50 shadow-inner group/preview">
+                    {/* Fixed Close Button for Visibility */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImage(null);
+                        setSelectedFile(null);
+                      }}
+                      className="absolute top-4 right-4 z-[30] p-2 bg-black/60 hover:bg-red-500 text-white rounded-xl backdrop-blur-md border border-white/10 transition-all shadow-lg active:scale-90"
+                      title="Remove image"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+
                     <img
                       src={selectedImage}
                       alt="Selected issue"
@@ -1247,7 +1279,7 @@ export default function SimpleReport() {
                         name="zipCode"
                         value={formData.zipCode}
                         onChange={handleChange}
-                        placeholder="1100XX"
+                        placeholder="37XXX"
                         className="w-full px-5 py-4 bg-gray-900/50 border border-gray-800 rounded-2xl text-sm focus:border-blue-500 transition-colors text-white outline-none"
                       />
                     </div>

@@ -1,4 +1,4 @@
-﻿export default function AuthLanding() {
+export default function AuthLanding() {
   const handleEmailSignup = () => { window.location.href = '/auth'; };
   const handleGoogleSignup = () => { console.log('Continue with Google clicked'); };
   const handleGithubSignup = () => { console.log('Continue with GitHub clicked'); };

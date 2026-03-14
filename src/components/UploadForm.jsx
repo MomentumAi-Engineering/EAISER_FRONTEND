@@ -798,6 +798,19 @@ function UploadForm({ setStatus, fetchIssues }) {
                               alt="Preview"
                               className="image-preview max-h-[300px] object-contain bg-black/50"
                             />
+                            {/* Fast Close Button */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setImage(null);
+                                setPreview(null);
+                              }}
+                              className="absolute top-2 right-2 z-[30] p-1.5 bg-black/60 hover:bg-red-500 text-white rounded-lg backdrop-blur-md border border-white/10 transition-all shadow-lg active:scale-90"
+                              title="Remove image"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
                             {/* Scanning Line Animation overlay on preview */}
                             <motion.div
                               className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-blue-500/10 to-transparent pointer-events-none"

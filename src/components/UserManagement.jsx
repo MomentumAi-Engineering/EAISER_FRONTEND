@@ -165,7 +165,7 @@ export default function UserManagement() {
                                             <div className="font-bold text-white">{user.name}</div>
                                             <div className="text-blue-400 text-sm font-mono">{user.email}</div>
                                             <div className="text-xs text-gray-600 mt-1">
-                                                Joined: {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                                                Joined: {user.created_at ? new Date(user.created_at).toLocaleDateString('en-US') : 'N/A'}
                                             </div>
                                         </td>
 

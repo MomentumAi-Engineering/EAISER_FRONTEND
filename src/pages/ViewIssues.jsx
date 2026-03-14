@@ -92,7 +92,7 @@ const IssueCard = ({ issue, index, expanded, toggleExpand }) => {
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <FiCalendar className="text-indigo-500" />
-          <span>{new Date(issue.date).toLocaleDateString()}</span>
+          <span>{new Date(issue.date).toLocaleDateString('en-US')}</span>
         </div>
       </div>
       
@@ -544,7 +544,7 @@ function ViewIssues() {
                               </span>
                             </td>
                             <td className="p-4">{issue.location}</td>
-                            <td className="p-4">{new Date(issue.date).toLocaleDateString()}</td>
+                            <td className="p-4">{new Date(issue.date).toLocaleDateString('en-US')}</td>
                             <td className="p-4">
                               <div className="flex gap-2">
                                 <button className="w-8 h-8 rounded-md bg-gray-50 border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition">

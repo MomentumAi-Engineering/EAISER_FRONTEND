@@ -48,7 +48,7 @@ function Dashboard() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
           <div className="text-xs md:text-sm text-slate-400">
-            {lastUpdated ? `Last updated ${lastUpdated.toLocaleString()}` : 'Loading...'}
+            {lastUpdated ? `Last updated ${lastUpdated.toLocaleString('en-US')}` : 'Loading...'}
           </div>
         </div>
 
@@ -79,7 +79,7 @@ function Dashboard() {
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm md:text-base font-semibold">{issue.title}</h3>
-                    <span className="text-xs text-slate-400">{new Date(issue.date).toLocaleDateString()}</span>
+                    <span className="text-xs text-slate-400">{new Date(issue.date).toLocaleDateString('en-US')}</span>
                   </div>
                   <div className="mt-1 text-xs text-slate-400">{issue.location}</div>
                 </div>

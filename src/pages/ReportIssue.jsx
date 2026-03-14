@@ -380,7 +380,7 @@ const IssueCard = ({ issue, index, expanded, toggleExpand }) => {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Date</p>
-                  <p className="text-sm font-medium text-neutral-700">{issue.date ? new Date(issue.date).toLocaleDateString() : 'No date provided'}</p>
+                  <p className="text-sm font-medium text-neutral-700">{issue.date ? new Date(issue.date).toLocaleDateString('en-US') : 'No date provided'}</p>
                 </div>
               </motion.div>
 
@@ -410,7 +410,7 @@ const IssueCard = ({ issue, index, expanded, toggleExpand }) => {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">Timestamp</p>
-                  <p className="text-sm font-medium text-neutral-700">{issue.timestamp ? new Date(issue.timestamp).toLocaleString() : 'No timestamp'}</p>
+                  <p className="text-sm font-medium text-neutral-700">{issue.timestamp ? new Date(issue.timestamp).toLocaleString('en-US') : 'No timestamp'}</p>
                 </div>
               </motion.div>
             </div>

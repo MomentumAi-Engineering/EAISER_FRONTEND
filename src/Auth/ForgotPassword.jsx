@@ -45,7 +45,7 @@ export default function ForgotPassword() {
             {/* Logo in top left corner */}
             <Link to="/" className="absolute top-6 left-6 z-50 group transition-transform hover:scale-105 duration-300">
                 <div className="flex items-center gap-2 transition-all">
-                    <img src="/lat.png" alt="Logo" className="w-10 h-10 object-contain rounded-xl bg-yellow-400 p-0.5 group-hover:scale-110 transition-transform" />
+                    <img src="/newlogo.png" alt="Logo" className="w-10 h-10 object-contain rounded-xl bg-yellow-400 p-0.5 group-hover:scale-110 transition-transform" />
                     <span className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow-md">
                         EAiSER
                     </span>
@@ -56,7 +56,7 @@ export default function ForgotPassword() {
                 <div className="relative bg-gradient-to-br from-gray-900/90 to-black/90 backdrop-blur-xl rounded-3xl border border-yellow-500/20 p-8 shadow-2xl">
                     <div className="text-center mb-8">
                         <div className="inline-flex items-center justify-center w-20 h-20 mb-3 shadow-lg shadow-yellow-500/10 rounded-2xl overflow-hidden p-2 bg-yellow-400 border border-yellow-500/20">
-                            <img src="/lat.png" alt="Logo" className="w-full h-full object-contain" />
+                            <img src="/newlogo.png" alt="Logo" className="w-full h-full object-contain" />
                         </div>
                         <h1 className="text-3xl font-black mb-2">Reset <span className="text-yellow-400">Password</span></h1>
                         <p className="text-gray-400 text-sm px-4">Enter your email and we'll send you a secure link to reset your password.</p>

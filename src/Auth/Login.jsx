@@ -212,7 +212,7 @@ export default function EaiserLogin() {
         className="absolute top-6 left-6 z-50 group transition-transform hover:scale-105 duration-300"
       >
         <div className="flex items-center gap-2 group cursor-pointer">
-          <img src="/lat.png" alt="Logo" className="w-10 h-10 object-contain rounded-xl bg-yellow-400 p-0.5 group-hover:scale-110 transition-transform" />
+          <img src="/newlogo.png" alt="Logo" className="w-10 h-10 object-contain rounded-xl bg-yellow-400 p-0.5 group-hover:scale-110 transition-transform" />
           <span className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow-md">
             EAiSER
           </span>
@@ -253,7 +253,7 @@ export default function EaiserLogin() {
           {/* Header */}
           <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center w-20 h-20 mb-3 shadow-lg shadow-yellow-500/10 rounded-2xl overflow-hidden p-0 border border-yellow-500/20">
-              <img src="/lat.png" alt="Logo" className="w-full h-full object-contain" />
+              <img src="/newlogo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
 
             <h1 className="text-3xl font-black mb-1">

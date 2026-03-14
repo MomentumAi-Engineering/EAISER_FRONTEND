@@ -34,6 +34,8 @@ const AuditLog = lazy(() => import('./components/AuditLog'));
 // User Components
 const UserDash = lazy(() => import('./pages/UserDashboard'));
 const ProfilePage = lazy(() => import('./pages/Profile'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 
 /**
  * Detect if running on the admin subdomain.
@@ -117,6 +119,8 @@ function PublicApp() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
 
           {/* Fallback Admin routes for local dev */}
           <Route path="/admin" element={<AdminLogin />} />

@@ -149,7 +149,7 @@ const ReviewCard = memo(({
                 {/* Metadata */}
                 <div className="text-xs text-gray-500 mb-4 space-y-1">
                     <p>📍 {review.location?.address || review.address || 'Unknown Location'}</p>
-                    <p>🕒 {new Date(review.timestamp).toLocaleString()}</p>
+                    <p>🕒 {new Date(review.timestamp).toLocaleString('en-US')}</p>
                     <p>
                         👤 <span className="text-white font-medium">{review.user_reputation?.name || 'User'}</span>
                         {' '}

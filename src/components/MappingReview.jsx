@@ -256,7 +256,7 @@ const MappingReview = () => {
                                                     </span>
                                                 )}
                                                 <span className="text-xs text-gray-600">
-                                                    {new Date(entry.flagged_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {new Date(entry.flagged_at).toLocaleDateString('en-US')}
                                                 </span>
                                             </div>
                                             <span className="text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-2 py-1 rounded whitespace-nowrap">
@@ -415,7 +415,7 @@ const MappingReview = () => {
                                     <tbody className="divide-y divide-gray-800">
                                         {historyData.map((log) => (
                                             <tr key={log._id || log.id} className="hover:bg-gray-800/50">
-                                                <td className="px-6 py-4 whitespace-nowrap text-gray-400">{new Date(log.timestamp).toLocaleString()}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-gray-400">{new Date(log.timestamp).toLocaleString('en-US')}</td>
                                                 <td className="px-6 py-4 text-blue-400">{log.admin_email}</td>
                                                 <td className="px-6 py-4">
                                                     <span className={`px-2 py-1 rounded text-xs border ${log.action === 'resolve_review' ? 'bg-green-500/10 text-green-400 border-green-500/20' : log.action === 'update_mapping' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-gray-700 text-gray-300 border-gray-600'}`}>

@@ -271,7 +271,7 @@ export default function WarRoom() {
                                                 📍 {issue.address || 'Unknown Location'}
                                             </p>
                                             <p className="text-xs text-gray-600 mb-2">
-                                                {new Date(issue.timestamp || issue.flagged_at).toLocaleString()}
+                                                {new Date(issue.timestamp || issue.flagged_at).toLocaleString('en-US')}
                                             </p>
                                             <div className="flex items-center gap-2 mb-2">
                                                 <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded">
@@ -396,7 +396,7 @@ export default function WarRoom() {
                                             <div className="flex flex-col items-end flex-shrink-0">
                                                 <span className="text-[9px] text-gray-600 flex items-center gap-0.5">
                                                     <Clock className="w-2.5 h-2.5" />
-                                                    {issue.timestamp ? new Date(issue.timestamp).toLocaleDateString() : '—'}
+                                                    {issue.timestamp ? new Date(issue.timestamp).toLocaleDateString('en-US') : '—'}
                                                 </span>
                                                 <Eye className="w-3 h-3 text-gray-600 group-hover:text-blue-400 mt-1 transition-colors" />
                                             </div>
@@ -416,7 +416,7 @@ export default function WarRoom() {
                     {/* Footer */}
                     <div className="p-3 border-t border-gray-800 text-center">
                         <p className="text-[10px] text-gray-600">
-                            Last updated: {lastUpdated ? lastUpdated.toLocaleTimeString() : '—'}
+                            Last updated: {lastUpdated ? lastUpdated.toLocaleTimeString('en-US') : '—'}
                         </p>
                     </div>
                 </div>

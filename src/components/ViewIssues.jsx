@@ -490,7 +490,7 @@ const ViewIssues = () => {
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2" className="issue-date">
-                                  {new Date(issue.timestamp).toLocaleDateString()}
+                                  {new Date(issue.timestamp).toLocaleDateString('en-US')}
                                 </Typography>
                               </TableCell>
                               <TableCell>
@@ -623,7 +623,7 @@ const ViewIssues = () => {
                       Reported Date
                     </Typography>
                     <Typography variant="body1" className="info-value">
-                      {new Date(selectedIssue.timestamp).toLocaleString()}
+                      {new Date(selectedIssue.timestamp).toLocaleString('en-US')}
                     </Typography>
                   </div>
                 </Grid>

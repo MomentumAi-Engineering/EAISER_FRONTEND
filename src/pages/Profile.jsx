@@ -659,7 +659,7 @@ const ProfilePage = () => {
                               }`}>
                               {issue.status?.replace('_', ' ')}
                             </div>
-                            <span className="text-[10px] text-zinc-600 font-mono">{new Date(issue.timestamp).toLocaleDateString()}</span>
+                            <span className="text-[10px] text-zinc-600 font-mono">{new Date(issue.timestamp).toLocaleDateString('en-US')}</span>
                           </div>
                         </motion.div>
                       ))

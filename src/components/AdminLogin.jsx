@@ -114,7 +114,7 @@ export default function AdminLogin() {
               className="inline-block"
             >
               <div className="bg-yellow-400 p-3 rounded-2xl shadow-2xl shadow-yellow-500/5 mb-6 border border-yellow-300/20">
-                <img src="/lat.png" alt="EAiSER Logo" className="w-14 h-14 object-contain" />
+                <img src="/newlogo.png" alt="EAiSER Logo" className="w-14 h-14 object-contain" />
               </div>
             </motion.div>
 

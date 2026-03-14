@@ -92,7 +92,7 @@ export default function AuditLog() {
                                     filteredLogs.map((log) => (
                                         <tr key={log._id} className="hover:bg-gray-800/30 transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm font-mono">
-                                                {new Date(log.timestamp).toLocaleString()}
+                                                {new Date(log.timestamp).toLocaleString('en-US')}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-2">

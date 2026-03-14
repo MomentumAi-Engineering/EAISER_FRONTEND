@@ -454,7 +454,7 @@ export default function AdminSettings() {
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">Last Restart</span>
-                                                <span className="text-gray-300 font-mono">{new Date().toLocaleDateString()}</span>
+                                                <span className="text-gray-300 font-mono">{new Date().toLocaleDateString('en-US')}</span>
                                             </div>
                                         </div>
                                     </div>

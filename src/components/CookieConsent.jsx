@@ -73,7 +73,7 @@ const CookieConsent = () => {
                                     <h3 className="font-bold text-lg tracking-tight">Privacy Guard</h3>
                                 </div>
                                 <p className="text-gray-200 text-sm leading-relaxed">
-                                    We use cookies to ensure the platform functions properly and to improve the experience. By accepting, you help us make EAiSER better for everyone.
+                                    We use cookies and similar technologies to keep EAiSER working securely, personalize your experience, and help us improve the platform. You can choose which optional cookies to allow in Preferences.
                                 </p>
                             </div>
 

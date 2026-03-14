@@ -432,7 +432,7 @@ function StatusDisplay({ issues }) {
                           <span>Reported</span>
                         </div>
                         <span className="issue-date">
-                          {new Date(issue.timestamp).toLocaleString()}
+                          {new Date(issue.timestamp).toLocaleString('en-US')}
                         </span>
                       </div>
                     </div>

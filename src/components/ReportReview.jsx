@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/apiClient';
-import { Image as ImageIcon, MapPin, FileText, CheckCircle2, Clock, Check, AlertTriangle, ShieldAlert, Send, Edit2, LogIn } from 'lucide-react';
+import { Image as ImageIcon, MapPin, FileText, CheckCircle2, Clock, Check, AlertTriangle, ShieldAlert, Send, Edit2, LogIn, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti'; // Assuming it's installed, otherwise I will guide to install or use fallback.
@@ -153,7 +153,12 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     const conf = pick(issue, ['report.report.unified_report.confidence_percent', 'report.issue_overview.confidence'], 100);
 
     // Set initial form values
-    const initialSummary = pick(issue, ['report.report.issue_overview.summary_explanation', 'summary'], '');
+    const initialSummary = pick(issue, [
+      'report.report.issue_overview.detailed_description',
+      'report.report.issue_overview.summary_explanation', 
+      'detailed_description',
+      'summary'
+    ], '');
 
     setEditForm({
       issue_type: type,
@@ -267,9 +272,9 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
     let finalAuths = selectedAuths;
 
     // For any issue with no mapped authorities (including 'other' / unknown types),
+    // OR if AI explicitly said no issue detected,
     // automatically route to Admin Review Team.
-    // Admin will review via Mapping Review and route to correct department.
-    if (finalAuths.length === 0) {
+    if (finalAuths.length === 0 || isNoIssue) {
       finalAuths = [{
         name: "Mapping Department",
         email: "eaiser@momntumai.com",
@@ -401,12 +406,17 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
         try { sessionStorage.removeItem('eaiser_pending_report'); } catch { }
 
+            // Trigger Premium Confetti
+      if (typeof confetti === 'function') {
         confetti({
-          particleCount: 100,
-          spread: 60,
+          particleCount: 150,
+          spread: 80,
           origin: { y: 0.6 },
-          colors: ['#facc15', '#eab308', '#ffffff']
+          colors: ['#22c55e', '#ffffff', '#10b981'],
+          scalar: 1.2,
+          ticks: 200
         });
+      }
 
       } catch (err) {
         console.error("Manual submit failed", err);
@@ -645,7 +655,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
             className="text-3xl md:text-4xl font-black text-white mb-6"
           >
             {isReview ? (
-              <span>Report Submitted for <span className="text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">Review</span></span>
+              <span>Your report has been submitted for <span className="text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">Team Reviewal</span></span>
             ) : (
               <span>Report <span className="text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">Submitted</span> successfully</span>
             )}
@@ -659,7 +669,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
           >
             {isReview ? (
               <p className="text-yellow-200/90 text-lg tracking-wide border-t border-b border-white/5 py-4 leading-relaxed font-medium">
-                Your report has been received and is being verified by our team before dispatching to the authorities.
+                Your report has been submitted for team reviewal. Our specialists will verify the details before dispatching it to the appropriate authorities.
               </p>
             ) : (
               <div className="border-t border-b border-white/5 py-4">
@@ -703,6 +713,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   const aiReport = pick(issue, ['report.report', 'report', 'data.report'], {});
   const aiOverview = pick(aiReport, ['issue_overview', 'unified_report.issue_overview'], {});
   const summaryExplanation = pick(aiOverview, ['summary_explanation', 'summary'], null);
+  const detailedDescription = pick(aiOverview, ['detailed_description'], null);
   const detectedProblems = pick(aiOverview, ['detected_problems', 'issues', 'labels'], []);
 
   let issueType = pick(issue, [
@@ -821,7 +832,7 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
   
   const descriptionText = isManualReport
     ? (analysisDescription || summaryExplanation || reportText || '')
-    : `${aiHeader}\n\n${(summaryExplanation || '')}`;
+    : (detailedDescription || summaryExplanation || '');
 
   const recommendedActions = pick(issue, ['recommended_actions', 'report.recommended_actions', 'report.report.recommended_actions'], []);
   const lat = typeof latitude === 'number' ? latitude : Number(latitude);
@@ -1111,7 +1122,19 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
 
             <div className="bg-white/5 border border-gray-700 rounded-xl p-3">
               <p className="text-xs text-gray-400">Reported Date</p>
-              <p className="text-sm font-semibold mt-1">{String(incidentDate || pick(issue, ['timestamp_formatted', 'report.timestamp_formatted'], new Date().toLocaleDateString())).split(' ')[0]}</p>
+              <p className="text-sm font-semibold mt-1">
+                {(() => {
+                  const rawDate = incidentDate || pick(issue, ['timestamp_formatted', 'report.timestamp_formatted'], new Date().toLocaleDateString('en-US'));
+                  if (!rawDate) return '—';
+                  try {
+                    const d = new Date(rawDate);
+                    if (isNaN(d.getTime())) return rawDate.split(' ')[0];
+                    return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+                  } catch {
+                    return rawDate.split(' ')[0];
+                  }
+                })()}
+              </p>
             </div>
           </div>
 
@@ -1185,42 +1208,6 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                 <div className="bg-white/5 border border-gray-700 rounded-xl p-4 text-xs text-gray-400">No summary provided.</div>
               )
             )}
-            {!isEditing && (
-              <div className="mt-8 bg-blue-500/5 border border-blue-500/20 rounded-2xl p-6 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <ShieldAlert className="w-16 h-16 text-blue-400" />
-                </div>
-                <div className="relative z-10">
-                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
-                    <div className="w-1 h-1 bg-blue-400 rounded-full" /> Dispatcher Protocol / Next Steps
-                  </p>
-                  <h4 className="text-lg font-bold text-white mb-3">
-                    {(() => {
-                      const type = String(hasEdited ? editForm.issue_type : issueType || '').toLowerCase();
-                      if (type.includes('fire')) return 'Emergency Fire Response Active';
-                      if (type.includes('accident') || type.includes('car')) return 'Traffic Safety Protocol Initiated';
-                      if (type.includes('tree')) return 'Infrastructure Clearance Protocol';
-                      if (type.includes('flood')) return 'Hydraulic Hazard Alert';
-                      if (type.includes('garbage') || type.includes('trash')) return 'Sanitation Response Protocol';
-                      if (type.includes('road') || type.includes('pothole')) return 'Infrastructure Repair Queued';
-                      return 'Official Action Plan Ready';
-                    })()}
-                  </h4>
-                  <p className="text-sm text-blue-100/70 leading-relaxed max-w-2xl italic">
-                    {(() => {
-                      const type = String(hasEdited ? editForm.issue_type : issueType || '').toLowerCase();
-                      if (type.includes('fire')) return 'Emergency services have been briefed on this hazard. Please evacuate the immediate area and maintain a minimum distance of 50 meters until field teams arrive.';
-                      if (type.includes('accident') || type.includes('car')) return 'Traffic control units have been notified. Avoid slowing down near the site to prevent secondary incidents. Emergency crews are currently assessing response priority.';
-                      if (type.includes('tree')) return 'Municipal forestry teams will conduct a stability audit of this site. Caution is advised near leaning structures or branches, especially in wind-sensitive conditions.';
-                      if (type.includes('flood')) return 'Hydraulic load reports are being updated for this zone. Use alternate routes and "Turn Around, Don\'t Drown" if water depth exceeds 6 inches on roadways.';
-                      if (type.includes('garbage') || type.includes('trash')) return 'The issue has been logged for municipal sanitation pickup. Teams will be routed for clearance based on high-priority zones.';
-                      if (type.includes('road') || type.includes('pothole')) return 'Public works crews will prioritize safety markings and perimeter setup for this defect. Resolution is typically scheduled within 2-5 business days based on traffic volume.';
-                      return 'Your report has been successfully encrypted and routed through our official municipal gateway. A field operator will review the evidence provided and update your tracking token as progress is made.';
-                    })()}
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
 
 
@@ -1229,14 +1216,36 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
           {/* Image Preview if available */}
           {imagePreview && (
             <div className="mb-6">
-              <p className="text-sm font-bold mb-2">Submitted Image</p>
-              <div className="relative">
+              <p className="text-sm font-bold mb-2 flex items-center justify-between">
+                <span>Submitted Image</span>
+                <button 
+                  onClick={() => {
+                    // This is a prop, but we can't easily clear it. 
+                    // We'll hide it for the current session.
+                    const imgEl = document.getElementById('report-image-container');
+                    if (imgEl) imgEl.style.display = 'none';
+                  }}
+                  className="text-[10px] text-red-400 hover:text-red-300 font-bold uppercase tracking-wider flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" /> Remove Picture
+                </button>
+              </p>
+              <div id="report-image-container" className="relative group">
                 <img src={imagePreview} alt="Submitted" className="w-full h-64 object-cover rounded-xl border border-gray-700" />
                 {imageName && (
                   <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-3 py-2 rounded-b-xl">
                     {imageName}
                   </div>
                 )}
+                <button 
+                  onClick={() => {
+                    const imgEl = document.getElementById('report-image-container');
+                    if (imgEl) imgEl.style.display = 'none';
+                  }}
+                  className="absolute top-2 right-2 p-2 bg-black/60 hover:bg-red-500 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-all backdrop-blur-md border border-white/10"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             </div>
           )}
@@ -1358,18 +1367,26 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
                 delay: 0.3,
                 scale: { duration: 4, repeat: Infinity, ease: "easeInOut" }
               }}
-              className="mt-5 relative overflow-hidden"
+              className="mt-4"
             >
-              <div className="flex items-center justify-center gap-2.5 px-6 py-3 rounded-2xl bg-red-500/[0.06] border border-red-500/20 backdrop-blur-md"
-                style={{ boxShadow: '0 0 30px rgba(239,68,68,0.05), inset 0 1px 0 rgba(255,255,255,0.03)' }}
-              >
-                {/* Pulsing dot with enhanced shadow */}
-                <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-60"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></span>
-                </span>
-                <p className="text-[11px] text-red-400 font-bold tracking-wider uppercase text-center">
-                  Information may contain errors. Please verify details before reporting.
+              <div className="flex items-center justify-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.05] relative overflow-hidden group">
+                {/* Subtle Shimmer Effect */}
+                <motion.div 
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-red-500/[0.05] to-transparent -translate-x-full"
+                  animate={{ x: ['100%', '-100%'] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+                />
+                
+                {/* Micro-animating Icon */}
+                <motion.div
+                  animate={{ rotate: [0, -10, 10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", repeatDelay: 2 }}
+                >
+                  <AlertTriangle className="w-3 h-3 text-red-500/60" />
+                </motion.div>
+
+                <p className="text-[10px] text-red-400/70 font-bold tracking-wide text-center relative z-10">
+                  Please verify details before reporting.
                 </p>
               </div>
             </motion.div>
@@ -1432,7 +1449,14 @@ export default function ReportReview({ issue, imagePreview, analysisDescription,
         </div>
       )}
 
-      {/* Raw debug removed */}
+      {/* Bottom Branding */}
+      <div className="mt-12 pt-8 border-t border-white/5 flex flex-col items-center gap-4 text-center">
+        <div className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity duration-500">
+          <img src="/newlogo.png" alt="EAiSER Logo" className="w-6 h-6 object-contain" />
+          <span className="text-xs font-black tracking-widest uppercase text-gray-400">Branded by EAiSER</span>
+        </div>
+      </div>
+
     </div>
   );
 }

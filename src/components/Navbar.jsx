@@ -110,11 +110,17 @@ export default function Navbar() {
 
   return (
     <nav className="w-full bg-gradient-to-r from-black via-zinc-900 to-black text-yellow-400 shadow-xl fixed top-0 left-0 z-50 border-b border-yellow-400/30 backdrop-blur-md md:backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-6 py-2 md:py-3 flex items-center justify-between">
 
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group transition-transform hover:scale-105 duration-300">
-          <img src="/lat.png" alt="Logo" className="w-10 h-10 object-contain rounded-xl bg-yellow-400 p-0.5 group-hover:scale-110 transition-transform" />
+          <img 
+            src="/newlogo.png" 
+            alt="Logo" 
+            className="w-10 h-10 object-contain rounded-xl bg-yellow-400 p-0.5 group-hover:scale-110 transition-transform" 
+            fetchPriority="high"
+            loading="eager"
+          />
           <span className="text-3xl font-extrabold tracking-wider text-yellow-400 drop-shadow-md">
             EAiSER
           </span>
