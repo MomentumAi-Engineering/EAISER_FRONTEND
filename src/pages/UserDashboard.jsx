@@ -265,9 +265,9 @@ export default function UserDashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black relative font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-black relative font-sans overflow-x-hidden w-full">
       <Navbar />
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pt-20 sm:pt-24 pb-8 sm:pb-12 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-20 sm:pt-24 pb-8 sm:pb-12 relative z-10 w-full min-w-0">
         {/* Unverified User Banner */}
         <AnimatePresence>
           {!emailVerified && (
@@ -334,7 +334,7 @@ export default function UserDashboard() {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-zinc-900 border border-yellow-500/20 rounded-xl shadow-2xl z-50 overflow-hidden"
+                      className="absolute right-[-85px] sm:right-0 top-full mt-2 w-[280px] sm:w-80 bg-zinc-900 border border-yellow-500/20 rounded-xl shadow-2xl z-[100] overflow-hidden"
                     >
                       <div className="p-3 border-b border-white/5 flex justify-between items-center">
                         <div className="flex items-center gap-2">
@@ -387,15 +387,15 @@ export default function UserDashboard() {
             <button onClick={() => fetchIssues(false)} className="mt-4 px-6 py-2 bg-zinc-900 rounded-xl text-white">Retry Connection</button>
           </div>
         ) : (
-          <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
-            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 min-w-0 w-full">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6 min-w-0 w-full">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <StatCard icon={Activity} label="Total Reports" value={stats.totalReported} color="bg-blue-500/10" delay={0.1} />
                 <StatCard icon={Clock} label="Under Review" value={stats.pending} color="bg-orange-500/10" delay={0.2} />
                 <StatCard icon={CheckCircle} label="Routed" value={stats.resolved} color="bg-green-500/10" delay={0.3} />
               </div>
 
-              <div className="bg-zinc-900/40 p-3 sm:p-5 rounded-2xl border border-white/5 backdrop-blur-md">
+              <div className="bg-zinc-900/40 p-3 sm:p-5 rounded-2xl border border-white/5 backdrop-blur-md min-w-0 w-full overflow-hidden">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                   <h2 className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" /> Recent Issues
@@ -421,7 +421,7 @@ export default function UserDashboard() {
                   </div>
                 </div>
 
-                <div className="space-y-3 max-h-[400px] sm:max-h-[500px] overflow-y-auto pr-0 sm:pr-2 custom-scrollbar">
+                <div className="space-y-3 max-h-[400px] sm:max-h-[500px] overflow-y-auto pr-0 sm:pr-2 custom-scrollbar min-w-0 w-full">
                   {issues.length === 0 ? (
                     <div className="text-gray-600 text-center py-12 text-sm italic">Satellite link ready. Waiting for first report...</div>
                   ) : (
