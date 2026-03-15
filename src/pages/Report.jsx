@@ -637,9 +637,9 @@ export default function SimpleReport() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white w-full overflow-x-hidden">
       <Navbar />
-      <div className="max-w-3xl mx-auto space-y-8 p-4 md:p-6 pt-16 md:pt-20">
+      <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8 p-4 sm:p-6 pt-20 sm:pt-24 min-w-0 w-full">
         <h1 className="text-3xl font-black text-white flex items-center gap-3">
           Report an Issue
         </h1>
@@ -760,7 +760,7 @@ export default function SimpleReport() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-gradient-to-br from-gray-900/80 to-black border border-gray-800 rounded-3xl p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden group transition-all duration-500"
+              className="bg-gradient-to-br from-gray-900/80 to-black border border-gray-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden group transition-all duration-500 min-w-0 w-full"
             >
               {/* Animated accent gradient */}
               <div className="absolute -top-32 -right-32 w-64 h-64 bg-yellow-500/10 rounded-full blur-[100px] group-hover:bg-yellow-500/20 transition-all duration-700" />
@@ -832,7 +832,7 @@ export default function SimpleReport() {
                     {/* Dropzone Area */}
                     <div
                       onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-gray-800 rounded-3xl p-12 text-center transition-all duration-500 hover:border-yellow-500/40 hover:bg-yellow-500/[0.02] cursor-pointer group/dropzone flex flex-col items-center justify-center"
+                      className="border-2 border-dashed border-gray-800 rounded-2xl sm:rounded-3xl p-6 sm:p-12 text-center transition-all duration-500 hover:border-yellow-500/40 hover:bg-yellow-500/[0.02] cursor-pointer group/dropzone flex flex-col items-center justify-center min-w-0 w-full"
                     >
                       <div className="w-24 h-24 bg-gray-900/80 rounded-full flex items-center justify-center mb-6 border border-gray-800 relative group-hover/dropzone:scale-110 transition-transform duration-500">
                         <div className="absolute inset-0 bg-yellow-500/10 rounded-full blur-xl opacity-0 group-hover/dropzone:opacity-100 transition-opacity" />
@@ -972,18 +972,18 @@ export default function SimpleReport() {
                     )}
 
                     {/* Manual Bypass Prompt */}
-                    <div className="flex flex-col items-center gap-3">
-                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-[4px] mb-1">Backup Routing</p>
+                    <div className="flex flex-col items-center gap-3 w-full sm:w-auto px-4 sm:px-0 mt-4 sm:mt-0">
+                      <p className="text-[10px] font-bold text-gray-600 uppercase tracking-[2px] sm:tracking-[4px] mb-1 text-center">Backup Routing</p>
                       <button
                         onClick={() => {
                           setIsManualMode(true);
                           setPhotoCoords(null);
                         }}
-                        className="group/manual relative px-8 py-3 bg-gray-900/50 hover:bg-gray-800 border border-gray-800 rounded-2xl text-xs font-black text-gray-400 hover:text-yellow-500 transition-all overflow-hidden"
+                        className="group/manual relative px-4 sm:px-8 py-3 bg-gray-900/50 hover:bg-gray-800 border border-gray-800 rounded-2xl text-[10px] sm:text-xs font-black text-gray-400 hover:text-yellow-500 transition-all overflow-hidden w-full sm:w-auto"
                       >
                         <div className="absolute inset-0 bg-yellow-500/5 translate-y-full group-hover/manual:translate-y-0 transition-transform duration-300" />
-                        <span className="relative flex items-center gap-2 italic uppercase">
-                          Skip photo & report manually <ArrowLeft className="w-3 h-3 rotate-180" />
+                        <span className="relative flex items-center justify-center gap-1.5 sm:gap-2 italic uppercase flex-wrap text-center">
+                          Skip photo & report manually <ArrowLeft className="w-3 h-3 rotate-180 shrink-0" />
                         </span>
                       </button>
                     </div>
@@ -1164,8 +1164,8 @@ export default function SimpleReport() {
         </AnimatePresence>
 
         {/* Location Details Section - Advanced Priority UI */}
-        <div className={`bg-gradient-to-br from-gray-900/80 to-black border ${locationMissing ? 'border-red-500/60' : 'border-gray-800'} rounded-3xl p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden group/loc transition-all`}>
-          <div className="flex items-center justify-between mb-8">
+        <div className={`bg-gradient-to-br from-gray-900/80 to-black border ${locationMissing ? 'border-red-500/60' : 'border-gray-800'} rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden group/loc transition-all min-w-0 w-full`}>
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
             <div>
               <h2 className="text-xl font-black text-white flex items-center gap-3">
                 <div className="p-2 bg-blue-500/10 rounded-xl">
@@ -1188,7 +1188,7 @@ export default function SimpleReport() {
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleLocationPermission}
-              className={`w-full group/locbtn relative overflow-hidden flex items-center justify-center gap-4 px-6 py-5 rounded-2xl font-black text-sm transition-all duration-500 shadow-2xl ${locationPermission
+              className={`w-full group/locbtn relative overflow-hidden flex items-center justify-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 sm:py-5 rounded-2xl font-black transition-all duration-500 shadow-2xl min-w-0 ${locationPermission
                 ? "bg-gradient-to-r from-emerald-500 to-green-400 text-black shadow-green-500/40"
                 : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/40"
                 }`}
@@ -1200,18 +1200,18 @@ export default function SimpleReport() {
               <div className={`absolute inset-0 opacity-0 group-hover/locbtn:opacity-100 transition-opacity duration-500 ${locationPermission ? "bg-[radial-gradient(circle,rgba(255,255,255,0.4)_0%,transparent_70%)]" : "bg-[radial-gradient(circle,rgba(255,255,255,0.2)_0%,transparent_70%)]"
                 }`} />
 
-              <div className="relative flex items-center gap-3 uppercase tracking-tighter">
-                <div className="relative">
+              <div className="relative flex items-center gap-2 sm:gap-3 uppercase tracking-tighter min-w-0">
+                <div className="relative shrink-0">
                   {locationPermission ? (
-                    <ShieldCheck className="w-6 h-6 animate-in zoom-in duration-300" />
+                    <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 animate-in zoom-in duration-300" />
                   ) : (
                     <>
-                      <LocateFixed className="w-6 h-6 relative z-10" />
+                      <LocateFixed className="w-5 h-5 sm:w-6 sm:h-6 relative z-10" />
                       <div className="absolute inset-0 bg-white/40 rounded-full animate-ping scale-150 opacity-0 group-hover/locbtn:opacity-100" />
                     </>
                   )}
                 </div>
-                <span className="text-base">{locationPermission ? "Location Synced Successfully" : "Use My Current Location"}</span>
+                <span className="text-xs sm:text-base leading-tight text-center">{locationPermission ? "Location Synced Successfully" : "Use My Current Location"}</span>
               </div>
             </motion.button>
 
@@ -1220,7 +1220,7 @@ export default function SimpleReport() {
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               onClick={() => setShowManualAddress(!showManualAddress)}
-              className={`w-full group/manual relative overflow-hidden flex items-center justify-center gap-3 px-6 py-5 rounded-2xl font-black text-sm uppercase tracking-tighter transition-all duration-500 shadow-xl border ${showManualAddress
+              className={`w-full group/manual relative overflow-hidden flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-4 sm:py-5 rounded-2xl font-black uppercase tracking-tighter transition-all duration-500 shadow-xl border min-w-0 ${showManualAddress
                 ? "bg-zinc-800 border-white/30 text-white shadow-white/5"
                 : "bg-zinc-900/90 border-white/10 text-gray-400 hover:text-white hover:border-white/30"
                 }`}
@@ -1230,13 +1230,13 @@ export default function SimpleReport() {
                 <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-400/50 to-transparent animate-scan" />
               </div>
 
-              <div className="relative flex items-center gap-3">
+              <div className="relative flex items-center gap-2 sm:gap-3 shrink-0">
                 {showManualAddress ? (
-                  <X className="w-5 h-5 text-red-400 group-hover:rotate-90 transition-transform duration-300" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 group-hover:rotate-90 transition-transform duration-300" />
                 ) : (
-                  <MapPin className="w-5 h-5 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 group-hover:text-blue-400 transition-colors" />
                 )}
-                <span className="tracking-widest text-xs">
+                <span className="tracking-widest text-[10px] sm:text-xs text-center">
                   {showManualAddress ? "Hide Manual Entry" : "Or Enter Address Manually"}
                 </span>
               </div>
