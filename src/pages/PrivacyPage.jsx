@@ -38,14 +38,14 @@ export default function PrivacyPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-black text-white selection:bg-yellow-500/30">
+        <div className="min-h-screen bg-black text-white selection:bg-yellow-500/30 overflow-x-hidden w-full">
             {/* Ambient Background - Optimized */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-yellow-500/[0.03] blur-[80px] rounded-full -translate-y-1/2 translate-x-1/2 will-change-[filter]" />
                 <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/[0.03] blur-[80px] rounded-full translate-y-1/2 -translate-x-1/2 will-change-[filter]" />
             </div>
 
-            <main className="relative pt-12 pb-24 px-6 md:px-12">
+            <main className="relative pt-12 pb-24 px-4 sm:px-6 md:px-12 min-w-0 w-full">
                 <div className="max-w-7xl mx-auto">
                     {/* Header */}
                     <motion.div
@@ -111,7 +111,7 @@ export default function PrivacyPage() {
                         </aside>
 
                         {/* Content Area */}
-                        <div className="bg-zinc-900/30 border border-white/5 rounded-[3rem] p-8 md:p-16 backdrop-blur-3xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
+                        <div className="bg-zinc-900/30 border border-white/5 rounded-3xl sm:rounded-[3rem] p-6 sm:p-8 md:p-16 backdrop-blur-3xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] min-w-0 w-full overflow-hidden">
                             <PrivacyPolicy isModal={false} />
                         </div>
                     </div>

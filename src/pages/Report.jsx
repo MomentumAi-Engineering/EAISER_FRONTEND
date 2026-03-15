@@ -640,7 +640,7 @@ export default function SimpleReport() {
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-900 text-white w-full overflow-x-hidden">
       <Navbar />
       <div className="max-w-3xl mx-auto space-y-6 sm:space-y-8 p-4 sm:p-6 pt-20 sm:pt-24 min-w-0 w-full">
-        <h1 className="text-3xl font-black text-white flex items-center gap-3">
+        <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
           Report an Issue
         </h1>
 
@@ -650,32 +650,6 @@ export default function SimpleReport() {
             {error}
           </div>
         )} */}
-
-        {/* Manual Mode Toggle */}
-        <div className="flex justify-end mb-2">
-          {!isManualMode && (
-            <button
-              onClick={() => {
-                setIsManualMode(true);
-              }}
-              className="text-yellow-500 hover:text-yellow-400 text-sm font-semibold underline"
-            >
-              Skip & Report Manually
-            </button>
-          )}
-          {isManualMode && (
-            <button
-              onClick={() => {
-                setIsManualMode(false);
-                // Reset manual form data if returning
-                setFormData(prev => ({ ...prev, issueType: 'other', incidentDate: '', description: '' }));
-              }}
-              className="text-blue-500 hover:text-blue-400 text-sm font-semibold underline"
-            >
-              Back to Photo Upload
-            </button>
-          )}
-        </div>
 
         {/* --- PREMIUM OUTSIDE SERVICED AREA POPUP --- */}
         <AnimatePresence>
@@ -768,9 +742,9 @@ export default function SimpleReport() {
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-8">
                   <div>
-                    <h2 className="text-xl font-black text-white flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
                       <div className="p-2 bg-yellow-500/10 rounded-xl">
-                        <Upload className="w-5 h-5 text-yellow-500" />
+                        <Upload className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
                       </div>
                       Visual Proof
                     </h2>
@@ -834,20 +808,20 @@ export default function SimpleReport() {
                       onClick={() => fileInputRef.current?.click()}
                       className="border-2 border-dashed border-gray-800 rounded-2xl sm:rounded-3xl p-6 sm:p-12 text-center transition-all duration-500 hover:border-yellow-500/40 hover:bg-yellow-500/[0.02] cursor-pointer group/dropzone flex flex-col items-center justify-center min-w-0 w-full"
                     >
-                      <div className="w-24 h-24 bg-gray-900/80 rounded-full flex items-center justify-center mb-6 border border-gray-800 relative group-hover/dropzone:scale-110 transition-transform duration-500">
+                      <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-900/80 rounded-full flex items-center justify-center mb-4 sm:mb-6 border border-gray-800 relative group-hover/dropzone:scale-110 transition-transform duration-500">
                         <div className="absolute inset-0 bg-yellow-500/10 rounded-full blur-xl opacity-0 group-hover/dropzone:opacity-100 transition-opacity" />
-                        <Upload className="w-8 h-8 text-gray-600 group-hover/dropzone:text-yellow-500 transition-colors" />
+                        <Upload className="w-6 h-6 sm:w-8 sm:h-8 text-gray-600 group-hover/dropzone:text-yellow-500 transition-colors" />
                       </div>
 
-                      <h3 className="text-white font-bold text-lg mb-2">Evidence Upload</h3>
-                      <p className="text-gray-500 text-sm max-w-[200px] mx-auto leading-relaxed mb-10">
+                      <h3 className="text-white font-bold text-base sm:text-lg mb-1 sm:mb-2">Evidence Upload</h3>
+                      <p className="text-gray-500 text-xs sm:text-sm max-w-[200px] mx-auto leading-relaxed mb-6 sm:mb-10">
                         Drag files here or use the high-speed captures below
                       </p>
 
-                      <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
+                      <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full justify-center">
                         <button
                           onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                          className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-gray-100 text-black rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-white/5"
+                          className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-white hover:bg-gray-100 text-black rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 sm:gap-3 transition-all active:scale-95 shadow-xl shadow-white/5"
                         >
                           <Upload className="w-4 h-4" />
                           Choose File
@@ -857,7 +831,7 @@ export default function SimpleReport() {
 
                         <button
                           onClick={(e) => { e.stopPropagation(); startCamera(); }}
-                          className="w-full sm:w-auto px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-black rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-yellow-500/20"
+                          className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 sm:gap-3 transition-all active:scale-95 shadow-xl shadow-yellow-500/20"
                         >
                           <Camera className="w-4 h-4" />
                           Take Photo
@@ -1042,7 +1016,7 @@ export default function SimpleReport() {
                       name="issueType"
                       value={formData.issueType || 'other'}
                       onChange={handleChange}
-                      className="w-full px-6 py-4 bg-gray-900/40 border border-gray-800 rounded-2xl text-sm text-white outline-none focus:border-yellow-500/50 focus:bg-gray-900/60 transition-all appearance-none cursor-pointer"
+                      className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-gray-900/40 border border-gray-800 rounded-xl sm:rounded-2xl text-xs sm:text-sm text-white outline-none focus:border-yellow-500/50 focus:bg-gray-900/60 transition-all appearance-none cursor-pointer"
                     >
                       <option value="other">Select Issue Type...</option>
                       <option value="fire_hazard">Fire Hazard</option>
@@ -1074,7 +1048,7 @@ export default function SimpleReport() {
                         value={formData.customIssueType || ''}
                         onChange={handleChange}
                         placeholder="e.g. Broken bench, Tree fallen..."
-                        className="w-full px-6 py-4 bg-gray-900/40 border border-gray-800 rounded-2xl text-sm text-white outline-none focus:border-yellow-500 focus:bg-gray-900/60 transition-all"
+                        className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-gray-900/40 border border-gray-800 rounded-xl sm:rounded-2xl text-xs sm:text-sm text-white outline-none focus:border-yellow-500 focus:bg-gray-900/60 transition-all"
                       />
                     </div>
                   )}
@@ -1094,7 +1068,7 @@ export default function SimpleReport() {
                       name="incidentDate"
                       value={formData.incidentDate || ''}
                       onChange={handleChange}
-                      className="w-full pl-14 pr-6 py-4 bg-gray-900/40 border border-gray-800 rounded-2xl text-sm text-white outline-none focus:border-blue-500/50 focus:bg-gray-900/60 transition-all"
+                      className="w-full pl-12 sm:pl-14 pr-4 sm:pr-6 py-3 sm:py-4 bg-gray-900/40 border border-gray-800 rounded-xl sm:rounded-2xl text-xs sm:text-sm text-white outline-none focus:border-blue-500/50 focus:bg-gray-900/60 transition-all"
                       style={{ colorScheme: 'dark' }}
                     />
                   </div>
@@ -1111,7 +1085,7 @@ export default function SimpleReport() {
                     onChange={handleChange}
                     rows={4}
                     placeholder="Provide a detailed log of the observation for AI-assisted classification..."
-                    className="w-full px-6 py-5 bg-gray-900/40 border border-gray-800 rounded-3xl text-sm text-white outline-none focus:border-white/20 focus:bg-gray-900/60 transition-all resize-none shadow-inner"
+                    className="w-full px-4 sm:px-6 py-4 sm:py-5 bg-gray-900/40 border border-gray-800 rounded-2xl sm:rounded-3xl text-xs sm:text-sm text-white outline-none focus:border-white/20 focus:bg-gray-900/60 transition-all resize-none shadow-inner"
                   />
                   <div className="flex flex-col gap-4 mt-2">
                     <div className="flex flex-wrap items-center gap-3">
@@ -1167,9 +1141,9 @@ export default function SimpleReport() {
         <div className={`bg-gradient-to-br from-gray-900/80 to-black border ${locationMissing ? 'border-red-500/60' : 'border-gray-800'} rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden group/loc transition-all min-w-0 w-full`}>
           <div className="flex items-center justify-between mb-6 sm:mb-8">
             <div>
-              <h2 className="text-xl font-black text-white flex items-center gap-3">
+              <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2 sm:gap-3">
                 <div className="p-2 bg-blue-500/10 rounded-xl">
-                  <MapPin className="w-5 h-5 text-blue-500" />
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
                 </div>
                 Incident Location
               </h2>
