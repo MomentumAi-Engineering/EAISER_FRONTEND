@@ -1,0 +1,87 @@
+﻿diff --git a/src/pages/UserDashboard.jsx b/src/pages/UserDashboard.jsx
+index 1f1100a..c281c5a 100644
+--- a/src/pages/UserDashboard.jsx
++++ b/src/pages/UserDashboard.jsx
+@@ -10,23 +10,23 @@ import toast from 'react-hot-toast';
+ import confetti from 'canvas-confetti';
+ 
+ // Memoized StatCard moved outside to prevent re-creation
+-const StatCard = memo(({ icon: Icon, label, value, color, delay }) => (
++const StatCard = memo(({ icon: Icon, label, value, color, delay, className = "" }) => (
+   <motion.div
+     initial={{ opacity: 0, y: 10 }}
+     animate={{ opacity: 1, y: 0 }}
+     transition={{ duration: 0.4, delay: delay }}
+-    className="relative overflow-hidden rounded-lg sm:rounded-xl bg-gradient-to-br from-zinc-900 to-zinc-800 border border-yellow-500/10 p-2.5 sm:p-4 cursor-pointer group will-change-transform"
++    className={`relative overflow-hidden rounded-lg sm:rounded-xl bg-gradient-to-br from-zinc-900 to-zinc-800 border border-yellow-500/10 p-2 sm:p-4 cursor-pointer group will-change-transform ${className}`}
+   >
+     <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-500/5 rounded-full blur-2xl group-hover:bg-yellow-500/10 transition-colors pointer-events-none"></div>
+ 
+-    <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-3">
+-      <div className={`p-1.5 sm:p-2 rounded-md sm:rounded-lg ${color}`}>
++    <div className="relative z-10 flex flex-row items-center justify-start gap-1.5 sm:gap-3">
++      <div className={`p-1.5 sm:p-2 rounded-lg ${color} shrink-0`}>
+         <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+       </div>
+ 
+-      <div className="text-center sm:text-left">
+-        <p className="text-gray-400 text-[8px] sm:text-[10px] md:text-xs font-medium uppercase tracking-wider leading-tight">{label}</p>
+-        <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">{value}</p>
++      <div className="text-left min-w-0 flex-1">
++        <p className="text-gray-400 text-[8px] sm:text-[10px] md:text-xs font-medium uppercase tracking-wider leading-tight truncate">{label}</p>
++        <p className="text-base sm:text-xl md:text-2xl font-bold text-white">{value}</p>
+       </div>
+     </div>
+   </motion.div>
+@@ -265,7 +265,7 @@ export default function UserDashboard() {
+   }, []);
+ 
+   return (
+-    <div className="min-h-screen bg-black relative font-sans">
++    <div className="min-h-screen bg-black relative font-sans overflow-x-hidden">
+       <Navbar />
+       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pt-20 sm:pt-24 pb-8 sm:pb-12 relative z-10">
+         {/* Unverified User Banner */}
+@@ -389,10 +389,10 @@ export default function UserDashboard() {
+         ) : (
+           <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+             <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+-              <div className="grid grid-cols-3 gap-2 sm:gap-4">
++              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
+                 <StatCard icon={Activity} label="Total Reports" value={stats.totalReported} color="bg-blue-500/10" delay={0.1} />
+                 <StatCard icon={Clock} label="Under Review" value={stats.pending} color="bg-orange-500/10" delay={0.2} />
+-                <StatCard icon={CheckCircle} label="Routed" value={stats.resolved} color="bg-green-500/10" delay={0.3} />
++                <StatCard icon={CheckCircle} label="Routed" value={stats.resolved} color="bg-green-500/10" delay={0.3} className="col-span-2 sm:col-span-1" />
+               </div>
+ 
+               <div className="bg-zinc-900/40 p-3 sm:p-5 rounded-2xl border border-white/5 backdrop-blur-md">
+@@ -421,7 +421,7 @@ export default function UserDashboard() {
+                   </div>
+                 </div>
+ 
+-                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
++                <div className="space-y-3 max-h-[400px] sm:max-h-[500px] overflow-y-auto pr-0 sm:pr-2 custom-scrollbar">
+                   {issues.length === 0 ? (
+                     <div className="text-gray-600 text-center py-12 text-sm italic">Satellite link ready. Waiting for first report...</div>
+                   ) : (
+@@ -450,9 +450,9 @@ export default function UserDashboard() {
+                           initial={{ opacity: 0, y: 10 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           transition={{ delay: idx < 10 ? idx * 0.05 : 0 }}
+-                          className="bg-zinc-800/30 border border-white/5 rounded-xl p-3 sm:p-4 hover:border-yellow-500/40 transition-all cursor-pointer group will-change-transform"
++                          className="bg-zinc-800/30 border border-white/5 rounded-xl p-3 sm:p-4 hover:border-yellow-500/40 transition-all cursor-pointer group will-change-transform overflow-hidden"
+                         >
+-                          <div className="flex items-start gap-3 sm:gap-4">
++                          <div className="flex items-start gap-3 sm:gap-4 w-full min-w-0">
+                             {/* Thumbnail preview */}
+                             <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-zinc-900 overflow-hidden border border-white/5 flex-shrink-0 group-hover:border-yellow-500/30 transition-all">
+                               <img
+@@ -463,7 +463,7 @@ export default function UserDashboard() {
+                             </div>
+ 
+                             <div className="flex-1 min-w-0">
+-                              <div className="flex items-start justify-between">
++                              <div className="flex items-start justify-between w-full min-w-0 gap-2">
+                                 <div className="min-w-0 flex-1">
+                                   <h3 className="text-white font-bold text-xs sm:text-sm tracking-wide group-hover:text-yellow-400 transition-colors uppercase truncate">
+                                     {formatIssueType(issue.issue_type)}

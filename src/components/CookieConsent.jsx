@@ -54,49 +54,49 @@ const CookieConsent = () => {
     return (
         <AnimatePresence>
             {isVisible && (
-                <div className="fixed inset-x-0 bottom-0 z-[100] p-6 pointer-events-none flex justify-center">
+                <div className="fixed inset-x-0 bottom-0 z-[100] p-3 sm:p-6 pointer-events-none flex justify-center">
                     {!showPreferences ? (
                         /* Banner View */
                         <motion.div 
                             initial={{ y: 100, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 100, opacity: 0 }}
-                            className="pointer-events-auto max-w-4xl w-full bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-2xl p-6 flex flex-col md:flex-row items-center gap-6"
+                            className="pointer-events-auto max-w-4xl w-full bg-white/10 backdrop-blur-2xl border border-white/20 rounded-xl sm:rounded-2xl shadow-2xl p-4 sm:p-6 flex flex-col gap-4 sm:gap-6"
                             style={{ 
                                 background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
                                 boxShadow: '0 20px 50px rgba(0,0,0,0.3)'
                             }}
                         >
-                            <div className="flex-grow space-y-2">
-                                <div className="flex items-center gap-3 text-yellow-400">
-                                    <Shield className="w-5 h-5" />
-                                    <h3 className="font-bold text-lg tracking-tight">Privacy Guard</h3>
+                            <div className="flex-grow space-y-1.5 sm:space-y-2">
+                                <div className="flex items-center gap-2 sm:gap-3 text-yellow-400">
+                                    <Shield className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                                    <h3 className="font-bold text-base sm:text-lg tracking-tight">Privacy Guard</h3>
                                 </div>
-                                <p className="text-gray-200 text-sm leading-relaxed">
+                                <p className="text-gray-200 text-xs sm:text-sm leading-relaxed">
                                     We use cookies and similar technologies to keep EAiSER working securely, personalize your experience, and help us improve the platform. You can choose which optional cookies to allow in Preferences.
                                 </p>
                             </div>
 
-                            <div className="flex flex-wrap gap-3 shrink-0">
+                            <div className="flex flex-row items-center gap-2 sm:gap-3 shrink-0 w-full sm:w-auto">
                                 <button 
                                     onClick={() => setShowPreferences(true)}
-                                    className="px-5 py-2.5 text-sm font-semibold text-gray-300 hover:text-white transition-colors flex items-center gap-2"
+                                    className="px-3 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-gray-300 hover:text-white transition-colors flex items-center justify-center gap-1.5 sm:gap-2"
                                 >
-                                    <Settings className="w-4 h-4" />
+                                    <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     Preferences
                                 </button>
                                 <button 
                                     onClick={handleRejectOptional}
-                                    className="px-5 py-2.5 text-sm font-semibold text-white/70 hover:text-white bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all"
+                                    className="px-3 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold text-white/70 hover:text-white bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all whitespace-nowrap"
                                 >
                                     Reject Optional
                                 </button>
                                 <button 
                                     onClick={handleAcceptAll}
-                                    className="px-6 py-2.5 text-sm font-bold text-black bg-gradient-to-r from-yellow-400 to-amber-500 rounded-xl hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] transition-all flex items-center gap-2"
+                                    className="px-4 sm:px-6 py-2.5 text-xs sm:text-sm font-bold text-black bg-gradient-to-r from-yellow-400 to-amber-500 rounded-xl hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] transition-all flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap"
                                 >
                                     Accept All
-                                    <ArrowRight className="w-4 h-4" />
+                                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </button>
                             </div>
                         </motion.div>
@@ -106,11 +106,11 @@ const CookieConsent = () => {
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="pointer-events-auto w-full max-w-lg bg-gray-950 border border-white/10 rounded-3xl shadow-3xl overflow-hidden"
+                            className="pointer-events-auto w-full max-w-lg bg-gray-950 border border-white/10 rounded-2xl sm:rounded-3xl shadow-3xl overflow-hidden mx-3 sm:mx-0"
                         >
-                            <div className="p-8 space-y-6">
+                            <div className="p-5 sm:p-8 space-y-4 sm:space-y-6">
                                 <div className="flex justify-between items-center">
-                                    <h2 className="text-2xl font-black text-white">Cookie Settings</h2>
+                                    <h2 className="text-xl sm:text-2xl font-black text-white">Cookie Settings</h2>
                                     <button onClick={() => setShowPreferences(false)} className="p-2 text-gray-500 hover:text-white">
                                         <X className="w-6 h-6" />
                                     </button>
