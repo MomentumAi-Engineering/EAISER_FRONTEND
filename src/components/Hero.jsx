@@ -87,9 +87,9 @@ export default function EaiserAIHero() {
       <div className="absolute top-40 right-10 w-56 h-56 md:w-72 md:h-72 bg-amber-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 md:opacity-20 animate-blob animation-delay-2000" />
       <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-yellow-400 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 md:py-20">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-20">
         {/* Hero Section - Asymmetric Layout */}
-        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center mb-20 md:mb-32">
+        <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-16 items-center mb-16 sm:mb-20 md:mb-32">
           {/* Left Content */}
           <motion.div
             className="space-y-6 md:space-y-8"
@@ -107,7 +107,7 @@ export default function EaiserAIHero() {
               <span className="text-[10px] md:text-sm font-bold text-yellow-400 tracking-wider">NEXT-GEN AI TECHNOLOGY</span>
             </motion.div>
 
-            <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black leading-[1.1] md:leading-none">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] md:leading-none">
               <span className="block text-white mb-2">EAiSER AI</span>
               <span className="block bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 bg-clip-text text-transparent">
                 is here...
@@ -150,24 +150,24 @@ export default function EaiserAIHero() {
 
             {/* Live Stats */}
             <motion.div
-              className="flex flex-wrap gap-8 pt-8"
+              className="flex flex-wrap gap-4 sm:gap-8 pt-6 sm:pt-8"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
             >
               <div>
-                <div className="text-3xl font-black text-yellow-400">&lt; 30s</div>
+                <div className="text-2xl sm:text-3xl font-black text-yellow-400">&lt; 30s</div>
                 <div className="text-sm text-gray-400">Report an Issue</div>
               </div>
               <div className="w-px bg-gray-800" />
               <div>
-                <div className="text-3xl font-black text-yellow-400">Free</div>
+                <div className="text-2xl sm:text-3xl font-black text-yellow-400">Free</div>
                 <div className="text-sm text-gray-400">for Residents</div>
               </div>
               <div className="w-px bg-gray-800" />
               <div>
                 <div className="flex items-center gap-3">
-                  <div className="text-3xl font-black text-yellow-400">95%+</div>
+                  <div className="text-2xl sm:text-3xl font-black text-yellow-400">95%+</div>
                   <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-500/10 border border-green-500/20 rounded-full">
                     <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                     <span className="text-[8px] font-black text-green-500 uppercase tracking-[0.2em]">Live</span>
@@ -240,25 +240,25 @@ export default function EaiserAIHero() {
         </div>
 
         {/* How EAiSER AI Works Section */}
-        <div className="mb-48 relative">
+        <div className="mb-20 sm:mb-32 md:mb-48 relative">
           <motion.div 
-            className="text-center mb-24"
+            className="text-center mb-12 sm:mb-16 md:mb-24"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <h2 className="text-5xl lg:text-7xl font-black mb-6">
+            <h2 className="text-3xl sm:text-5xl lg:text-7xl font-black mb-4 sm:mb-6">
               How <span className="bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 bg-clip-text text-transparent">EAiSER AI</span> works
             </h2>
-            <div className="w-24 h-1.5 bg-yellow-500 mx-auto rounded-full" />
+            <div className="w-16 sm:w-24 h-1.5 bg-yellow-500 mx-auto rounded-full" />
           </motion.div>
 
           {/* Connecting Line (Desktop) */}
           <div className="hidden lg:block absolute top-[280px] left-[15%] right-[15%] h-0.5 border-t-2 border-dashed border-yellow-500/20 z-0" />
 
           <motion.div 
-            className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8 relative z-10"
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-100px" }}
@@ -307,23 +307,23 @@ export default function EaiserAIHero() {
                   show: { opacity: 1, y: 0, scale: 1 }
                 }}
                 whileHover={{ y: -15, transition: { duration: 0.3 } }}
-                className="group relative bg-gradient-to-br from-gray-900/80 to-black/80 backdrop-blur-2xl rounded-[2.5rem] border border-white/5 hover:border-yellow-500/50 p-10 overflow-hidden transition-colors"
+                className="group relative bg-gradient-to-br from-gray-900/80 to-black/80 backdrop-blur-2xl rounded-2xl sm:rounded-[2.5rem] border border-white/5 hover:border-yellow-500/50 p-6 sm:p-8 md:p-10 overflow-hidden transition-colors"
               >
                 {/* Background Glow */}
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-yellow-500/5 rounded-full blur-3xl group-hover:bg-yellow-500/15 transition-all duration-500" />
                 
-                <div className={`w-20 h-20 bg-gradient-to-br ${item.color} rounded-2xl flex items-center justify-center mb-8 transform group-hover:rotate-[10deg] transition-all duration-500 shadow-xl shadow-yellow-500/20 relative`}>
+                <div className={`w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-gradient-to-br ${item.color} rounded-xl sm:rounded-2xl flex items-center justify-center mb-5 sm:mb-6 md:mb-8 transform group-hover:rotate-[10deg] transition-all duration-500 shadow-xl shadow-yellow-500/20 relative`}>
                   <span className="absolute -top-3 -right-3 w-10 h-10 bg-black text-yellow-400 text-sm font-black rounded-xl flex items-center justify-center border-2 border-yellow-500/30 group-hover:scale-110 transition-transform">
                     {item.step}
                   </span>
                   {item.icon}
                 </div>
 
-                <h3 className="text-2xl font-black mb-4 text-white group-hover:text-yellow-400 transition-colors leading-tight">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-black mb-3 sm:mb-4 text-white group-hover:text-yellow-400 transition-colors leading-tight">
                   {item.title}
                 </h3>
                 
-                <p className="text-gray-400 leading-relaxed text-lg">
+                <p className="text-gray-400 leading-relaxed text-sm sm:text-base md:text-lg">
                   {item.desc}
                 </p>
 
@@ -339,25 +339,25 @@ export default function EaiserAIHero() {
         </div>
 
         {/* Purpose Section */}
-        <div className="grid lg:grid-cols-2 gap-12 mb-48">
+        <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 md:gap-12 mb-20 sm:mb-32 md:mb-48">
           {/* What it's for */}
           <motion.div 
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="group relative bg-gradient-to-br from-gray-900/40 to-black/40 backdrop-blur-xl rounded-[3rem] border border-white/5 p-12 overflow-hidden"
+            className="group relative bg-gradient-to-br from-gray-900/40 to-black/40 backdrop-blur-xl rounded-2xl sm:rounded-[3rem] border border-white/5 p-6 sm:p-8 md:p-12 overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/5 rounded-full blur-[100px]" />
             
-            <h2 className="text-4xl font-black mb-10 flex items-center gap-4 text-white">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mb-6 sm:mb-8 md:mb-10 flex items-center gap-3 sm:gap-4 text-white">
               <div className="p-3 bg-yellow-500/10 rounded-2xl border border-yellow-500/20">
                 <Sparkles className="w-8 h-8 text-yellow-400" />
               </div>
               What Eaiser AI is for
             </h2>
 
-            <ul className="space-y-8">
+            <ul className="space-y-5 sm:space-y-6 md:space-y-8">
               {[
                 "Reporting non‑emergency community issues like road hazards, fallen trees, or flooding.",
                 "Helping cities receive clear, structured reports with precise locations and photos.",
@@ -373,7 +373,7 @@ export default function EaiserAIHero() {
                   <div className="w-8 h-8 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center justify-center shrink-0 mt-1 transition-transform group-hover/item:scale-110">
                     <CheckCircle className="w-5 h-5 text-green-500" />
                   </div>
-                  <span className="text-gray-300 leading-relaxed text-lg">{text}</span>
+                  <span className="text-gray-300 leading-relaxed text-sm sm:text-base md:text-lg">{text}</span>
                 </motion.li>
               ))}
             </ul>
@@ -385,18 +385,18 @@ export default function EaiserAIHero() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="group relative bg-gradient-to-br from-gray-900/40 to-black/40 backdrop-blur-xl rounded-[3rem] border border-white/5 p-12 overflow-hidden"
+            className="group relative bg-gradient-to-br from-gray-900/40 to-black/40 backdrop-blur-xl rounded-2xl sm:rounded-[3rem] border border-white/5 p-6 sm:p-8 md:p-12 overflow-hidden"
           >
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-red-500/5 rounded-full blur-[100px]" />
 
-            <h2 className="text-4xl font-black mb-10 flex items-center gap-4 text-red-500">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mb-6 sm:mb-8 md:mb-10 flex items-center gap-3 sm:gap-4 text-red-500">
               <div className="p-3 bg-red-500/10 rounded-2xl border border-red-500/20">
                 <X className="w-8 h-8" />
               </div>
               What Eaiser AI is not for
             </h2>
 
-            <ul className="space-y-8">
+            <ul className="space-y-5 sm:space-y-6 md:space-y-8">
               {[
                 "Eaiser AI is not for emergencies. In any life‑threatening situation, call 911 immediately.",
                 "Eaiser AI does not replace official city hotlines or 311 systems; it works alongside them.",
@@ -412,7 +412,7 @@ export default function EaiserAIHero() {
                   <div className="w-8 h-8 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-center shrink-0 mt-1 transition-transform group-hover/item:scale-110">
                     <X className="w-5 h-5 text-red-500" />
                   </div>
-                  <span className="text-gray-300 leading-relaxed text-lg">{text}</span>
+                  <span className="text-gray-300 leading-relaxed text-sm sm:text-base md:text-lg">{text}</span>
                 </motion.li>
               ))}
             </ul>
@@ -420,19 +420,19 @@ export default function EaiserAIHero() {
         </div>
 
         {/* Final CTA Section */}
-        <div className="relative bg-gradient-to-br from-yellow-500/10 to-amber-500/10 backdrop-blur-xl rounded-3xl border border-yellow-500/30 p-16 text-center overflow-hidden">
+        <div className="relative bg-gradient-to-br from-yellow-500/10 to-amber-500/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-yellow-500/30 p-8 sm:p-12 md:p-16 text-center overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(234,179,8,0.1),transparent_50%)]" />
 
           <div className="relative z-10">
-            <Rocket className="w-16 h-16 text-yellow-400 mx-auto mb-6" />
-            <h2 className="text-5xl font-black mb-4">Ready to Transform Your Community?</h2>
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+            <Rocket className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 text-yellow-400 mx-auto mb-4 sm:mb-6" />
+            <h2 className="text-2xl sm:text-3xl md:text-5xl font-black mb-3 sm:mb-4">Ready to Transform Your Community?</h2>
+            <p className="text-sm sm:text-base md:text-xl text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto">
               Join the future of intelligent issue reporting and resolution
             </p>
 
             <button
               onClick={() => navigate('/report')}
-              className="px-12 py-5 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl font-bold text-xl text-black hover:shadow-2xl hover:shadow-yellow-500/50 transition-all hover:scale-105"
+              className="px-8 sm:px-10 md:px-12 py-3.5 sm:py-4 md:py-5 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg md:text-xl text-black hover:shadow-2xl hover:shadow-yellow-500/50 transition-all hover:scale-105 w-full sm:w-auto"
             >
               Get Started Now
             </button>

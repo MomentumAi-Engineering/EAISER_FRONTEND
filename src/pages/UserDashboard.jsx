@@ -15,18 +15,18 @@ const StatCard = memo(({ icon: Icon, label, value, color, delay }) => (
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.4, delay: delay }}
-    className="relative overflow-hidden rounded-xl bg-gradient-to-br from-zinc-900 to-zinc-800 border border-yellow-500/10 p-4 cursor-pointer group will-change-transform"
+    className="relative overflow-hidden rounded-lg sm:rounded-xl bg-gradient-to-br from-zinc-900 to-zinc-800 border border-yellow-500/10 p-2.5 sm:p-4 cursor-pointer group will-change-transform"
   >
     <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-500/5 rounded-full blur-2xl group-hover:bg-yellow-500/10 transition-colors pointer-events-none"></div>
 
-    <div className="relative z-10 flex items-center gap-3">
-      <div className={`p-2 rounded-lg ${color}`}>
-        <Icon className="w-5 h-5 text-yellow-400" />
+    <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-3">
+      <div className={`p-1.5 sm:p-2 rounded-md sm:rounded-lg ${color}`}>
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
       </div>
 
-      <div>
-        <p className="text-gray-400 text-[10px] md:text-xs font-medium uppercase tracking-wider">{label}</p>
-        <p className="text-xl md:text-2xl font-bold text-white">{value}</p>
+      <div className="text-center sm:text-left">
+        <p className="text-gray-400 text-[8px] sm:text-[10px] md:text-xs font-medium uppercase tracking-wider leading-tight">{label}</p>
+        <p className="text-lg sm:text-xl md:text-2xl font-bold text-white">{value}</p>
       </div>
     </div>
   </motion.div>
@@ -267,7 +267,7 @@ export default function UserDashboard() {
   return (
     <div className="min-h-screen bg-black relative font-sans">
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-24 pb-12 relative z-10">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pt-20 sm:pt-24 pb-8 sm:pb-12 relative z-10">
         {/* Unverified User Banner */}
         <AnimatePresence>
           {!emailVerified && (
@@ -277,15 +277,15 @@ export default function UserDashboard() {
               exit={{ opacity: 0, y: -20, height: 0 }}
               className="mb-6"
             >
-              <div className="flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-red-500/[0.08] to-orange-500/[0.06] border border-red-500/20 backdrop-blur-sm"
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-red-500/[0.08] to-orange-500/[0.06] border border-red-500/20 backdrop-blur-sm"
                 style={{ boxShadow: '0 0 20px rgba(239,68,68,0.06)' }}
               >
-                <div className="p-2 bg-red-500/10 rounded-xl">
+                <div className="p-2 bg-red-500/10 rounded-xl flex-shrink-0">
                   <AlertTriangle className="w-5 h-5 text-red-400" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-red-300">Unverified Account</p>
-                  <p className="text-xs text-red-400/60 mt-0.5">Please verify your email address to unlock full reporting features.</p>
+                  <p className="text-xs text-red-400/60 mt-0.5">Please verify your email to unlock full features.</p>
                 </div>
                 <button
                   onClick={async () => {
@@ -296,80 +296,82 @@ export default function UserDashboard() {
                       toast.error(e.message || 'Failed to resend verification email.');
                     }
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl text-xs font-bold text-red-300 transition-all whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl text-xs font-bold text-red-300 transition-all whitespace-nowrap w-full sm:w-auto justify-center sm:justify-start"
                 >
-                  <Mail className="w-3.5 h-3.5" /> Click here to resend email
+                  <Mail className="w-3.5 h-3.5" /> Resend email
                 </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-              Impact <span className="text-yellow-400">Hub</span>
-            </h1>
-            <p className="text-gray-500 mt-1 text-sm">Tracking your community contributions</p>
-          </div>
-          <div className="flex items-center gap-3 relative">
-            {/* Notification Bell */}
-            <div className="relative">
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="p-2 bg-zinc-900 rounded-lg text-yellow-400 hover:bg-zinc-800 transition-all border border-yellow-500/20 relative"
-              >
-                <Bell className="w-5 h-5" />
-                {notifications > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold animate-pulse">
-                    {notifications}
-                  </span>
-                )}
-              </button>
-
-              <AnimatePresence>
-                {showNotifications && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 top-full mt-2 w-80 bg-zinc-900 border border-yellow-500/20 rounded-xl shadow-2xl z-50 overflow-hidden"
-                  >
-                    <div className="p-3 border-b border-white/5 flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-bold text-white">Notifications</h3>
-                        <button onClick={() => { setNotifications(0); setNotificationList([]); }} className="text-[10px] text-gray-500 hover:text-white ml-2">Clear all</button>
-                      </div>
-                      <button
-                        onClick={() => setShowNotifications(false)}
-                        className="p-1 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                      {notificationList.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500 text-xs">No new alerts</div>
-                      ) : (
-                        notificationList.map((note) => (
-                          <div key={note.id} className="p-3 hover:bg-white/5 border-b border-white/5 last:border-0 transition-colors">
-                            <p className="text-xs text-gray-300">{note.text}</p>
-                            <span className="text-[10px] text-gray-600 mt-1 block">{note.time}</span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+        <header className="flex flex-col gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight">
+                Impact <span className="text-yellow-400">Hub</span>
+              </h1>
+              <p className="text-gray-500 mt-0.5 sm:mt-1 text-xs sm:text-sm">Tracking your community contributions</p>
             </div>
+            <div className="flex items-center gap-2 sm:gap-3 relative">
+              {/* Notification Bell */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="p-2 bg-zinc-900 rounded-lg text-yellow-400 hover:bg-zinc-800 transition-all border border-yellow-500/20 relative"
+                >
+                  <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {notifications > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold animate-pulse">
+                      {notifications}
+                    </span>
+                  )}
+                </button>
 
-            <button onClick={() => fetchIssues(false)} className="p-2 bg-zinc-900 rounded-lg text-yellow-400 hover:bg-zinc-800 transition-all border border-yellow-500/20">
-              <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-            <button onClick={() => navigate('/report')} className="px-5 py-2.5 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition-all flex items-center gap-2 text-sm shadow-lg shadow-yellow-500/10">
-              <Activity className="w-4 h-4" /> New Report
-            </button>
+                <AnimatePresence>
+                  {showNotifications && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-zinc-900 border border-yellow-500/20 rounded-xl shadow-2xl z-50 overflow-hidden"
+                    >
+                      <div className="p-3 border-b border-white/5 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-bold text-white">Notifications</h3>
+                          <button onClick={() => { setNotifications(0); setNotificationList([]); }} className="text-[10px] text-gray-500 hover:text-white ml-2">Clear all</button>
+                        </div>
+                        <button
+                          onClick={() => setShowNotifications(false)}
+                          className="p-1 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                        {notificationList.length === 0 ? (
+                          <div className="p-4 text-center text-gray-500 text-xs">No new alerts</div>
+                        ) : (
+                          notificationList.map((note) => (
+                            <div key={note.id} className="p-3 hover:bg-white/5 border-b border-white/5 last:border-0 transition-colors">
+                              <p className="text-xs text-gray-300">{note.text}</p>
+                              <span className="text-[10px] text-gray-600 mt-1 block">{note.time}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <button onClick={() => fetchIssues(false)} className="p-2 bg-zinc-900 rounded-lg text-yellow-400 hover:bg-zinc-800 transition-all border border-yellow-500/20">
+                <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </button>
+              <button onClick={() => navigate('/report')} className="px-3 sm:px-5 py-2 sm:py-2.5 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition-all flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm shadow-lg shadow-yellow-500/10">
+                <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">New</span> Report
+              </button>
+            </div>
           </div>
         </header>
 
@@ -385,25 +387,25 @@ export default function UserDashboard() {
             <button onClick={() => fetchIssues(false)} className="mt-4 px-6 py-2 bg-zinc-900 rounded-xl text-white">Retry Connection</button>
           </div>
         ) : (
-          <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
                 <StatCard icon={Activity} label="Total Reports" value={stats.totalReported} color="bg-blue-500/10" delay={0.1} />
                 <StatCard icon={Clock} label="Under Review" value={stats.pending} color="bg-orange-500/10" delay={0.2} />
                 <StatCard icon={CheckCircle} label="Routed" value={stats.resolved} color="bg-green-500/10" delay={0.3} />
               </div>
 
-              <div className="bg-zinc-900/40 p-5 rounded-2xl border border-white/5 backdrop-blur-md">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-yellow-400" /> Recent Issues
+              <div className="bg-zinc-900/40 p-3 sm:p-5 rounded-2xl border border-white/5 backdrop-blur-md">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+                  <h2 className="text-base sm:text-xl font-bold text-white flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" /> Recent Issues
                   </h2>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 -mx-1 px-1 scrollbar-hide">
                     {zipCodes.length > 1 && (
                       <select
                         value={locationFilter}
                         onChange={(e) => setLocationFilter(e.target.value)}
-                        className="bg-zinc-800 border border-white/5 text-gray-400 text-xs rounded-lg px-2 py-1.5 outline-none hover:text-white hover:border-white/10 transition-colors cursor-pointer mr-2"
+                        className="bg-zinc-800 border border-white/5 text-gray-400 text-xs rounded-lg px-2 py-1.5 outline-none hover:text-white hover:border-white/10 transition-colors cursor-pointer mr-1 sm:mr-2 flex-shrink-0"
                       >
                         {zipCodes.map(zip => (
                           <option key={zip} value={zip}>{zip}</option>
@@ -412,7 +414,7 @@ export default function UserDashboard() {
                     )}
 
                     {['all', 'in review', 'routed'].map((t) => (
-                      <button key={t} onClick={() => setFilter(t)} className={`px-3 py-1.5 rounded-lg text-xs transition-all capitalize font-bold ${filter === t ? 'bg-yellow-400 text-black shadow-lg shadow-yellow-500/10' : 'bg-zinc-800 text-gray-500 hover:text-white'}`}>
+                      <button key={t} onClick={() => setFilter(t)} className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs transition-all capitalize font-bold flex-shrink-0 ${filter === t ? 'bg-yellow-400 text-black shadow-lg shadow-yellow-500/10' : 'bg-zinc-800 text-gray-500 hover:text-white'}`}>
                         {t}
                       </button>
                     ))}
@@ -448,11 +450,11 @@ export default function UserDashboard() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: idx < 10 ? idx * 0.05 : 0 }}
-                          className="bg-zinc-800/30 border border-white/5 rounded-xl p-4 hover:border-yellow-500/40 transition-all cursor-pointer group will-change-transform"
+                          className="bg-zinc-800/30 border border-white/5 rounded-xl p-3 sm:p-4 hover:border-yellow-500/40 transition-all cursor-pointer group will-change-transform"
                         >
-                          <div className="flex items-start gap-4">
+                          <div className="flex items-start gap-3 sm:gap-4">
                             {/* Thumbnail preview */}
-                            <div className="w-14 h-14 rounded-xl bg-zinc-900 overflow-hidden border border-white/5 flex-shrink-0 group-hover:border-yellow-500/30 transition-all">
+                            <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-zinc-900 overflow-hidden border border-white/5 flex-shrink-0 group-hover:border-yellow-500/30 transition-all">
                               <img
                                 src={issue.image_url ? (issue.image_url.startsWith('http') ? issue.image_url : apiClient.url(issue.image_url)) : `https://placehold.co/100x100/18181b/FFD700?text=${issue.issue_type?.[0] || 'E'}`}
                                 className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
@@ -462,17 +464,17 @@ export default function UserDashboard() {
 
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between">
-                                <div className="min-w-0">
-                                  <h3 className="text-white font-bold text-sm tracking-wide group-hover:text-yellow-400 transition-colors uppercase truncate">
+                                <div className="min-w-0 flex-1">
+                                  <h3 className="text-white font-bold text-xs sm:text-sm tracking-wide group-hover:text-yellow-400 transition-colors uppercase truncate">
                                     {formatIssueType(issue.issue_type)}
                                   </h3>
-                                  <p className="text-gray-500 text-xs mt-1 truncate">{issue.address || 'Location analyzing...'}</p>
-                                  <div className="flex items-center gap-3 mt-3">
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${['resolved', 'completed', 'accepted', 'submitted', 'approved', 'dispatched'].includes(issue.status?.toLowerCase()) ? 'bg-green-500/10 text-green-400' : 'bg-orange-500/10 text-orange-400'}`}>
+                                  <p className="text-gray-500 text-[10px] sm:text-xs mt-0.5 sm:mt-1 truncate">{issue.address || 'Location analyzing...'}</p>
+                                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 mt-2 sm:mt-3">
+                                    <span className={`px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-black uppercase ${['resolved', 'completed', 'accepted', 'submitted', 'approved', 'dispatched'].includes(issue.status?.toLowerCase()) ? 'bg-green-500/10 text-green-400' : 'bg-orange-500/10 text-orange-400'}`}>
                                       {issue.status}
                                     </span>
                                     {issue.severity && (
-                                      <span className={`flex items-center gap-1.5 text-[9px] font-black tracking-widest uppercase ${(() => {
+                                      <span className={`flex items-center gap-1 text-[8px] sm:text-[9px] font-black tracking-wider sm:tracking-widest uppercase ${(() => {
                                         const sev = String(issue.severity).toLowerCase();
                                         if (sev === 'critical') return 'text-red-500';
                                         if (sev === 'high') return 'text-orange-500';
@@ -495,16 +497,17 @@ export default function UserDashboard() {
                                                 issue.severity}
                                       </span>
                                     )}
-                                    <span className="text-[10px] text-zinc-600 font-bold">{timeAgo(issue.timestamp)}</span>
+                                    <span className="text-[9px] sm:text-[10px] text-zinc-600 font-bold">{timeAgo(issue.timestamp)}</span>
                                     {issue.chat_active && (
-                                      <div className="flex items-center gap-1 ml-auto">
+                                      <div className="flex items-center gap-1 sm:ml-auto">
                                         <Mail className="w-3 h-3 text-blue-400" />
-                                        <span className="text-[9px] text-blue-400 font-black uppercase">Email Routing Active</span>
+                                        <span className="text-[8px] sm:text-[9px] text-blue-400 font-black uppercase hidden sm:inline">Email Routing Active</span>
+                                        <span className="text-[8px] text-blue-400 font-black uppercase sm:hidden">Active</span>
                                       </div>
                                     )}
                                   </div>
                                 </div>
-                                <ArrowRight className="w-4 h-4 text-zinc-700 group-hover:text-yellow-500 transition-all group-hover:translate-x-1 flex-shrink-0 ml-2" />
+                                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-700 group-hover:text-yellow-500 transition-all group-hover:translate-x-1 flex-shrink-0 ml-1 sm:ml-2 mt-1" />
                               </div>
                             </div>
                           </div>
@@ -515,12 +518,12 @@ export default function UserDashboard() {
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="bg-gradient-to-br from-zinc-900 to-black p-6 rounded-2xl border border-yellow-500/10">
-                <h3 className="text-white font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="bg-gradient-to-br from-zinc-900 to-black p-4 sm:p-6 rounded-2xl border border-yellow-500/10">
+                <h3 className="text-white font-black text-xs sm:text-sm uppercase tracking-widest mb-3 sm:mb-4 flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-yellow-400" /> Clearance Performance
                 </h3>
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
                     <motion.div initial={{ width: 0 }} animate={{ width: `${stats.activeRate}%` }} className="h-full bg-yellow-400 shadow-[0_0_10px_#fbbf24]" />
                   </div>
@@ -538,15 +541,22 @@ export default function UserDashboard() {
           {selectedIssue && (
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+              className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-sm sm:p-4"
               onClick={() => setSelectedIssue(null)}
             >
               <motion.div
                 initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
-                className="bg-zinc-900 border border-yellow-500/20 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl relative flex flex-col md:flex-row max-h-[90vh]"
+                className="bg-zinc-900 border border-yellow-500/20 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-2xl overflow-hidden shadow-2xl relative flex flex-col md:flex-row max-h-[92vh] sm:max-h-[90vh]"
                 onClick={e => e.stopPropagation()}
               >
-                <div className="h-60 md:h-auto md:w-1/2 bg-black relative">
+                {/* Close button - always visible on mobile */}
+                <button
+                  onClick={() => setSelectedIssue(null)}
+                  className="absolute top-3 right-3 z-30 p-1.5 bg-black/50 backdrop-blur-sm rounded-full text-white/70 hover:text-white border border-white/10 sm:hidden"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="h-44 sm:h-60 md:h-auto md:w-1/2 bg-black relative flex-shrink-0">
                   <img
                     src={(() => {
                       if (selectedIssue.image_url) {
@@ -567,19 +577,19 @@ export default function UserDashboard() {
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                  <div className="absolute bottom-4 left-4">
-                    <h2 className="text-xl font-black text-white uppercase tracking-tight">{formatIssueType(selectedIssue.issue_type)}</h2>
+                  <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4">
+                    <h2 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">{formatIssueType(selectedIssue.issue_type)}</h2>
                     <p className="text-yellow-400/80 text-[10px] font-bold uppercase tracking-widest">{selectedIssue.category || 'Environmental'}</p>
                   </div>
                 </div>
-                <div className="p-6 md:w-1/2 flex flex-col bg-zinc-900/50 overflow-hidden">
-                  <div className="flex-grow overflow-y-auto custom-scrollbar pr-2">
-                    <div className="mb-6">
+                <div className="p-4 sm:p-6 md:w-1/2 flex flex-col bg-zinc-900/50 overflow-hidden flex-1 min-h-0">
+                  <div className="flex-grow overflow-y-auto custom-scrollbar pr-1 sm:pr-2">
+                    <div className="mb-4 sm:mb-6">
                       <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Impact Intelligence</h3>
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-sm font-black text-white uppercase bg-zinc-800 px-3 py-1 rounded-lg border border-white/5">{selectedIssue.status}</span>
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
+                        <span className="text-xs sm:text-sm font-black text-white uppercase bg-zinc-800 px-2.5 sm:px-3 py-1 rounded-lg border border-white/5">{selectedIssue.status}</span>
                         {selectedIssue.severity && (
-                          <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase border ${(() => {
+                          <span className={`px-2.5 sm:px-3 py-1 rounded-lg text-[10px] font-black uppercase border ${(() => {
                             const sev = String(selectedIssue.severity).toLowerCase();
                             if (sev === 'critical') return 'bg-red-500/10 text-red-500 border-red-500/20';
                             if (sev === 'high') return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
@@ -605,7 +615,7 @@ export default function UserDashboard() {
 
                     {/* Authorities Section */}
                     {(selectedIssue.report?.responsible_authorities_or_parties?.length > 0 || selectedIssue.report?.report?.responsible_authorities_or_parties?.length > 0) && (
-                      <div className="mb-6">
+                      <div className="mb-4 sm:mb-6">
                         <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Dispatched Authorities</h3>
                         <div className="space-y-2">
                           {(selectedIssue.report?.responsible_authorities_or_parties || selectedIssue.report?.report?.responsible_authorities_or_parties).map((auth, idx) => (
@@ -625,25 +635,23 @@ export default function UserDashboard() {
                     )}
                   </div>
 
-
-
                   {/* Modal Footer - Explicitly pinned to bottom */}
-                  <div className="mt-auto pt-6 border-t border-white/5 bg-zinc-900/50 backdrop-blur-xl relative z-20">
-                    <div className="flex gap-3 mb-4">
-                      <div className="flex-1 py-4 bg-zinc-800 text-yellow-400 rounded-2xl font-black flex items-center justify-center gap-3 border border-yellow-500/20 uppercase tracking-widest text-[10px]">
-                        <Mail className="w-4 h-4" />
+                  <div className="mt-auto pt-4 sm:pt-6 border-t border-white/5 bg-zinc-900/50 backdrop-blur-xl relative z-20">
+                    <div className="flex gap-2 sm:gap-3 mb-3 sm:mb-4">
+                      <div className="flex-1 py-3 sm:py-4 bg-zinc-800 text-yellow-400 rounded-xl sm:rounded-2xl font-black flex items-center justify-center gap-2 sm:gap-3 border border-yellow-500/20 uppercase tracking-wider sm:tracking-widest text-[9px] sm:text-[10px]">
+                        <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         Email Routing Active
                       </div>
                       <motion.button
                         whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.1)" }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setSelectedIssue(null)}
-                        className="px-6 py-4 bg-white/5 text-white/50 hover:text-white rounded-2xl transition-all border border-white/10 backdrop-blur-md"
+                        className="px-4 sm:px-6 py-3 sm:py-4 bg-white/5 text-white/50 hover:text-white rounded-xl sm:rounded-2xl transition-all border border-white/10 backdrop-blur-md hidden sm:flex"
                       >
                         <X className="w-5 h-5" />
                       </motion.button>
                     </div>
-                    <p className="text-center text-[9px] text-zinc-600 uppercase tracking-[0.3em] font-black">Official EAiSER Digital Evidence Access</p>
+                    <p className="text-center text-[8px] sm:text-[9px] text-zinc-600 uppercase tracking-[0.2em] sm:tracking-[0.3em] font-black pb-1">Official EAiSER Digital Evidence Access</p>
                   </div>
                 </div>
               </motion.div>
@@ -656,6 +664,8 @@ export default function UserDashboard() {
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #fbbf24; border-radius: 10px; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </div>
   );

@@ -43,7 +43,7 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 function isAdminSubdomain() {
   const hostname = window.location.hostname;
   return (
-    hostname.startsWith('admin.') || 
+    hostname.startsWith('admin.') ||
     hostname === 'admin.eaiser.ai'
   );
 }
